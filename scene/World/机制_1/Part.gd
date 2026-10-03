@@ -4,6 +4,9 @@ extends Node3D
 
 @export var 反向 : bool
 
+## -1是不启用这一项功能，意思是无论这个模块的方向如何都能通过
+@export var 特定方向通过 = -1
+
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	pass # Replace with function body.
