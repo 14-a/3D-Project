@@ -1,3 +1,166 @@
 [gd_scene format=3 uid="uid://cu7di0bk6we1n"]
 
+[ext_resource type="Script" uid="uid://bchix0jpv46lx" path="res://addons/cyclops_level_builder/nodes/cyclops_block.gd" id="1_b2bta"]
+[ext_resource type="Script" uid="uid://d2vup2y7hq2ky" path="res://scene/World/LevelCrtl.gd" id="1_l4i1a"]
+[ext_resource type="Script" uid="uid://c5jpx1aoa7iso" path="res://addons/cyclops_level_builder/resources/data_vector_byte.gd" id="2_dvqia"]
+[ext_resource type="Script" uid="uid://dekcd1o0m0k3r" path="res://addons/cyclops_level_builder/resources/data_vector_float.gd" id="3_l4i1a"]
+[ext_resource type="Script" uid="uid://dfd47cc554yqi" path="res://addons/cyclops_level_builder/resources/data_vector_int.gd" id="4_itt2u"]
+[ext_resource type="Script" uid="uid://dmot4k5n7k0w6" path="res://addons/cyclops_level_builder/resources/mesh_vector_data.gd" id="5_sl8sp"]
+[ext_resource type="Material" uid="uid://ciri370h7fx4d" path="res://Texture/PNG/Orange/Orange.tres" id="6_vde34"]
+[ext_resource type="PackedScene" uid="uid://dmk67xkqjcwbs" path="res://scene/Player/player.tscn" id="7_i0hgx"]
+[ext_resource type="Script" uid="uid://ckk4mxxtjyewp" path="res://scene/World/Camera.gd" id="8_itt2u"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_l4i1a"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_itt2u"]
+sky_material = SubResource("ProceduralSkyMaterial_l4i1a")
+
+[sub_resource type="Environment" id="Environment_sl8sp"]
+background_mode = 2
+sky = SubResource("Sky_itt2u")
+glow_enabled = true
+
+[sub_resource type="Resource" id="Resource_qko3f"]
+script = ExtResource("2_dvqia")
+data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+[sub_resource type="Resource" id="Resource_iagbh"]
+script = ExtResource("2_dvqia")
+data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+[sub_resource type="Resource" id="Resource_le2q4"]
+script = ExtResource("2_dvqia")
+data = PackedByteArray(0, 0, 0, 0, 0, 0)
+
+[sub_resource type="Resource" id="Resource_m1bbb"]
+script = ExtResource("2_dvqia")
+data = PackedByteArray(1, 1, 1, 1, 1, 1)
+
+[sub_resource type="Resource" id="Resource_d73yo"]
+script = ExtResource("3_l4i1a")
+data = PackedFloat32Array(-1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0, 0, 0, -1)
+data_type = 6
+stride = 3
+
+[sub_resource type="Resource" id="Resource_qiv05"]
+script = ExtResource("4_itt2u")
+data = PackedInt32Array(0, 0, 0, 0, 0, 0)
+data_type = 1
+
+[sub_resource type="Resource" id="Resource_3ml0a"]
+script = ExtResource("4_itt2u")
+data = PackedInt32Array(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5)
+data_type = 1
+
+[sub_resource type="Resource" id="Resource_ufl8g"]
+script = ExtResource("4_itt2u")
+data = PackedInt32Array(0, 1, 2, 3, 7, 6, 5, 4, 1, 0, 4, 5, 2, 1, 5, 6, 3, 2, 6, 7, 0, 3, 7, 4)
+data_type = 1
+
+[sub_resource type="Resource" id="Resource_lmbtf"]
+script = ExtResource("3_l4i1a")
+data = PackedFloat32Array(-1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1)
+data_type = 6
+stride = 3
+
+[sub_resource type="Resource" id="Resource_h0417"]
+script = ExtResource("2_dvqia")
+data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+[sub_resource type="Resource" id="Resource_bo3oq"]
+script = ExtResource("3_l4i1a")
+data = PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+data_type = 4
+stride = 4
+
+[sub_resource type="Resource" id="Resource_vf6g6"]
+script = ExtResource("3_l4i1a")
+data = PackedFloat32Array(4, 0, -4, 0, -4, 1, 4, 1, 4, 1, -4, 1, -4, 0, 4, 0, 4, -4, 4, 4, -4, 4, -4, -4, 4, 1, 4, 0, -4, 0, -4, 1, 4, 4, 4, -4, -4, -4, -4, 4, 4, 0, 4, 1, -4, 1, -4, 0)
+data_type = 5
+stride = 2
+
+[sub_resource type="Resource" id="Resource_gf2on"]
+script = ExtResource("3_l4i1a")
+data = PackedFloat32Array(0, 1, 0, 0, 1, 8, 0, 0, 8, 0, 0, 0, 8, 1, 0, 8, 1, 8, 8, 0, 8, 8, 0, 0)
+data_type = 6
+stride = 3
+
+[sub_resource type="Resource" id="Resource_gljfn"]
+script = ExtResource("3_l4i1a")
+data = PackedFloat32Array(-0.12309149, 0.9847319, -0.12309149, -0.12309149, 0.9847319, 0.12309149, -0.12309149, -0.9847319, 0.12309149, -0.12309149, -0.9847319, -0.12309149, 0.12309149, 0.9847319, -0.12309149, 0.12309149, 0.9847319, 0.12309149, 0.12309149, -0.9847319, 0.12309149, 0.12309149, -0.9847319, -0.12309149)
+data_type = 6
+stride = 3
+
+[sub_resource type="Resource" id="Resource_u0xut"]
+script = ExtResource("2_dvqia")
+data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0)
+
+[sub_resource type="Resource" id="Resource_11dhq"]
+script = ExtResource("5_sl8sp")
+num_vertices = 8
+num_edges = 12
+num_faces = 6
+num_face_vertices = 24
+active_vertex = -1
+active_edge = -1
+active_face = -1
+active_face_vertex = -1
+edge_vertex_indices = PackedInt32Array(0, 1, 1, 2, 2, 3, 3, 0, 7, 6, 6, 5, 5, 4, 4, 7, 0, 4, 5, 1, 6, 2, 7, 3)
+edge_face_indices = PackedInt32Array(0, 2, 0, 3, 0, 4, 0, 5, 1, 4, 1, 3, 1, 2, 1, 5, 2, 5, 2, 3, 3, 4, 4, 5)
+face_vertex_count = PackedInt32Array(4, 4, 4, 4, 4, 4)
+face_vertex_indices = PackedInt32Array(0, 1, 2, 3, 7, 6, 5, 4, 1, 0, 4, 5, 2, 1, 5, 6, 3, 2, 6, 7, 0, 3, 7, 4)
+vertex_data = {
+"normal": SubResource("Resource_gljfn"),
+"position": SubResource("Resource_gf2on"),
+"selected": SubResource("Resource_u0xut")
+}
+edge_data = {
+"selected": SubResource("Resource_qko3f"),
+"uv_seam": SubResource("Resource_iagbh")
+}
+face_data = {
+"material_index": SubResource("Resource_qiv05"),
+"normal": SubResource("Resource_d73yo"),
+"selected": SubResource("Resource_le2q4"),
+"visible": SubResource("Resource_m1bbb")
+}
+face_vertex_data = {
+"color": SubResource("Resource_bo3oq"),
+"face_index": SubResource("Resource_3ml0a"),
+"normal": SubResource("Resource_lmbtf"),
+"selected": SubResource("Resource_h0417"),
+"uv0": SubResource("Resource_vf6g6"),
+"vertex_index": SubResource("Resource_ufl8g")
+}
+
 [node name="World" type="Node" unique_id=1033115210]
+script = ExtResource("1_l4i1a")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=671904586]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=32127716]
+environment = SubResource("Environment_sl8sp")
+
+[node name="Map" type="Node3D" parent="." unique_id=2107402624]
+
+[node name="Ready" type="Node3D" parent="Map" unique_id=1795429488]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, -1, -4)
+script = ExtResource("1_b2bta")
+mesh_vector_data = SubResource("Resource_11dhq")
+materials = Array[Material]([ExtResource("6_vde34")])
+
+[node name="Node3D" type="Node3D" parent="." unique_id=623399317 node_paths=PackedStringArray("Player")]
+transform = Transform3D(1, 0, 0, 0, 0.5893781, 0.80785733, 0, -0.80785733, 0.5893781, 0, 0, 0)
+script = ExtResource("8_itt2u")
+Player = NodePath("../Player")
+_elevation = -35.045
+
+[node name="Camera3D" type="Camera3D" parent="Node3D" unique_id=260439902]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 25.671)
+
+[node name="Player" parent="." unique_id=708521715 instance=ExtResource("7_i0hgx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1434679, 1, -0.010166168)
