@@ -1,0 +1,32 @@
+[font_size=24][b]Recovery and operation safety[/b][/font_size]
+
+[ul]
+Unsaved documents are copied every five minutes to [code]res://addons/gator_model_studio/recovery/[/code].
+A newer recovery copy is offered on startup and is cleared after manual save or discard.
+New and Open use Save / Discard / Cancel confirmation when the document is dirty.
+Guided voxel remesh warns before discarding UVs and before unusually heavy jobs.
+Remesh keeps its bounded voxel grid and cancellation path; subdivision warns before high-density evaluation without imposing an arbitrary face cap.
+Editor dialogs and tool windows stay above the editor while open; pressing their toolbar action again raises the existing window instead of opening or losing another copy.
+Guided voxel remesh closes automatically after a successful result is committed. Errors and cancellations keep the window open so their status remains visible.
+The startup recovery prompt stays above the editor until Recover or Discard is selected.
+[/ul]
+
+[font_size=18][b]Save As and automatic export[/b][/font_size]
+
+[ul]
+[b]Save As[/b] writes a new [code].tres[/code] document and makes that copy the active document. The copy starts without an export association so it cannot silently overwrite the original version's exported file.
+After a successful [b]Export Scene[/b], the document remembers that export path.
+Enable [b]Auto Export on Save[/b] to regenerate that export whenever the model document is saved.
+Automatic export uses the same cancellable background export path as manual export. A failed export does not undo the successful document save.
+[/ul]
+
+[ul]
+Automatic exports are deferred until the editor save input has completed, and repeated save callbacks in the same cycle are coalesced into one export.
+Automatic exports wait for the previous exported asset's editor reimport to finish before writing the same path again.
+Existing exported project assets use Godot's source scan so changed GLB, GLTF, and OBJ files are reimported immediately. After import completes, GMS refreshes the cached exported scene and its subresources in place; directly opened exported scenes are reloaded automatically, while parent scenes keep their unsaved changes.
+Automatic GLB exports targeting [code]res://[/code] are serialized to a staging file under [code]user://[/code] and only replace the project GLB after the staged file is complete. This prevents the editor importer from reading a partially written GLB.
+[/ul]
+
+[ul]
+Godot glTF/GLB scene serialization runs on the editor main thread. The exporter no longer creates GLTFDocument, GLTFState, scene nodes, meshes, materials, or image resources inside WorkerThreadPool tasks, which avoids intermittent native crashes during repeated exports. The editor may pause briefly during final glTF serialization.
+[/ul]

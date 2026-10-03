@@ -1,0 +1,159 @@
+[font_size=24][b]Animation[/b][/font_size]
+
+Gator Model Studio includes a dedicated [b]Animate[/b] mode for skeletal animation. It is focused on the active rig and does not expose Godot's general-purpose property, method, audio, or camera animation tracks.
+
+[font_size=18][b]Basic workflow[/b][/font_size]
+
+[ol type=1]
+Finish the armature and weights in [b]Rig[/b] mode.
+Select the rigged object and enter [b]Animate[/b].
+Create a clip, choose its FPS, frame count, and looping setting.
+Select a bone in the viewport or timeline.
+Move, rotate, or scale the bone with the transform gizmo or the numeric fields.
+With [b]Auto Key Changed Bones[/b] enabled, completing the transform inserts or updates the bone key at the current frame.
+Scrub or play the timeline to inspect the result.
+Export the document as [code].tscn[/code], [code].gltf[/code], or [code].glb[/code].
+[/ol]
+
+The timeline contains one row per bone. GMS creates the required position, rotation, and scale tracks automatically; users do not create node paths or individual track resources.
+
+[font_size=18][b]Clip controls[/b][/font_size]
+
+Each clip stores:
+
+[ul]
+Name
+Frames per second
+Frame count
+Looping state
+Bone transform tracks
+Per-key interpolation
+[/ul]
+
+Clips can be created, duplicated, renamed, and deleted. The current frame can be changed from the frame field, playback controls, timeline, or keyboard shortcuts.
+
+[font_size=18][b]Keying[/b][/font_size]
+
+[ul]
+[b]Key Bone[/b] inserts the active bone pose.
+[b]Key Changed[/b] inserts all bones changed since the current frame was evaluated.
+[b]Key Full Pose[/b] inserts every bone.
+[b]Auto Key Changed Bones[/b] inserts a key when a bone transform or pose operation is completed.
+[/ul]
+
+Keys can be selected, dragged to another frame, copied, pasted, pasted mirrored, and deleted. Interpolation choices are Constant, Linear, Smooth, Ease In, Ease Out, Ease In/Out, and Custom Curve.
+
+[font_size=18][b]IK posing[/b][/font_size]
+
+IK chains are persistent rig helpers used while authoring animation. Select an end bone and press [b]New from Bone[/b] to create a chain from that bone and its ancestors. A chain stores its root, tip, target, pole target, solver passes, tolerance, and pole influence.
+
+[ul]
+[b]Move Target[/b] moves the end-effector target with the viewport gizmo.
+[b]Move Pole[/b] changes the knee or elbow bend direction.
+[b]Target from Tip[/b] places the target on the current end of the chain.
+[b]Pole from Bend[/b] initializes the pole from the current limb bend.
+[b]Solve Without Key[/b] updates the current pose without inserting keys.
+[b]Solve + Key[/b] solves the chain and keys every changed bone.
+[/ul]
+
+IK is an authoring aid. GMS exports the solved transforms as ordinary skeletal animation keys, so exported models do not depend on a GMS IK runtime.
+
+[font_size=18][b]Bone constraints[/b][/font_size]
+
+Constraints are persistent rig-level posing helpers. [b]Apply Constraints While Posing[/b] keeps them active during numeric edits, gizmo transforms, pose pasting, playback, and IK solving. [b]Apply Now[/b] evaluates them once and can key the affected bones when Auto Key is enabled.
+
+Supported basic constraints are:
+
+[ul]
+[b]Limit Rotation[/b] — clamps local pose rotation between minimum and maximum Euler angles.
+[b]Copy Rotation[/b] — blends the constrained bone toward another bone's pose rotation.
+[b]Copy Transform[/b] — blends local pose position, rotation, and scale from another bone.
+[b]Look At[/b] — turns the bone's local length axis toward another bone.
+[/ul]
+
+Constraints improve authoring but are not required at runtime. Bake their results into keys before export when their effect must be present in the clip.
+
+[font_size=18][b]Curve editor[/b][/font_size]
+
+The existing interpolation presets remain the normal quick workflow. Selecting [b]Custom Curve[/b] or dragging a curve handle enables cubic Bezier timing for the segment after the selected key. Position, rotation, and scale each keep their own curve.
+
+The curve editor changes timing between poses rather than changing either keyed pose. Export samples the authored result at the clip FPS, preserving the visible motion in [code].tscn[/code], [code].gltf[/code], and [code].glb[/code] output.
+
+[font_size=18][b]Root-motion preparation[/b][/font_size]
+
+Each clip can designate one motion bone and choose which translation axes count as root motion.
+
+[ul]
+[b]Show Motion Path[/b] draws the selected bone's trajectory in the viewport.
+[b]Preview In Place[/b] removes the chosen axes only from preview playback.
+[b]Convert In Place[/b] permanently fixes those axes to their first-frame value. Undo restores the moving version.
+[b]Remove Loop Drift[/b] distributes end-to-start displacement correction across the root track so a looping clip closes cleanly.
+[/ul]
+
+These tools prepare animation data for game use. GMS does not create an [code]AnimationTree[/code], character controller, or runtime movement system.
+
+[font_size=18][b]Pose tools[/b][/font_size]
+
+Animate mode provides:
+
+[ul]
+Reset selected bone
+Reset the selected bone and child chain
+Reset the full rig
+Copy selected bone pose
+Copy full pose
+Paste pose
+Paste mirrored pose
+Save and apply reusable poses from the pose library
+[/ul]
+
+Mirroring uses the rig's left/right bone pairing and reflects the pose across the local X axis.
+
+[font_size=18][b]Shortcuts[/b][/font_size]
+
+[table=2]
+[cell][b]Shortcut[/b][/cell]
+[cell][b]Action[/b][/cell]
+[cell][code]Space[/code][/cell]
+[cell]Play or pause[/cell]
+[cell][code]Left[/code] / [code]Right[/code][/cell]
+[cell]Previous or next frame[/cell]
+[cell][code]Up[/code] / [code]Down[/code][/cell]
+[cell]Previous or next keyframe[/cell]
+[cell][code]K[/code][/cell]
+[cell]Key selected bone[/cell]
+[cell][code]Shift+K[/code][/cell]
+[cell]Key changed bones[/cell]
+[cell][code]Ctrl+K[/code][/cell]
+[cell]Key full pose[/cell]
+[cell][code]G[/code] / [code]R[/code] / [code]S[/code][/cell]
+[cell]Move, rotate, or scale selected bone[/cell]
+[cell][code]Delete[/code] or [code]X[/code][/cell]
+[cell]Delete selected keys[/cell]
+[cell][code]Ctrl+C[/code][/cell]
+[cell]Copy selected keys[/cell]
+[cell][code]Ctrl+V[/code][/cell]
+[cell]Paste selected keys at the current frame[/cell]
+[cell][code]Ctrl+Shift+V[/code][/cell]
+[cell]Paste selected keys mirrored[/cell]
+[/table]
+
+[font_size=18][b]Persistence and undo[/b][/font_size]
+
+Animation clips and pose-library entries are stored in the GMS document. Clip changes, key insertion, key deletion, key movement, interpolation changes, and pose-library changes use the normal undo and redo history.
+
+[font_size=18][b]Export[/b][/font_size]
+
+Scene export creates an [code]AnimationPlayer[/code] beside the rigged mesh and stores every GMS clip in its global [code]AnimationLibrary[/code]. Bone position, rotation, and scale tracks target the exported [code]Skeleton3D[/code].
+
+The same animation clips are passed through Godot's glTF exporter for [code].gltf[/code] and [code].glb[/code] output. Because glTF 2.0 has no standard animation-loop flag, GMS adds Godot's temporary [code]-loop[/code] import hint to looping clip names during glTF/GLB export. Godot uses that hint to restore linear looping when the file is imported. [code].tscn[/code] export stores the loop mode directly on the [code]Animation[/code] resource. Rigid objects attached to bones continue following those bones during exported animation playback.
+
+OBJ and standalone mesh-resource formats do not support skeletal animation.
+
+[font_size=18][b]Scope[/b][/font_size]
+
+Animate mode is limited to skeletal model animation. It does not provide skeleton retargeting, animation layers, runtime state machines, blend trees, animation events, audio tracks, or camera animation.
+
+[font_size=18][b]Natural IK gizmo workflow[/b][/font_size]
+
+Select an IK chain, then click its cyan target or purple pole marker in the viewport. The standard move gizmo relocates to that control. Dragging the gizmo solves the chain continuously. With Auto Key enabled, releasing the gizmo stores all changed chain bones at the current frame. Without Auto Key, press Shift+K or [b]Key IK Pose[/b] after posing. Direct bone selection temporarily returns the gizmo to normal FK bone editing.

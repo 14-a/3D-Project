@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://dk3v2seltp0y"]
+
+[ext_resource type="Script" uid="uid://dc8n8nmfaxb6n" path="res://scene/Model/Model/道路/highway_generator.gd" id="1_xj0f5"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3kwlq"]
+albedo_color = Color(0.19793725, 0.19793722, 0.19793722, 1)
+
+[node name="公路" type="Node3D" unique_id=1558276874]
+script = ExtResource("1_xj0f5")
+turn_randomness = 0.0
+road_material = SubResource("StandardMaterial3D_3kwlq")

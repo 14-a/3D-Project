@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://uv7sijir1cke"]
+
+[ext_resource type="Script" uid="uid://qv3nso10jsxp" path="res://addons/cyclops_level_builder/gui/docks/cyclops_console/keymap_editor/keycode_picker.gd" id="1_vh43p"]
+
+[node name="Popup" type="Popup" unique_id=808592497]
+oversampling_override = 1.0
+size = Vector2i(186, 101)
+visible = true
+script = ExtResource("1_vh43p")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=745323495]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=570850783]
+visible = false
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer" unique_id=1046055134]
+layout_mode = 2
+text = "Keycode String"
+
+[node name="line_keycode_string" type="LineEdit" parent="VBoxContainer/HBoxContainer" unique_id=428305486]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="capture" type="Button" parent="VBoxContainer" unique_id=291822246]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+toggle_mode = true
+text = "Capture"
+
+[node name="Label" type="Label" parent="VBoxContainer" unique_id=2143906619]
+layout_mode = 2
+text = "Press a key"

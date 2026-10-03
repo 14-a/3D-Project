@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3 uid="uid://dnjafd0sg0joc"]
+
+[ext_resource type="Script" uid="uid://m7hn324ili77" path="res://scene/World/PlayerStartPosition.gd" id="1_wtq0e"]
+
+[resource]
+script = ExtResource("1_wtq0e")
+Positions = Array[Vector3]([Vector3(0, 0, 0)])

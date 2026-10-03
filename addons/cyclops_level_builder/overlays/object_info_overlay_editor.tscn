@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://cp1paeksdjjmg"]
+
+[ext_resource type="Script" uid="uid://cvpiljrvdj37h" path="res://addons/cyclops_level_builder/overlays/object_info_overlay_editor.gd" id="1_tapmw"]
+
+[node name="InfoOverlay" type="PanelContainer" unique_id=104159704]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_tapmw")
+
+[node name="GridContainer" type="GridContainer" parent="." unique_id=885415183]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="GridContainer" unique_id=1351829098]
+layout_mode = 2
+text = "Edge length"
+
+[node name="check_edge_length" type="CheckBox" parent="GridContainer" unique_id=1885944110]
+layout_mode = 2
+text = "On"
+
+[connection signal="toggled" from="GridContainer/check_edge_length" to="." method="_on_check_edge_length_toggled"]

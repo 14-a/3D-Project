@@ -1,0 +1,92 @@
+[font_size=24][b]Rigging[/b][/font_size]
+
+Gator Model Studio provides rig creation, skin weighting, rigid bone attachments, and a dedicated bone-animation workspace. Exported scenes include the skeleton, skin, attachments, and authored animation clips.
+
+[font_size=18][b]Workflow[/b][/font_size]
+
+[ol type=1]
+Select one mesh object and enter [b]Rig[/b] mode.
+In [b]Edit[/b], choose [b]Add Root[/b], then select bones and use [b]Extrude[/b] to build the hierarchy.
+Edit bone heads, tails, roll, names, and parents from the right panel, or drag bone endpoints in the viewport.
+Apply the modifier stack before binding.
+In [b]Weights[/b], choose [b]Generate Automatic Weights[/b].
+Correct isolated problems with the weight brush or enable [b]Vertex Select Instead of Brush[/b] for exact vertex assignment.
+Use [b]Pose Preview[/b] to rotate bones and inspect deformation.
+Switch to [b]Animate[/b] to create clips, pose bones, and insert keys.
+Export the complete document as [code].tscn[/code], [code].gltf[/code], or [code].glb[/code].
+[/ol]
+
+[font_size=18][b]Armature editing[/b][/font_size]
+
+Each bone stores a head, tail, roll, name, and parent. Parent bones must appear before their children in the hierarchy. [b]Mirror X[/b] mirrors the selected bone and its complete child chain, preserves connected joints and parent relationships, updates an existing opposite-side chain when present, and recognizes common [code].L[/code], [code].R[/code], [code]_L[/code], [code]_R[/code], [code]Left[/code], and [code]Right[/code] naming conventions.
+
+Changing the object origin or applying rotation and scale also transforms the armature rest data so the mesh and skeleton remain aligned.
+
+[font_size=18][b]Automatic weights[/b][/font_size]
+
+Automatic binding measures vertices against the bone segments, assigns the strongest influences, smooths them over connected mesh topology, and normalizes the result. Each vertex stores up to four bone influences.
+
+Automatic weights are a starting point. Dense intersections, very close limbs, unusual proportions, and disconnected accessories can still require correction.
+
+Topology-changing operations invalidate existing weights. This includes voxel remeshing, subdivision that changes vertex count, and other operations that replace the mesh layout. Regenerate automatic weights after those operations. Apply the modifier stack before generating weights.
+
+[font_size=18][b]Weight correction[/b][/font_size]
+
+The brush supports:
+
+[ul]
+[b]Add[/b]
+[b]Subtract[/b]
+[b]Replace[/b]
+[b]Smooth[/b]
+[/ul]
+
+The viewport displays the selected bone's weights from blue to red. The radius control uses a percentage-style display while the brush still operates in object-local model units: [code]1%[/code] equals [code]0.01[/code] model units, [code]25%[/code] equals [code]0.25[/code], and [code]100%[/code] equals [code]1.0[/code].
+
+For numerical corrections, enable [b]Vertex Select Instead of Brush[/b], select vertices, choose the active bone, then use [b]Assign[/b], [b]Remove[/b], or [b]Smooth[/b]. [b]Mirror Weights +X to -X[/b] copies weights to matching mirrored vertices and mirrored bone names when a match exists.
+
+[font_size=18][b]Pose Preview[/b][/font_size]
+
+Pose Preview temporarily rotates bones to test deformation. It creates no animation keys and is reset when leaving Pose Preview or Rig mode. Use the separate [b]Animate[/b] mode when the pose should become part of an animation clip.
+
+[font_size=18][b]Animation authoring helpers[/b][/font_size]
+
+The rig can store reusable IK chains and bone constraints. They are available from [b]Animate[/b] mode and are saved with the GMS document.
+
+IK chains provide target-and-pole posing for limbs, then bake the solved result into ordinary bone keys. Constraints provide rotation limits, copy rotation, copy transform, and look-at behaviour while posing. Neither system requires a GMS runtime component in exported projects.
+
+[font_size=18][b]Export[/b][/font_size]
+
+Rigged export is supported for:
+
+[ul]
+Godot scene ([code].tscn[/code])
+glTF 2.0 ([code].gltf[/code])
+Binary glTF 2.0 ([code].glb[/code])
+[/ul]
+
+The exported asset contains a [code]Skeleton3D[/code], a skinned [code]MeshInstance3D[/code], rest transforms, bind data, bone indices, and normalized vertex weights.
+
+OBJ and standalone combined-mesh export do not preserve skeletons. Rigged objects with weights that no longer match the evaluated mesh are blocked from rigged export until weights are regenerated.
+
+[font_size=18][b]Rigid object attachments[/b][/font_size]
+
+Separate rigid objects do not need skin weights. In [b]Rig → Edit[/b], select the active bone, choose one or more objects under [b]Object Attachments[/b], then press [b]Attach to Active Bone[/b].
+
+Typical uses include:
+
+[ul]
+Eyes
+Teeth
+Armour pieces
+Weapons
+Accessories
+[/ul]
+
+The object's current world transform is preserved when attaching or detaching. Attachments follow the selected bone during Pose Preview. Moving an attached object in Object mode updates its bone-relative offset rather than breaking the attachment.
+
+Godot scene export writes attached objects below a [code]BoneAttachment3D[/code]. glTF and GLB scene export pass the same bone attachment hierarchy through Godot's glTF exporter. Standalone mesh and OBJ exports do not contain attachment relationships.
+
+[font_size=18][b]Reparenting bones[/b][/font_size]
+
+In Rig Edit mode, drag a bone in the Bone Hierarchy onto another bone to make it a child. Drop it in empty tree space to make it a root bone. Reparenting preserves the armature's object-local rest pose, prevents hierarchy cycles, remaps bone indices used by weights and pose arrays, and is undoable.

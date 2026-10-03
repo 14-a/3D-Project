@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://dps0vbjpt7eio"]
+
+[ext_resource type="Script" uid="uid://dnsn3oxpgegwi" path="res://scene/Model/Model/栅栏/栅栏.gd" id="1_hdu1b"]
+
+[node name="栅栏" type="Node3D" unique_id=1153765703]
+script = ExtResource("1_hdu1b")
+rail_offsets = Array[float]([0.2, 1.8, 0.9])

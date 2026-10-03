@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://1pm2hrlfqa26"]
+
+[ext_resource type="Script" uid="uid://sqofrp4ougcn" path="res://scene/Model/Model/城市/node_3d.gd" id="1_m12k7"]
+
+[node name="Node3D" type="Node3D" unique_id=1864984087]
+script = ExtResource("1_m12k7")

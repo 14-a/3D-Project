@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://ypcsorcbv5cd"]
+
+[ext_resource type="Script" uid="uid://dxn3n3je0l2kv" path="res://scene/Model/Model/道路/路.gd" id="1_cniwe"]
+
+[node name="路" type="Node3D" unique_id=269868040]
+script = ExtResource("1_cniwe")

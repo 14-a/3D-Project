@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://gj01cr4lbktp"]
+
+[ext_resource type="Script" uid="uid://dspmmm382m6oc" path="res://scene/Model/Model/桥/桥.gd" id="1_08n26"]
+
+[node name="桥" type="Node3D" unique_id=1452921210]
+script = ExtResource("1_08n26")

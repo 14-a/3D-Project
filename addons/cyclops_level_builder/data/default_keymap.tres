@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="KeymapGroup" format=3 uid="uid://8ual1a8gc2kj"]
+
+[ext_resource type="Script" uid="uid://dpbbj3rohvils" path="res://addons/cyclops_level_builder/gui/keymap/keymap_group.gd" id="1_a6rpb"]
+[ext_resource type="Script" uid="uid://cpm2bt2ove81d" path="res://addons/cyclops_level_builder/gui/keymap/keymap_item.gd" id="1_o3aht"]
+
+[resource]
+script = ExtResource("1_a6rpb")

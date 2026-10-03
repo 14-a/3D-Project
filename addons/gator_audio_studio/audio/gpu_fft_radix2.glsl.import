@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://43lwr0nal0hk"
+path="res://.godot/imported/gpu_fft_radix2.glsl-859f25160f47d4276b89e0050665af26.res"
+
+[deps]
+
+source_file="res://addons/gator_audio_studio/audio/gpu_fft_radix2.glsl"
+dest_files=["res://.godot/imported/gpu_fft_radix2.glsl-859f25160f47d4276b89e0050665af26.res"]
+
+[params]
+

@@ -1,0 +1,131 @@
+[gd_scene format=3 uid="uid://f8rglmdeaplp"]
+
+[ext_resource type="Script" uid="uid://c3jpxik4gmolp" path="res://addons/cyclops_level_builder/gui/docks/uv_editor/gizmos/gizmo_transform_box_2d.gd" id="1_oeixp"]
+[ext_resource type="PackedScene" uid="uid://cqeuqgat4gbol" path="res://addons/cyclops_level_builder/gui/docks/uv_editor/gizmos/gizmo_rect_2d.tscn" id="1_oq6jn"]
+[ext_resource type="PackedScene" uid="uid://dca71bjhyx554" path="res://addons/cyclops_level_builder/gui/docks/uv_editor/gizmos/gizmo_circle_2d.tscn" id="3_8ngjf"]
+[ext_resource type="PackedScene" uid="uid://d1jcavlel4oc" path="res://addons/cyclops_level_builder/gui/controls/dashed_polygon.tscn" id="4_py61l"]
+
+[node name="GizmoBoxTransform2d" type="Node2D" unique_id=1609576439]
+script = ExtResource("1_oeixp")
+
+[node name="dashed_polygon" parent="." unique_id=2012723148 instance=ExtResource("4_py61l")]
+unique_name_in_owner = true
+points = PackedVector2Array(0, 0, 0, 60, 60, 60, 60, 0, 0, 0)
+
+[node name="Node2D" type="Node2D" parent="." unique_id=1230024249]
+
+[node name="handle_rot_00" parent="Node2D" unique_id=1214844949 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(-10, -10)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_rot_01" parent="Node2D" unique_id=256019645 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(-10, 30)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_rot_02" parent="Node2D" unique_id=1368982524 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(-10, 70)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_rot_10" parent="Node2D" unique_id=2104412348 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(30, -10)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_rot_12" parent="Node2D" unique_id=1330999794 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(30, 70)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_rot_20" parent="Node2D" unique_id=1408072181 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(70, -10)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_rot_21" parent="Node2D" unique_id=864560738 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(70, 30)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_rot_22" parent="Node2D" unique_id=1569624460 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(70, 70)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_00" parent="Node2D" unique_id=708427086 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_01" parent="Node2D" unique_id=1698391950 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(0, 30)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_02" parent="Node2D" unique_id=1603521967 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(0, 60)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_10" parent="Node2D" unique_id=1295768256 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(30, 0)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_12" parent="Node2D" unique_id=1253434994 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(30, 60)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_20" parent="Node2D" unique_id=1108388099 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(60, 0)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_21" parent="Node2D" unique_id=464914996 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(60, 30)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_22" parent="Node2D" unique_id=532831023 instance=ExtResource("1_oq6jn")]
+unique_name_in_owner = true
+position = Vector2(60, 60)
+color = Color(1, 1, 1, 1)
+color_outline = Color(0, 0, 0, 1)
+rect = Rect2(-4, -4, 8, 8)
+
+[node name="handle_pivot" parent="Node2D" unique_id=1447444311 instance=ExtResource("3_8ngjf")]
+unique_name_in_owner = true
+position = Vector2(10, 20)
+radius = 3.0

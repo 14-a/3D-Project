@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://d1jcavlel4oc"]
+
+[ext_resource type="Script" uid="uid://bib1hgdud7750" path="res://addons/cyclops_level_builder/gui/controls/dashed_polygon.gd" id="1_juc10"]
+
+[node name="dashed_polygon" type="Node2D" unique_id=1679973758]
+script = ExtResource("1_juc10")

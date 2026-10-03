@@ -1,0 +1,54 @@
+[font_size=24][b]Guided Voxel Remesh[/b][/font_size]
+
+Guided Voxel Remesh is an experimental GDScript-only remesher available from the modelling tool shelf.
+
+[font_size=18][b]Whole-object workflow[/b][/font_size]
+
+[ol type=1]
+Select an unlocked mesh object.
+Open [b]Guided Voxel Remesh[/b].
+Set [b]Region[/b] to [b]Whole Object[/b].
+Set the voxel resolution and smoothing options.
+Optionally choose a guide type and use [b]Draw Guide[/b] to drag a stroke across the surface.
+Keep [b]Create Duplicate[/b] selected for the first attempt, then press [b]Remesh[/b].
+[/ol]
+
+[font_size=18][b]Selected-face workflow[/b][/font_size]
+
+[ol type=1]
+Apply the object's modifier stack. Selected-face remeshing requires the visible face indices to match the stored mesh topology.
+Enter Face mode and select the area that should be remeshed.
+Open [b]Guided Voxel Remesh[/b] and set [b]Region[/b] to [b]Selected Faces[/b].
+Set [b]Boundary Padding[/b]. Two rings is the recommended starting value.
+Choose a local resolution. The voxel grid is calculated from the padded selection rather than the whole object, so thin features receive substantially more detail.
+Use [b]Create Duplicate[/b] for the first attempt and press [b]Remesh[/b].
+[/ol]
+
+Selected-face remeshing extracts the selected faces plus the padding rings, builds a temporary closed voxel shell, keeps the remeshed outer surface, preserves the original padded boundary, and stitches the new surface back into the untouched mesh. The operation refuses to commit a result that creates a non-manifold edge or an additional open boundary.
+
+The operation runs through [code]WorkerThreadPool[/code], reports progress, supports cancellation, and creates one undoable document action when complete.
+
+[font_size=18][b]Guide types[/b][/font_size]
+
+[ul]
+[b]Flow[/b] biases vertex relaxation along the stroke and encourages nearby edge rows to follow its direction.
+[b]Preserve Shape[/b] reduces smoothing around the stroke and increases projection back to the source surface.
+[b]Density[/b] locally subdivides the generated surface around the stroke.
+[/ul]
+
+Guide radius and strength apply when a new guide is drawn. Guides are temporary editing data and are not saved in the model document.
+
+[font_size=18][b]Limitations[/b][/font_size]
+
+[ul]
+The generated surface is mostly quad-based, but density transitions and preserved-boundary stitching can contain triangles or n-gons.
+Selected-face remeshing cannot currently touch an existing open mesh boundary.
+Disconnected or branching face selections can fail boundary matching. Select one connected surface region at a time when possible.
+Selected-face remeshing requires the modifier stack to be applied first.
+It does not create deliberate animation loops comparable to manual retopology or ZRemesher.
+Thin details and narrow gaps can close when the voxel resolution is too low.
+UVs, seams, creases, loose edges, and custom normals are discarded from the remeshed result.
+Open, intersecting, and non-manifold whole-object inputs are accepted, but the voxel result can alter those regions substantially.
+Resolution supports values from 12 through 256. Higher resolutions increase processing time and memory use quickly.
+The completion message reports the effective resolution. Extremely large voxel grids may be reduced to the safety limit.
+[/ul]

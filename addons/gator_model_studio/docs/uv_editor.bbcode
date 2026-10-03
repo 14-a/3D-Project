@@ -1,0 +1,31 @@
+[font_size=24][b]UV Editor[/b][/font_size]
+
+The full UV Editor displays one horizontal UV tile for every material slot on the active object.
+
+[ul]
+Material slot 1 uses tile 1, material slot 2 uses tile 2, and so on.
+Each tile displays that material's albedo texture when one is assigned.
+Faces automatically appear in the tile matching their assigned material.
+Changing a face's material moves it to the corresponding editor tile without rewriting its local UV coordinates.
+Move, rotate, scale, box selection, face selection, and island selection work across all material tiles.
+Unwrap, Smart UV Project, and Pack Islands process each material independently so every material can use its full 0–1 texture area.
+Material boundaries are treated as UV island boundaries.
+[/ul]
+
+The tiles are an editor representation. Each material retains ordinary local 0–1 UV coordinates for Godot rendering and export, rather than requiring UDIM texture support.
+
+The compact UV preview in the material properties panel follows the active material slot. It displays that material's albedo texture and only the UV faces assigned to that material, while the full UV Editor continues to show all material tiles together.
+
+[font_size=18][b]3D to UV unfold preview[/b][/font_size]
+
+Press [b]3D → UV Preview[/b] in the full UV Editor to open a temporary visualization of the model unfolding into its UV layout.
+
+[ul]
+Drag the Unfold slider to scrub between the original 3D model and the flattened UV islands.
+Press Animate to UV or Animate to 3D to play the transition.
+UV seams visibly split because preview vertices are duplicated only for rendering.
+Each material moves into its own horizontal UV tile.
+The preview does not modify the mesh, UV coordinates, materials, history, or saved document.
+[/ul]
+
+The preview mesh is built only when its window is opened or the source mesh changes. Moving the slider updates a shader uniform rather than rebuilding geometry, keeping interaction responsive on dense meshes.

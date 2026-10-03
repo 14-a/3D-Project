@@ -1,0 +1,48 @@
+[font_size=24][b]Materials and UV Tiles[/b][/font_size]
+
+Each object can contain multiple material slots. Faces choose which slot they use, and each material receives its own UV tile in the full UV Editor.
+
+[font_size=18][b]Add and edit a material[/b][/font_size]
+
+[ol type=1]
+Select the object.
+Add a material slot from the Material section.
+Set its name, base colour, metallic value, roughness, and optional albedo texture.
+Press Apply Material after changing its properties.
+[/ol]
+
+[font_size=18][b]Assign faces to a material[/b][/font_size]
+
+[ol type=1]
+Enter Face mode.
+Select the faces that should use the material.
+Choose the required material slot.
+Press Assign to Selected Faces.
+[/ol]
+
+Only selected faces are reassigned. Other material assignments remain unchanged.
+
+[font_size=18][b]UV layout per material[/b][/font_size]
+
+[ul]
+Material slot 1 uses the first tile, material slot 2 uses the second tile, and so on.
+The compact UV preview shows only the active material and its texture.
+The full UV Editor shows every material tile together.
+Unwrap, Smart UV Project, and Pack UV Islands operate only on the active material.
+Unwrapping one material does not change the UVs of other materials.
+Selecting UVs in another tile makes that material active.
+[/ul]
+
+The tiles are an editing layout. Every material still stores ordinary local 0–1 UV coordinates for rendering and export.
+
+[font_size=18][b]Recommended workflow[/b][/font_size]
+
+[ol type=1]
+Assign all faces to their intended materials first.
+Select one material slot.
+Mark seams only on that material's faces where needed.
+Unwrap or Smart UV Project that material.
+Pack its islands.
+Repeat for each remaining material.
+Use the texture preview while moving, rotating, or scaling UVs. The 3D model updates during the transform.
+[/ol]

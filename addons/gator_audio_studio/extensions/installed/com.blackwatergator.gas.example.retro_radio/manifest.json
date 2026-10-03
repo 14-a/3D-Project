@@ -1,0 +1,16 @@
+{
+  "id": "com.blackwatergator.gas.example.retro_radio",
+  "name": "GAS Example - Retro Radio",
+  "version": "1.0.3",
+  "api_version": 1,
+  "min_gas_version": "0.12.26",
+  "max_gas_version": "",
+  "min_godot_version": "4.6.0",
+  "entry": "extension.gd",
+  "author": "Blackwater Gator Studios",
+  "description": "Reference Audio Editor extension demonstrating a stateless typed custom effect, generated parameter UI, presets, lifecycle and worker-safe DSP.",
+  "capabilities": [
+    "editor_effects"
+  ],
+  "enabled": false
+}
