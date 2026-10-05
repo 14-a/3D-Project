@@ -1,7 +1,0 @@
-[gd_resource type="Resource" script_class="MaterialViewerState" format=3 uid="uid://cwq6b2p7f631n"]
-
-[ext_resource type="Script" uid="uid://tjtlxclrvg0i" path="res://addons/cyclops_level_builder/gui/docks/material_palette/material_viewer/material_viewer_state.gd" id="1_3sifp"]
-
-[resource]
-script = ExtResource("1_3sifp")
-active_material_path = "res://Texture/PNG/Purple/逆时针通向终点.tres"

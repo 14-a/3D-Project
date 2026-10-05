@@ -8,6 +8,10 @@
 
 config_version=5
 
+[addons]
+
+csg_blockout/material_preset=3
+
 [application]
 
 config/name="New Project Demo"
@@ -27,7 +31,7 @@ window/stretch/aspect="expand"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/cyclops_level_builder/plugin.cfg", "res://addons/gator_audio_studio/plugin.cfg", "res://addons/gator_model_studio/plugin.cfg", "res://addons/gator_sprite_studio/plugin.cfg", "res://addons/godot_ai/plugin.cfg")
+enabled=PackedStringArray("res://addons/csg_blockout/plugin.cfg", "res://addons/gator_audio_studio/plugin.cfg", "res://addons/gator_model_studio/plugin.cfg", "res://addons/gator_sprite_studio/plugin.cfg", "res://addons/godot_ai/plugin.cfg")
 
 [input]
 

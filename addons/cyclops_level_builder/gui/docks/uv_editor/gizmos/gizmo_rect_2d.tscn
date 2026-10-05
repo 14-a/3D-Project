@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://cqeuqgat4gbol"]
-
-[ext_resource type="Script" uid="uid://c0o4atl7u74vq" path="res://addons/cyclops_level_builder/gui/docks/uv_editor/gizmos/gizmo_rect_2d.gd" id="1_4cvd6"]
-
-[node name="GizmoRect2d" type="Node2D" unique_id=481920842]
-script = ExtResource("1_4cvd6")

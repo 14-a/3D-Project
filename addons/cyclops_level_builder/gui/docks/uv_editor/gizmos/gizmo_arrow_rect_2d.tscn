@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://d24yjcg5fwnko"]
-
-[ext_resource type="Script" uid="uid://spturxefugfi" path="res://addons/cyclops_level_builder/gui/docks/uv_editor/gizmos/gizmo_arrow_rect_2d.gd" id="1_114uf"]
-
-[node name="GizmoArrowRect2d" type="Node2D" unique_id=911777922]
-script = ExtResource("1_114uf")
