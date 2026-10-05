@@ -4,4 +4,4 @@
 
 [resource]
 script = ExtResource("1_3sifp")
-active_material_path = "res://Texture/PNG/Light/Ligth.tres"
+active_material_path = "res://Texture/PNG/Purple/逆时针通向终点.tres"
