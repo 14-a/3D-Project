@@ -12,7 +12,7 @@
 [ext_resource type="Script" uid="uid://dmot4k5n7k0w6" path="res://addons/cyclops_level_builder/resources/mesh_vector_data.gd" id="8_7u6rc"]
 [ext_resource type="Material" uid="uid://bfcgyquj4hhrd" path="res://Texture/Vector/Textuer.tres" id="9_leofq"]
 [ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="10_06nd7"]
-[ext_resource type="Material" uid="uid://ciri370h7fx4d" path="res://Texture/PNG/Orange/Orange.tres" id="10_ejqj2"]
+[ext_resource type="Material" uid="uid://ciri370h7fx4d" path="res://Texture/PNG/Orange/静止平台.tres" id="10_ejqj2"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_x4muu"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)

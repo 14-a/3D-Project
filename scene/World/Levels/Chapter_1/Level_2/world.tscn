@@ -9,10 +9,10 @@
 [ext_resource type="Script" uid="uid://dfd47cc554yqi" path="res://addons/cyclops_level_builder/resources/data_vector_int.gd" id="4_0eetd"]
 [ext_resource type="Script" uid="uid://dmot4k5n7k0w6" path="res://addons/cyclops_level_builder/resources/mesh_vector_data.gd" id="5_1yw3b"]
 [ext_resource type="Script" uid="uid://ckk4mxxtjyewp" path="res://scene/World/Camera.gd" id="7_cu3gs"]
-[ext_resource type="Material" uid="uid://ciri370h7fx4d" path="res://Texture/PNG/Orange/Orange.tres" id="7_ncbee"]
+[ext_resource type="Material" uid="uid://ciri370h7fx4d" path="res://Texture/PNG/Orange/静止平台.tres" id="7_ncbee"]
 [ext_resource type="PackedScene" uid="uid://dmk67xkqjcwbs" path="res://scene/Player/player.tscn" id="8_1yw3b"]
 [ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="8_stxbn"]
-[ext_resource type="Material" uid="uid://d1g2ktc6ladng" path="res://Texture/PNG/Light/Ligth.tres" id="9_5wtwr"]
+[ext_resource type="Material" uid="uid://d1g2ktc6ladng" path="res://Texture/PNG/Light/顺时针旋转.tres" id="9_5wtwr"]
 [ext_resource type="Material" uid="uid://bfcgyquj4hhrd" path="res://Texture/Vector/Textuer.tres" id="10_ncbee"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1m2jt"]
