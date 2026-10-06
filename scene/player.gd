@@ -7,6 +7,7 @@ extends CharacterBody3D
 
 const SPEED = 5.0
 const JUMP_VELOCITY = 4.5
+const 虚空高度 = -10
 
 var speed = 1
 
@@ -72,8 +73,13 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, SPEED * speed)
 
 	move_and_slide()
+	
+	_Player_Event()
 
 
 func _Player_Event() -> void: 
 	if Input.is_action_pressed("交互"):pass  
+	
+	if position.y < 虚空高度:
+		position = Vector3(0,2,0)
 	pass

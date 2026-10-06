@@ -25,7 +25,7 @@ ssil_enabled = true
 glow_enabled = true
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ita4j"]
-size = Vector3(2.7165527, 3.68396, 1.4772949)
+size = Vector3(1.9393921, 3.68396, 0.8255615)
 
 [node name="World" type="Node3D" unique_id=225366442]
 script = ExtResource("1_wsppd")
@@ -106,10 +106,9 @@ material = ExtResource("3_tcy25")
 
 [node name="Area3D" type="Area3D" parent="Event" unique_id=1368247993]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -35.82701, 2.1046343, -0.06779528)
-visible = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Event/Area3D" unique_id=826972955]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1986084, -0.010070801, -0.23864841)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.043365475, -0.010070801, 0.3746872)
 shape = SubResource("BoxShape3D_ita4j")
 debug_color = Color(0, 0.6, 0.69803923, 1)
 
@@ -119,4 +118,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.33411872, 0, -0.5983629)
 [node name="小按钮" parent="." unique_id=1513593193 instance=ExtResource("6_fkx80")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
 
+[connection signal="body_entered" from="Event/Area3D" to="." method="toNextScene"]
 [connection signal="小按钮触发" from="小按钮" to="." method="旋转"]

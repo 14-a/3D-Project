@@ -10,12 +10,6 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	pass
 
-
-func 旋转() -> void:
-	改变()
-	pass # Replace with function body.
-
-
 func 改变() -> void:
 	var Level_Part = $Map.get_children()
 	
@@ -25,6 +19,11 @@ func 改变() -> void:
 	pass
 
 
-func toNextScene(body: Node3D) -> void:
-	get_tree().change_scene_to_file("uid://btsmiyqm05keu")
+func _on_小按钮_小按钮触发() -> void:
+	改变()
+	pass # Replace with function body.
+
+
+func toNextLevel(body: Node3D) -> void:
+	get_tree().change_scene_to_file("uid://bsr8y1ylthtfk")
 	pass # Replace with function body.
