@@ -5,10 +5,15 @@
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="1_jhvkw"]
 [ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="2_xwd53"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="3_4fygr"]
+[ext_resource type="Script" uid="uid://yeqxrycecog0" path="res://scene/World/Levels/Chapter_2/Level_1/map.gd" id="3_8mrm5"]
 [ext_resource type="PackedScene" uid="uid://c4kmlqrqch45f" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.tscn" id="4_hfxgv"]
+[ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="6_e02v5"]
 [ext_resource type="Script" uid="uid://dk0lnwaxjr57t" path="res://scene/World/机制_1/Part.gd" id="6_iuofv"]
 [ext_resource type="Material" uid="uid://d1g2ktc6ladng" path="res://Texture/PNG/Light/顺时针旋转.tres" id="6_om164"]
 [ext_resource type="Material" uid="uid://bw3g0dbwps4ox" path="res://Texture/PNG/Dark/逆时针旋转.tres" id="8_e54eb"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_8mrm5"]
+size = Vector3(1.6357422, 2.8831787, 1)
 
 [node name="Level1" type="Node3D" unique_id=998201690]
 script = ExtResource("1_c5od8")
@@ -21,6 +26,7 @@ shadow_enabled = true
 environment = ExtResource("1_fuu7m")
 
 [node name="Map" type="Node3D" parent="." unique_id=239915234]
+script = ExtResource("3_8mrm5")
 
 [node name="静止平台" type="Node3D" parent="Map" unique_id=690899168]
 
@@ -65,7 +71,7 @@ size = Vector3(4, 0.9999999, 4)
 material = ExtResource("1_jhvkw")
 
 [node name="平台3" type="Node3D" parent="Map/静止平台" unique_id=1266280151]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 0, -18)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -18)
 
 [node name="Block_平台3_01" type="CSGBox3D" parent="Map/静止平台/平台3" unique_id=1223668734]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
@@ -81,6 +87,149 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000006, 0)
 use_collision = true
 size = Vector3(4, 0.9999999, 4)
 material = ExtResource("1_jhvkw")
+
+[node name="End" type="Node3D" parent="Map/静止平台" unique_id=1623183256]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -64)
+
+[node name="Block_End_01_2" type="CSGBox3D" parent="Map/静止平台/End" unique_id=1008679479]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000006, 0)
+use_collision = true
+size = Vector3(8, 0.9999999, 8)
+material = ExtResource("1_jhvkw")
+
+[node name="Block" type="CSGBox3D" parent="Map/静止平台/End" unique_id=637790639]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, -0.5000003, 3)
+use_collision = true
+size = Vector3(3, 0.9999995, 2)
+material = ExtResource("3_4fygr")
+
+[node name="Block_End_02" type="CSGBox3D" parent="Map/静止平台/End" unique_id=1552838153]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -1.5)
+use_collision = true
+size = Vector3(4, 3, 1)
+material = ExtResource("1_jhvkw")
+
+[node name="Block_End_03" type="CSGBox3D" parent="Map/静止平台/End" unique_id=1092120148]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.5, 0)
+use_collision = true
+size = Vector3(1, 3, 2)
+material = ExtResource("1_jhvkw")
+
+[node name="Block_End_04" type="CSGBox3D" parent="Map/静止平台/End" unique_id=1075516072]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1.5, 0)
+use_collision = true
+size = Vector3(1, 3, 2)
+material = ExtResource("1_jhvkw")
+
+[node name="Block_End_01" type="CSGBox3D" parent="Map/静止平台/End" unique_id=1672538659]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, -0.5)
+use_collision = true
+size = Vector3(4, 1, 3)
+material = ExtResource("1_jhvkw")
+
+[node name="Block_End_05" type="CSGBox3D" parent="Map/静止平台/End" unique_id=828240189]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -0.5)
+use_collision = true
+size = Vector3(2, 3, 1)
+material = ExtResource("6_e02v5")
+
+[node name="Area3D" type="Area3D" parent="Map/静止平台/End" unique_id=1553715653]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Map/静止平台/End/Area3D" unique_id=1702013837]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.030761719, 1.4790957, 0.80122757)
+shape = SubResource("BoxShape3D_8mrm5")
+
+[node name="Block_Group" type="CSGCombiner3D" parent="Map/静止平台" unique_id=192261944]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -27, -0.5, -43)
+use_collision = true
+
+[node name="Block_BlockGroup_01" type="CSGBox3D" parent="Map/静止平台/Block_Group" unique_id=1570312189]
+use_collision = true
+size = Vector3(4, 1, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="Block_BlockGroup_01_2" type="CSGBox3D" parent="Map/静止平台/Block_Group" unique_id=1806386802]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.019949913, 0)
+size = Vector3(2, 1.0199995, 2)
+material = ExtResource("3_4fygr")
+
+[node name="小按钮" parent="Map/静止平台/Block_Group" unique_id=2009391931 instance=ExtResource("4_hfxgv")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="Block_Group2" type="CSGCombiner3D" parent="Map/静止平台" unique_id=436199639]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, -0.5, -52)
+use_collision = true
+
+[node name="Block_BlockGroup2_01" type="CSGBox3D" parent="Map/静止平台/Block_Group2" unique_id=848186556]
+use_collision = true
+size = Vector3(4, 1, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="Block_BlockGroup2_01_2" type="CSGBox3D" parent="Map/静止平台/Block_Group2" unique_id=1582945251]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.013538361, 0)
+size = Vector3(2, 1.02, 2)
+material = ExtResource("3_4fygr")
+
+[node name="小按钮" parent="Map/静止平台/Block_Group2" unique_id=1865283726 instance=ExtResource("4_hfxgv")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="平台5" type="Node3D" parent="Map/静止平台" unique_id=619710523]
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -34)
+
+[node name="Block_平台5_01" type="CSGBox3D" parent="Map/静止平台/平台5" unique_id=58873536]
+transform = Transform3D(1.0000001, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+size = Vector3(4, 1, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="平台6" type="Node3D" parent="Map/静止平台" unique_id=2067813969]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, -43)
+
+[node name="Block_Group" type="CSGCombiner3D" parent="Map/静止平台/平台6" unique_id=1282971954]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+
+[node name="Block_BlockGroup_01" type="CSGBox3D" parent="Map/静止平台/平台6/Block_Group" unique_id=764535904]
+use_collision = true
+size = Vector3(4, 1, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="Block_BlockGroup_01_2" type="CSGBox3D" parent="Map/静止平台/平台6/Block_Group" unique_id=2040036524]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02916634, 0)
+size = Vector3(2, 1.0200002, 2)
+material = ExtResource("3_4fygr")
+
+[node name="小按钮" parent="Map/静止平台/平台6/Block_Group" unique_id=2087273954 instance=ExtResource("4_hfxgv")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="平台7" type="Node3D" parent="Map/静止平台" unique_id=754863699]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, -61)
+
+[node name="Block_01" type="CSGBox3D" parent="Map/静止平台/平台7" unique_id=565459121]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.49999976, 0)
+use_collision = true
+size = Vector3(4, 0.9999995, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="平台8" type="Node3D" parent="Map/静止平台" unique_id=1107347899]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -52)
+
+[node name="Block_Group" type="CSGCombiner3D" parent="Map/静止平台/平台8" unique_id=1098748108]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000024, 0)
+use_collision = true
+
+[node name="Block" type="CSGBox3D" parent="Map/静止平台/平台8/Block_Group" unique_id=413850949]
+use_collision = true
+size = Vector3(4, 0.9999995, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="Cut" type="CSGBox3D" parent="Map/静止平台/平台8/Block_Group" unique_id=869467848]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.043726206, 0)
+size = Vector3(2, 1.0200005, 2)
+material = ExtResource("3_4fygr")
+
+[node name="小按钮" parent="Map/静止平台/平台8/Block_Group" unique_id=252777628 instance=ExtResource("4_hfxgv")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.50000024, 0)
 
 [node name="Prat" type="Node3D" parent="Map" unique_id=1658315464]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10)
@@ -132,7 +281,8 @@ material = ExtResource("6_om164")
 [node name="小按钮" parent="Map/Prat4" unique_id=1364377047 instance=ExtResource("4_hfxgv")]
 
 [node name="Prat5" type="Node3D" parent="Map" unique_id=2064674911]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 0, -26)
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -26)
 script = ExtResource("6_iuofv")
 
 [node name="Block_Prat5_01" type="CSGBox3D" parent="Map/Prat5" unique_id=2145741973]
@@ -143,10 +293,67 @@ material = ExtResource("6_om164")
 
 [node name="小按钮" parent="Map/Prat5" unique_id=1527991205 instance=ExtResource("4_hfxgv")]
 
+[node name="Prat6" type="Node3D" parent="Map" unique_id=1352920647]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -43)
+script = ExtResource("6_iuofv")
+"反向" = true
+
+[node name="Block_Prat6_01" type="CSGBox3D" parent="Map/Prat6" unique_id=2003778121]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000006, 3)
+use_collision = true
+size = Vector3(2, 1, 8)
+material = ExtResource("8_e54eb")
+
+[node name="Block_Prat6_01_2" type="CSGBox3D" parent="Map/Prat6" unique_id=319044695]
+transform = Transform3D(0, -1, 0, 0, 0, -1, 1, 0, 0, -4, -0.5, 0)
+use_collision = true
+size = Vector3(2, 6, 1)
+material = ExtResource("8_e54eb")
+
+[node name="Prat7" type="Node3D" parent="Map" unique_id=2110946385]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -43)
+script = ExtResource("6_iuofv")
+
+[node name="Block_Prat7_01" type="CSGBox3D" parent="Map/Prat7" unique_id=1171580141]
+transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, 3)
+use_collision = true
+size = Vector3(2, 8, 1)
+material = ExtResource("6_om164")
+
+[node name="Block_Prat7_01_2" type="CSGBox3D" parent="Map/Prat7" unique_id=486065132]
+transform = Transform3D(0, -1, 0, 0, 0, -1, 1, 0, 0, -4, -0.5, 0)
+use_collision = true
+size = Vector3(2, 6, 1)
+material = ExtResource("6_om164")
+
+[node name="Prat8" type="Node3D" parent="Map" unique_id=320110294]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, -52)
+script = ExtResource("6_iuofv")
+
+[node name="Block_Prat8_01" type="CSGBox3D" parent="Map/Prat8" unique_id=704479526]
+transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, 3)
+use_collision = true
+size = Vector3(2, 8, 1)
+material = ExtResource("8_e54eb")
+
+[node name="Block_Prat8_01_2" type="CSGBox3D" parent="Map/Prat8" unique_id=1849609984]
+transform = Transform3D(0, -1, 0, 0, 0, -1, 1, 0, 0, -4, -0.5, 0)
+use_collision = true
+size = Vector3(2, 6, 1)
+material = ExtResource("8_e54eb")
+
 [node name="Player" parent="." unique_id=1765428193 instance=ExtResource("2_xwd53")]
 
 [connection signal="小按钮触发" from="Map/静止平台/Ready/小按钮" to="." method="旋转"]
+[connection signal="body_entered" from="Map/静止平台/End/Area3D" to="." method="toNextScene"]
+[connection signal="小按钮触发" from="Map/静止平台/Block_Group/小按钮" to="Map" method="_on_小按钮_小按钮触发"]
+[connection signal="小按钮触发" from="Map/静止平台/Block_Group2/小按钮" to="Map" method="_on_小按钮_小按钮触发a"]
+[connection signal="小按钮触发" from="Map/静止平台/平台6/Block_Group/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/静止平台/平台8/Block_Group/小按钮" to="Map" method="b"]
 [connection signal="小按钮触发" from="Map/Prat/小按钮" to="." method="旋转"]
 [connection signal="小按钮触发" from="Map/Prat2/小按钮" to="." method="旋转"]
 [connection signal="小按钮触发" from="Map/Prat3/小按钮" to="." method="旋转"]
 [connection signal="小按钮触发" from="Map/Prat4/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/Prat5/小按钮" to="." method="旋转"]
