@@ -1,12 +1,17 @@
 [gd_scene format=3 uid="uid://bu003mo73hx2e"]
 
+[ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_c5od8"]
 [ext_resource type="Environment" uid="uid://xi1n2c7vhoyj" path="res://scene/World/Levels/Chapter_2/Chapter_2.tres" id="1_fuu7m"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="1_jhvkw"]
 [ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="2_xwd53"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="3_4fygr"]
 [ext_resource type="PackedScene" uid="uid://c4kmlqrqch45f" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.tscn" id="4_hfxgv"]
+[ext_resource type="Script" uid="uid://dk0lnwaxjr57t" path="res://scene/World/机制_1/Part.gd" id="6_iuofv"]
+[ext_resource type="Material" uid="uid://d1g2ktc6ladng" path="res://Texture/PNG/Light/顺时针旋转.tres" id="6_om164"]
+[ext_resource type="Material" uid="uid://bw3g0dbwps4ox" path="res://Texture/PNG/Dark/逆时针旋转.tres" id="8_e54eb"]
 
 [node name="Level1" type="Node3D" unique_id=998201690]
+script = ExtResource("1_c5od8")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1024844913]
 transform = Transform3D(-0.82308424, 0.4927273, -0.28240454, 0.086846724, 0.6006152, 0.7948078, 0.5612398, 0.6296678, -0.5371486, 4.077153, -4.7683716e-07, 6.6575737)
@@ -38,4 +43,110 @@ material = ExtResource("3_4fygr")
 [node name="小按钮" parent="Map/静止平台/Ready" unique_id=1513593193 instance=ExtResource("4_hfxgv")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -2)
 
+[node name="平台1" type="Node3D" parent="Map/静止平台" unique_id=1157391200]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -18)
+
+[node name="Block_平台1_01" type="CSGBox3D" parent="Map/静止平台/平台1" unique_id=1309400079]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+size = Vector3(4, 1, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="平台2" type="Node3D" parent="Map/静止平台" unique_id=1047785408]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -18)
+
+[node name="Block_平台2_01_Group" type="CSGCombiner3D" parent="Map/静止平台/平台2" unique_id=630488660]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+
+[node name="Block_平台2_01" type="CSGBox3D" parent="Map/静止平台/平台2/Block_平台2_01_Group" unique_id=504878445]
+use_collision = true
+size = Vector3(4, 0.9999999, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="平台3" type="Node3D" parent="Map/静止平台" unique_id=1266280151]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 0, -18)
+
+[node name="Block_平台3_01" type="CSGBox3D" parent="Map/静止平台/平台3" unique_id=1223668734]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+size = Vector3(4, 0.9999999, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="平台4" type="Node3D" parent="Map/静止平台" unique_id=115613433]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -34)
+
+[node name="Block_平台4_01" type="CSGBox3D" parent="Map/静止平台/平台4" unique_id=1844286272]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000006, 0)
+use_collision = true
+size = Vector3(4, 0.9999999, 4)
+material = ExtResource("1_jhvkw")
+
+[node name="Prat" type="Node3D" parent="Map" unique_id=1658315464]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10)
+script = ExtResource("6_iuofv")
+
+[node name="Block_Prat_01" type="CSGBox3D" parent="Map/Prat" unique_id=927117591]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -2.5)
+use_collision = true
+size = Vector3(2, 1, 7)
+material = ExtResource("6_om164")
+
+[node name="小按钮" parent="Map/Prat" unique_id=50291221 instance=ExtResource("4_hfxgv")]
+
+[node name="Prat2" type="Node3D" parent="Map" unique_id=392903224]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, -18)
+script = ExtResource("6_iuofv")
+
+[node name="Block_Prat2_01" type="CSGBox3D" parent="Map/Prat2" unique_id=1744447499]
+transform = Transform3D(0, 1, 0, 0, 0, -1, -1, 0, 0, -3, -0.5, 0)
+use_collision = true
+size = Vector3(2, 8, 1)
+material = ExtResource("6_om164")
+
+[node name="小按钮" parent="Map/Prat2" unique_id=1842310500 instance=ExtResource("4_hfxgv")]
+
+[node name="Prat3" type="Node3D" parent="Map" unique_id=1291092682]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 0, -18)
+script = ExtResource("6_iuofv")
+"反向" = true
+
+[node name="Block_Prat3_01" type="CSGBox3D" parent="Map/Prat3" unique_id=557344123]
+transform = Transform3D(0, 1, 0, 0, 0, -1, -1, 0, 0, 3, -0.5, 0)
+use_collision = true
+size = Vector3(2, 8, 1)
+material = ExtResource("8_e54eb")
+
+[node name="小按钮" parent="Map/Prat3" unique_id=1912553131 instance=ExtResource("4_hfxgv")]
+
+[node name="Prat4" type="Node3D" parent="Map" unique_id=981966665]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -26)
+script = ExtResource("6_iuofv")
+
+[node name="Block_Prat4_01" type="CSGBox3D" parent="Map/Prat4" unique_id=122133328]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000006, -2.5)
+use_collision = true
+size = Vector3(2, 0.9999999, 7)
+material = ExtResource("6_om164")
+
+[node name="小按钮" parent="Map/Prat4" unique_id=1364377047 instance=ExtResource("4_hfxgv")]
+
+[node name="Prat5" type="Node3D" parent="Map" unique_id=2064674911]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 0, -26)
+script = ExtResource("6_iuofv")
+
+[node name="Block_Prat5_01" type="CSGBox3D" parent="Map/Prat5" unique_id=2145741973]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000006, 2.5)
+use_collision = true
+size = Vector3(2, 0.9999999, 7)
+material = ExtResource("6_om164")
+
+[node name="小按钮" parent="Map/Prat5" unique_id=1527991205 instance=ExtResource("4_hfxgv")]
+
 [node name="Player" parent="." unique_id=1765428193 instance=ExtResource("2_xwd53")]
+
+[connection signal="小按钮触发" from="Map/静止平台/Ready/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/Prat/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/Prat2/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/Prat3/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/Prat4/小按钮" to="." method="旋转"]
