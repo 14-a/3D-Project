@@ -25,5 +25,5 @@ func _on_小按钮_小按钮触发() -> void:
 
 
 func toNextLevel(body: Node3D) -> void:
-	get_tree().change_scene_to_file("uid://bsr8y1ylthtfk")
+	get_tree().change_scene_to_file("uid://dhhb28a0mqj2s")
 	pass # Replace with function body.

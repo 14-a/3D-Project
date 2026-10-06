@@ -22,6 +22,9 @@ background_mode = 2
 sky = SubResource("Sky_lxhgg")
 glow_enabled = true
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_oite3"]
+size = Vector3(1.9028931, 2.922943, 1)
+
 [node name="Level3" type="Node3D" unique_id=250298982]
 script = ExtResource("1_m0fyq")
 
@@ -140,6 +143,12 @@ use_collision = true
 size = Vector3(2, 3, 1)
 material = ExtResource("3_demj2")
 
+[node name="Area3D" type="Area3D" parent="Map/静止平台/End" unique_id=1526811468]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Map/静止平台/End/Area3D" unique_id=1896463365]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.057769775, 1.5006256, 1)
+shape = SubResource("BoxShape3D_oite3")
+
 [node name="Block_Group2" type="CSGCombiner3D" parent="Map/静止平台" unique_id=1395732809]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000006, -34)
 use_collision = true
@@ -167,4 +176,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14808702, 0, -0.024169404)
 [connection signal="小按钮触发" from="Map/Prat/小按钮" to="." method="_on_小按钮_小按钮触发"]
 [connection signal="小按钮触发" from="Map/静止平台/Block_Group/小按钮" to="." method="_on_小按钮_小按钮触发"]
 [connection signal="小按钮触发" from="Map/静止平台/ready/小按钮" to="." method="_on_小按钮_小按钮触发"]
+[connection signal="body_entered" from="Map/静止平台/End/Area3D" to="." method="toNextLevel"]
 [connection signal="小按钮触发" from="Map/Prat3/小按钮" to="." method="_on_小按钮_小按钮触发"]
