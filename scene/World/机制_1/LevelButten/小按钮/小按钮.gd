@@ -4,6 +4,8 @@ var 可交互 : bool
 
 var 动画 : bool
 
+signal 小按钮触发
+
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	pass # Replace with function body.
@@ -25,6 +27,7 @@ func _process(delta: float) -> void:
 			动画 = true
 			$%Cylinder_02.position.y -= 0.05
 			print("小按钮:",self,"点击")
+			小按钮触发.emit()
 	
 	if 动画:
 		if abs($%Cylinder_02.position.y - 1.068) < 0.001:

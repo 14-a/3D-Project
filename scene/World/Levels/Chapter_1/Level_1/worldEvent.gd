@@ -9,3 +9,17 @@ func _ready() -> void:
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	pass
+
+
+func 旋转() -> void:
+	改变()
+	pass # Replace with function body.
+
+
+func 改变() -> void:
+	var Level_Part = $Map.get_children()
+	
+	for body in Level_Part:
+		if "Prat" in body.name:
+			body.偏转度 += 1
+	pass
