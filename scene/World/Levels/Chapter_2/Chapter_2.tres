@@ -1,0 +1,14 @@
+[gd_resource type="Environment" format=3 uid="uid://xi1n2c7vhoyj"]
+
+[ext_resource type="Texture2D" uid="uid://cae4lph0rwblo" path="res://Texture/SkyBox/skybox-morning.png" id="1_h0k0n"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_01edb"]
+panorama = ExtResource("1_h0k0n")
+
+[sub_resource type="Sky" id="Sky_om164"]
+sky_material = SubResource("PanoramaSkyMaterial_01edb")
+
+[resource]
+background_mode = 2
+sky = SubResource("Sky_om164")
+glow_enabled = true

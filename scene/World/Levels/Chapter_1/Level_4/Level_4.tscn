@@ -2,6 +2,7 @@
 
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="1_cym46"]
 [ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_l1t51"]
+[ext_resource type="PackedScene" uid="uid://bu003mo73hx2e" path="res://scene/World/Levels/Chapter_2/Level_1/Level_1.tscn" id="2_cqalp"]
 [ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="2_gw143"]
 [ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="2_hrqbk"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="2_kwquh"]
@@ -30,6 +31,7 @@ size = Vector3(1, 2.8616943, 1.7719727)
 
 [node name="Level4" type="Node3D" unique_id=1986697162]
 script = ExtResource("1_l1t51")
+NextScene = ExtResource("2_cqalp")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1506512615]
 environment = ExtResource("2_gw143")
