@@ -16,8 +16,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	
 	if 反向:
-		rotation_degrees.y += (偏转度 * 90 - rotation_degrees.y) * delta * 2
+		rotation_degrees.y += (偏转度 * 90 - rotation_degrees.y) * delta * 10
 	else :
-		rotation_degrees.y += (偏转度 * -90 - rotation_degrees.y) * delta * 2
+		rotation_degrees.y += (偏转度 * -90 - rotation_degrees.y) * delta * 10
 	
 	pass
