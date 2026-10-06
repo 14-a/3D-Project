@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://de3d04qd0cdxi"]
+[gd_scene format=3 uid="uid://ccqlvicfg44ji"]
 
-[ext_resource type="Script" uid="uid://u3tura2bsd2b" path="res://scene/player.gd" id="1_l8h54"]
+[ext_resource type="Script" uid="uid://u3tura2bsd2b" path="res://player.gd" id="1_l8h54"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_d8fr4"]
 radial_segments = 8
