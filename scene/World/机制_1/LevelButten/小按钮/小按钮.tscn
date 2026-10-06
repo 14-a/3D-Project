@@ -1,29 +1,58 @@
 [gd_scene format=3 uid="uid://c4kmlqrqch45f"]
 
 [ext_resource type="Script" uid="uid://bcf15k2et3joy" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.gd" id="1_fnyf6"]
+[ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_tag_interactive.tres" id="2_dpnwv"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="2_hsjhd"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="3_dpnwv"]
+
+[sub_resource type="PackedScene" id="PackedScene_hsjhd"]
+[node name="Cylinder" type="MeshInstance3D" unique_id=1801655964]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54809666, 0)
+material_override = ExtResource("2_dpnwv")
+metadata/_csg_blockout_bake = {
+"collision": "auto",
+"lod": true,
+"occluder": false,
+"texel": 0.2,
+"uv2": false
+}
+metadata/csg_blockout_tag = "interactive"
+
+[sub_resource type="PackedScene" id="PackedScene_qmjx6"]
+[node name="Cylinder_02" type="MeshInstance3D" unique_id=834489323]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0678587, 0)
+metadata/_csg_blockout_bake = {
+"collision": "auto",
+"lod": true,
+"occluder": false,
+"texel": 0.2,
+"uv2": false
+}
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_fnyf6"]
 radius = 1.0507283
 
+[resource]
+
 [node name="小按钮" type="Node3D" unique_id=1513593193]
 script = ExtResource("1_fnyf6")
 
-[node name="Cylinder" type="CSGCylinder3D" parent="." unique_id=486198181]
+[node name="Cylinder" type="CSGCylinder3D" parent="." unique_id=1758809542]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54809666, 0)
 use_collision = true
 radius = 0.13316286
 height = 1.0961933
 material = ExtResource("2_hsjhd")
+metadata/_csg_blockout_shell = SubResource("PackedScene_hsjhd")
 
-[node name="Cylinder_02" type="CSGCylinder3D" parent="." unique_id=1053635664]
+[node name="Cylinder_02" type="CSGCylinder3D" parent="." unique_id=179221807]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0678587, 0)
 use_collision = true
 radius = 0.09050398
 height = 0.14626008
 material = ExtResource("3_dpnwv")
+metadata/_csg_blockout_shell = SubResource("PackedScene_qmjx6")
 
 [node name="Area3D" type="Area3D" parent="." unique_id=1469963381]
 unique_name_in_owner = true

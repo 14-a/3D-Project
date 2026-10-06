@@ -1,5 +1,6 @@
 extends Node3D
 
+@export var NextScene : PackedScene
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -10,6 +11,12 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	pass
 
+
+func 旋转() -> void:
+	改变()
+	pass # Replace with function body.
+
+
 func 改变() -> void:
 	var Level_Part = $Map.get_children()
 	
@@ -19,11 +26,6 @@ func 改变() -> void:
 	pass
 
 
-func _on_小按钮_小按钮触发() -> void:
-	改变()
-	pass # Replace with function body.
-
-
-func toNextLevel(body: Node3D) -> void:
-	get_tree().change_scene_to_file("uid://dhhb28a0mqj2s")
+func toNextScene(body: Node3D) -> void:
+	get_tree().change_scene_to_packed(NextScene)
 	pass # Replace with function body.

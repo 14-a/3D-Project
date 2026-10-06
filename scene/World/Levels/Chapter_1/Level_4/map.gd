@@ -10,20 +10,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	pass
 
-func 改变() -> void:
-	var Level_Part = $Map.get_children()
-	
-	for body in Level_Part:
-		if "Prat" in body.name:
-			body.偏转度 += 1
-	pass
-
 
 func _on_小按钮_小按钮触发() -> void:
-	改变()
-	pass # Replace with function body.
-
-
-func toNextLevel(body: Node3D) -> void:
-	get_tree().change_scene_to_file("uid://bsr8y1ylthtfk")
+	$Prat2.偏转度 += 1
+	$Prat3.偏转度 += 1
 	pass # Replace with function body.

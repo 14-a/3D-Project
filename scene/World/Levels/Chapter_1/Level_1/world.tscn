@@ -1,41 +1,29 @@
 [gd_scene format=3 uid="uid://5iqqcvkmyamp"]
 
-[ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/Chapter_1/Level_1/worldEvent.gd" id="1_wsppd"]
+[ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_wsppd"]
 [ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="2_f6cnw"]
+[ext_resource type="PackedScene" uid="uid://btsmiyqm05keu" path="res://scene/World/Levels/Chapter_1/Level_2/level_2.tscn" id="2_n5ylv"]
 [ext_resource type="Material" uid="uid://bfcgyquj4hhrd" path="res://Texture/Vector/Textuer.tres" id="3_44lqf"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="3_fkx80"]
+[ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="3_kp881"]
 [ext_resource type="Script" uid="uid://dk0lnwaxjr57t" path="res://scene/World/机制_1/Part.gd" id="3_leofq"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="3_tcy25"]
 [ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="5_347rm"]
 [ext_resource type="PackedScene" uid="uid://c4kmlqrqch45f" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.tscn" id="6_fkx80"]
-
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_x4muu"]
-sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
-ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
-
-[sub_resource type="Sky" id="Sky_fajuy"]
-sky_material = SubResource("ProceduralSkyMaterial_x4muu")
-
-[sub_resource type="Environment" id="Environment_8jegb"]
-background_mode = 2
-sky = SubResource("Sky_fajuy")
-ssr_enabled = true
-ssao_enabled = true
-ssil_enabled = true
-glow_enabled = true
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ita4j"]
 size = Vector3(1.9393921, 3.68396, 0.8255615)
 
 [node name="World" type="Node3D" unique_id=225366442]
 script = ExtResource("1_wsppd")
+NextScene = ExtResource("2_n5ylv")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=977711085]
-transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+transform = Transform3D(-0.75064677, 0.5721863, -0.3303518, 0.21360312, 0.683317, 0.6981774, 0.6252225, 0.45352042, -0.6351505, -0.7868, 0, 7.9326267)
 shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=91374130]
-environment = SubResource("Environment_8jegb")
+environment = ExtResource("3_kp881")
 
 [node name="Map" type="Node3D" parent="." unique_id=1742529871]
 

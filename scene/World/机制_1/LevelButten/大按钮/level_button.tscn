@@ -3,20 +3,40 @@
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="1_dhpb7"]
 [ext_resource type="Script" uid="uid://dskcorm35m1fp" path="res://scene/World/机制_1/LevelButten/大按钮/level_button.gd" id="1_u7yad"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="2_0tlrd"]
+[ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_tag_interactive.tres" id="2_k3pwk"]
+
+[sub_resource type="PackedScene" id="PackedScene_k3pwk"]
+[node name="Group" type="MeshInstance3D" unique_id=612890685]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.16025838, 0)
+material_override = ExtResource("2_k3pwk")
+metadata/_csg_blockout_bake = {
+"collision": "auto",
+"lod": true,
+"occluder": false,
+"texel": 0.2,
+"uv2": false
+}
+metadata/csg_blockout_tag = "interactive"
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_u7yad"]
 size = Vector3(1, 0.17553711, 1)
 
+[resource]
+
 [node name="LevelButton" type="Node3D" unique_id=232198663]
 script = ExtResource("1_u7yad")
 
-[node name="Block" type="CSGBox3D" parent="." unique_id=1226082474]
+[node name="Group" type="CSGCombiner3D" parent="." unique_id=343130485]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.16025838, 0)
+use_collision = true
+metadata/_csg_blockout_shell = SubResource("PackedScene_k3pwk")
+
+[node name="Block" type="CSGBox3D" parent="Group" unique_id=1860970529]
 use_collision = true
 size = Vector3(2, 0.32051674, 2)
 material = ExtResource("1_dhpb7")
 
-[node name="Cylinder" type="CSGCylinder3D" parent="Block" unique_id=479075029]
+[node name="Cylinder" type="CSGCylinder3D" parent="Group/Block" unique_id=520838589]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16390368, 0)
 use_collision = true
 radius = 0.83935547

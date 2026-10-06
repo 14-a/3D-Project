@@ -26,7 +26,6 @@ func _process(delta: float) -> void:
 		if Input.is_action_just_pressed("交互"):
 			动画 = true
 			$%Cylinder_02.position.y -= 0.05
-			print("小按钮:",self,"点击")
 			小按钮触发.emit()
 	
 	if 动画:

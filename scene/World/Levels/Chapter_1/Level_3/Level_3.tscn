@@ -1,39 +1,26 @@
 [gd_scene format=3 uid="uid://bsr8y1ylthtfk"]
 
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="1_lxhgg"]
-[ext_resource type="Script" uid="uid://bdyb3xt83bafx" path="res://scene/World/Levels/Chapter_1/Level_3/level_3.gd" id="1_m0fyq"]
+[ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_oite3"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="2_demj2"]
 [ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="2_k5laq"]
+[ext_resource type="PackedScene" uid="uid://dhhb28a0mqj2s" path="res://scene/World/Levels/Chapter_1/Level_4/Level_4.tscn" id="2_mdmdm"]
+[ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="3_3q4ko"]
 [ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="3_demj2"]
 [ext_resource type="PackedScene" uid="uid://c4kmlqrqch45f" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.tscn" id="5_5sift"]
 [ext_resource type="Script" uid="uid://dk0lnwaxjr57t" path="res://scene/World/机制_1/Part.gd" id="6_5s7vx"]
 [ext_resource type="Material" uid="uid://d1g2ktc6ladng" path="res://Texture/PNG/Light/顺时针旋转.tres" id="7_oite3"]
 [ext_resource type="Material" uid="uid://bw3g0dbwps4ox" path="res://Texture/PNG/Dark/逆时针旋转.tres" id="8_mdmdm"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_yue7j"]
-sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
-ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
-
-[sub_resource type="Sky" id="Sky_lxhgg"]
-sky_material = SubResource("ProceduralSkyMaterial_yue7j")
-
-[sub_resource type="Environment" id="Environment_k5laq"]
-background_mode = 2
-sky = SubResource("Sky_lxhgg")
-glow_enabled = true
-
 [sub_resource type="BoxShape3D" id="BoxShape3D_oite3"]
-size = Vector3(1.9028931, 2.922943, 1)
+size = Vector3(1.7844543, 2.599266, 1)
 
 [node name="Level3" type="Node3D" unique_id=250298982]
-script = ExtResource("1_m0fyq")
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1565254379]
-transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
-shadow_enabled = true
+script = ExtResource("1_oite3")
+NextScene = ExtResource("2_mdmdm")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1765683896]
-environment = SubResource("Environment_k5laq")
+environment = ExtResource("3_3q4ko")
 
 [node name="Map" type="Node3D" parent="." unique_id=618992119]
 
@@ -146,7 +133,7 @@ material = ExtResource("3_demj2")
 [node name="Area3D" type="Area3D" parent="Map/静止平台/End" unique_id=1526811468]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Map/静止平台/End/Area3D" unique_id=1896463365]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.057769775, 1.5006256, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.001449585, 1.6083641, 1)
 shape = SubResource("BoxShape3D_oite3")
 
 [node name="Block_Group2" type="CSGCombiner3D" parent="Map/静止平台" unique_id=1395732809]
@@ -173,8 +160,12 @@ material = ExtResource("7_oite3")
 [node name="Player" parent="." unique_id=1765428193 instance=ExtResource("2_k5laq")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14808702, 0, -0.024169404)
 
-[connection signal="小按钮触发" from="Map/Prat/小按钮" to="." method="_on_小按钮_小按钮触发"]
-[connection signal="小按钮触发" from="Map/静止平台/Block_Group/小按钮" to="." method="_on_小按钮_小按钮触发"]
-[connection signal="小按钮触发" from="Map/静止平台/ready/小按钮" to="." method="_on_小按钮_小按钮触发"]
-[connection signal="body_entered" from="Map/静止平台/End/Area3D" to="." method="toNextLevel"]
-[connection signal="小按钮触发" from="Map/Prat3/小按钮" to="." method="_on_小按钮_小按钮触发"]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1377111066]
+transform = Transform3D(-0.75064677, 0.5721863, -0.3303518, 0.21360312, 0.683317, 0.6981774, 0.6252225, 0.45352042, -0.6351505, -0.7868, 0, 7.9326267)
+shadow_enabled = true
+
+[connection signal="小按钮触发" from="Map/Prat/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/静止平台/Block_Group/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/静止平台/ready/小按钮" to="." method="旋转"]
+[connection signal="body_entered" from="Map/静止平台/End/Area3D" to="." method="toNextScene"]
+[connection signal="小按钮触发" from="Map/Prat3/小按钮" to="." method="旋转"]

@@ -1,37 +1,25 @@
 [gd_scene format=3 uid="uid://btsmiyqm05keu"]
 
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="1_mefbm"]
-[ext_resource type="Script" uid="uid://cwrev0wc8gl8k" path="res://scene/World/Levels/Chapter_1/Level_2/level_2.gd" id="1_tt13b"]
+[ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_mtqfh"]
+[ext_resource type="PackedScene" uid="uid://bsr8y1ylthtfk" path="res://scene/World/Levels/Chapter_1/Level_3/Level_3.tscn" id="2_1612y"]
 [ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="2_o15ty"]
+[ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="3_ctxu3"]
 [ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="3_tt13b"]
+[ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="4_md3p8"]
 [ext_resource type="PackedScene" uid="uid://c4kmlqrqch45f" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.tscn" id="6_2tfya"]
 [ext_resource type="Material" uid="uid://d1g2ktc6ladng" path="res://Texture/PNG/Light/顺时针旋转.tres" id="7_ini1n"]
 [ext_resource type="Script" uid="uid://dk0lnwaxjr57t" path="res://scene/World/机制_1/Part.gd" id="7_mtqfh"]
-
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_mefbm"]
-sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
-ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
-
-[sub_resource type="Sky" id="Sky_o15ty"]
-sky_material = SubResource("ProceduralSkyMaterial_mefbm")
-
-[sub_resource type="Environment" id="Environment_tt13b"]
-background_mode = 2
-sky = SubResource("Sky_o15ty")
-glow_enabled = true
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ini1n"]
 size = Vector3(1, 2.7817993, 1.7346191)
 
 [node name="Level_2" type="Node3D" unique_id=530561150]
-script = ExtResource("1_tt13b")
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2047432420]
-transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
-shadow_enabled = true
+script = ExtResource("1_mtqfh")
+NextScene = ExtResource("2_1612y")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1190904497]
-environment = SubResource("Environment_tt13b")
+environment = ExtResource("3_ctxu3")
 
 [node name="Player" parent="." unique_id=1765428193 instance=ExtResource("2_o15ty")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22594976, 0, 0.4162407)
@@ -40,11 +28,22 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22594976, 0, 0.4162407)
 
 [node name="ready" type="Node3D" parent="Map" unique_id=395989180]
 
-[node name="R" type="CSGBox3D" parent="Map/ready" unique_id=49002410]
+[node name="R_Group" type="CSGCombiner3D" parent="Map/ready" unique_id=406941403]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+
+[node name="R" type="CSGBox3D" parent="Map/ready/R_Group" unique_id=49002410]
 use_collision = true
 size = Vector3(8, 1, 8)
 material = ExtResource("1_mefbm")
+
+[node name="Cut" type="CSGBox3D" parent="Map/ready/R_Group" unique_id=976256149]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.022605062, -2)
+size = Vector3(2, 1.0200002, 2)
+material = ExtResource("4_md3p8")
+
+[node name="小按钮" parent="Map/ready/R_Group" unique_id=1513593193 instance=ExtResource("6_2tfya")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.5, -2)
 
 [node name="End" type="Node3D" parent="Map" unique_id=1048971710]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0, 0)
@@ -115,6 +114,11 @@ use_collision = true
 size = Vector3(6, 1, 2)
 material = ExtResource("7_ini1n")
 
-[connection signal="body_entered" from="Map/End/Area3D" to="." method="toNextLevel"]
-[connection signal="小按钮触发" from="Map/Prat_1/小按钮" to="." method="_on_小按钮_小按钮触发"]
-[connection signal="小按钮触发" from="Map/Prat_2/小按钮" to="." method="_on_小按钮_小按钮触发"]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=137669205]
+transform = Transform3D(-0.75064677, 0.5721863, -0.3303518, 0.21360312, 0.683317, 0.6981774, 0.6252225, 0.45352042, -0.6351505, -0.7868, 0, 7.9326267)
+shadow_enabled = true
+
+[connection signal="小按钮触发" from="Map/ready/R_Group/小按钮" to="." method="旋转"]
+[connection signal="body_entered" from="Map/End/Area3D" to="." method="toNextScene"]
+[connection signal="小按钮触发" from="Map/Prat_1/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/Prat_2/小按钮" to="." method="旋转"]
