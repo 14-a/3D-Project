@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://c4kmlqrqch45f"]
+
+[ext_resource type="Script" uid="uid://bcf15k2et3joy" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.gd" id="1_fnyf6"]
+[ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="2_hsjhd"]
+[ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="3_dpnwv"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_fnyf6"]
+radius = 1.0507283
+
+[node name="小按钮" type="Node3D" unique_id=1513593193]
+script = ExtResource("1_fnyf6")
+
+[node name="Cylinder" type="CSGCylinder3D" parent="." unique_id=486198181]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54809666, 0)
+use_collision = true
+radius = 0.13316286
+height = 1.0961933
+material = ExtResource("2_hsjhd")
+
+[node name="Cylinder_02" type="CSGCylinder3D" parent="." unique_id=1053635664]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0678587, 0)
+use_collision = true
+radius = 0.09050398
+height = 0.14626008
+material = ExtResource("3_dpnwv")
+
+[node name="Area3D" type="Area3D" parent="." unique_id=1469963381]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1058794534]
+shape = SubResource("SphereShape3D_fnyf6")

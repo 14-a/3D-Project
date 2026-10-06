@@ -5,6 +5,8 @@
 [ext_resource type="Script" uid="uid://dk0lnwaxjr57t" path="res://scene/World/机制_1/Part.gd" id="3_leofq"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="3_tcy25"]
 [ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="5_347rm"]
+[ext_resource type="PackedScene" uid="uid://c4kmlqrqch45f" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.tscn" id="6_fkx80"]
+[ext_resource type="PackedScene" uid="uid://cot4tw6gyn4vh" path="res://scene/World/机制_1/LevelButten/大按钮/level_button.tscn" id="7_44lqf"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_x4muu"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -100,3 +102,9 @@ debug_color = Color(0, 0.6, 0.69803923, 1)
 
 [node name="Player" parent="." unique_id=1765428193 instance=ExtResource("2_f6cnw")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.33411872, 0, -0.5983629)
+
+[node name="小按钮" parent="." unique_id=1513593193 instance=ExtResource("6_fkx80")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1)
+
+[node name="LevelButton" parent="." unique_id=232198663 instance=ExtResource("7_44lqf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.99099493, 0.32051677, 2.9808557)

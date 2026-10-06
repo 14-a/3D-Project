@@ -10,6 +10,7 @@ config_version=5
 
 [addons]
 
+csg_blockout/material_preset=3
 csg_blockout/custom_material_path="res://Materials/TempMatertials/Temp-Door.tres"
 
 [application]
