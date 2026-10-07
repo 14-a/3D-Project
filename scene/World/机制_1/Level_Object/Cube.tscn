@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://ci8nt2fcmhuoc"]
+
+[ext_resource type="Script" uid="uid://cvpxsixwjri27" path="res://scene/World/机制_1/Level_Object/cube.gd" id="1_hdk4s"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_ertgh"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hdk4s"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[node name="Cube" type="RigidBody3D" unique_id=1446145362]
+script = ExtResource("1_hdk4s")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1550111996]
+mesh = SubResource("BoxMesh_ertgh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1316040186]
+shape = SubResource("BoxShape3D_hdk4s")

@@ -1,0 +1,93 @@
+[gd_scene format=3 uid="uid://cu7di0bk6we1n"]
+
+[ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_d0wlf"]
+[ext_resource type="Environment" uid="uid://xi1n2c7vhoyj" path="res://scene/World/Levels/Chapter_2/Chapter_2.tres" id="1_p1hi2"]
+[ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="2_dbndh"]
+[ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="3_kimkp"]
+[ext_resource type="Material" uid="uid://d1g2ktc6ladng" path="res://Texture/PNG/Light/顺时针旋转.tres" id="4_akanj"]
+[ext_resource type="Script" uid="uid://dk0lnwaxjr57t" path="res://scene/World/机制_1/Part.gd" id="5_aom1w"]
+[ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="7_dvqia"]
+[ext_resource type="PackedScene" uid="uid://c4kmlqrqch45f" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.tscn" id="8_l4i1a"]
+
+[node name="Level2" type="Node3D" unique_id=585392183]
+script = ExtResource("1_d0wlf")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=350091069]
+transform = Transform3D(-0.890989, -0.21885628, -0.39779472, -0.45335063, 0.476585, 0.7532197, 0.024736134, 0.851451, -0.5238506, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1460625679]
+environment = ExtResource("1_p1hi2")
+
+[node name="Player" parent="." unique_id=1765428193 instance=ExtResource("3_kimkp")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 1, 0, 0)
+
+[node name="Map" type="Node3D" parent="." unique_id=1491789709]
+
+[node name="静态平台" type="Node3D" parent="Map" unique_id=2138134200]
+
+[node name="Ready" type="Node3D" parent="Map/静态平台" unique_id=915807523]
+
+[node name="Block_Ready_01_Group" type="CSGCombiner3D" parent="Map/静态平台/Ready" unique_id=622435339]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000024, 0)
+use_collision = true
+
+[node name="Block_Ready_01" type="CSGBox3D" parent="Map/静态平台/Ready/Block_Ready_01_Group" unique_id=1903393815]
+use_collision = true
+size = Vector3(8, 0.9999995, 8)
+material = ExtResource("2_dbndh")
+
+[node name="Cut" type="CSGBox3D" parent="Map/静态平台/Ready/Block_Ready_01_Group" unique_id=951360074]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 2)
+size = Vector3(2, 1.02, 2)
+material = ExtResource("7_dvqia")
+
+[node name="小按钮" parent="Map/静态平台/Ready/Block_Ready_01_Group" unique_id=1513593193 instance=ExtResource("8_l4i1a")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.50000024, 2)
+
+[node name="Block_Ready_01_2" type="CSGBox3D" parent="Map/静态平台/Ready" unique_id=1597784437]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5000005, 6)
+use_collision = true
+size = Vector3(2, 0.9999995, 4)
+material = ExtResource("2_dbndh")
+
+[node name="Prat1" type="Node3D" parent="Map" unique_id=1994147810]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0, 2.5, 11)
+rotation_order = 5
+script = ExtResource("5_aom1w")
+
+[node name="Room_Map_01" type="CSGCombiner3D" parent="Map/Prat1" unique_id=958682537]
+transform = Transform3D(-4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0, 1, -4.7683716e-07, 2.1316282e-14, 0)
+use_collision = true
+
+[node name="Shell" type="CSGBox3D" parent="Map/Prat1/Room_Map_01" unique_id=490303047]
+size = Vector3(6, 5, 6)
+material = ExtResource("4_akanj")
+
+[node name="Hollow" type="CSGBox3D" parent="Map/Prat1/Room_Map_01" unique_id=129284406]
+operation = 2
+size = Vector3(5.5, 4.5, 5.5)
+material = ExtResource("4_akanj")
+
+[node name="Door_RoomMap01_01" type="CSGBox3D" parent="Map/Prat1/Room_Map_01" unique_id=688725907]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, -1.2499995, -2.875)
+operation = 2
+size = Vector3(1.5, 2.5, 0.29000014)
+material = ExtResource("4_akanj")
+
+[node name="Door" type="CSGBox3D" parent="Map/Prat1/Room_Map_01" unique_id=2039381748]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 2.875, 1.1385393, 0)
+operation = 2
+size = Vector3(1.5, 2.5, 0.2899999)
+material = ExtResource("4_akanj")
+
+[node name="Cut3" type="CSGBox3D" parent="Map/Prat1/Room_Map_01" unique_id=1256834933]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8747537, -2.375, 1.882369)
+size = Vector3(1.75, 0.27, 1.75)
+material = ExtResource("7_dvqia")
+
+[node name="小按钮" parent="Map/Prat1/Room_Map_01/Cut3" unique_id=1383916977 instance=ExtResource("8_l4i1a")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12524629, -0.12499952, -0.12583733)
+
+[connection signal="小按钮触发" from="Map/静态平台/Ready/Block_Ready_01_Group/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/Prat1/Room_Map_01/Cut3/小按钮" to="." method="旋转"]

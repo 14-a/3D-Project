@@ -11,9 +11,12 @@ config_version=5
 [addons]
 
 csg_blockout/material_preset=1
-csg_blockout/custom_material_path="res://Texture/PNG/Dark/逆时针旋转.tres"
+csg_blockout/custom_material_path="res://Texture/PNG/Light/顺时针旋转.tres"
 csg_blockout/language_override="zh_CN"
 csg_blockout/bake/lod=true
+csg_blockout/room/open_top=false
+csg_blockout/room/height=5.0
+csg_blockout/openings/door_size=Vector2(1.5, 2.5)
 
 [application]
 
