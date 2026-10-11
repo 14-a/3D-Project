@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cttuydqqv5m2a"
-path="res://.godot/imported/Colorsheet Tree Cold.png-81bc554970b56f4a0f2a46fa2be5cf6c.ctex"
+uid="uid://b3biqmov3maep"
+path="res://.godot/imported/Colorsheet Tree Fall.png-8b4664a0a18fc54cfdabacc8d08feb33.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://scene/Model/Atr/Models/Textures/Colorsheet Tree Cold.png"
-dest_files=["res://.godot/imported/Colorsheet Tree Cold.png-81bc554970b56f4a0f2a46fa2be5cf6c.ctex"]
+source_file="res://scene/Model/Atr/Models/Models/Textures/Colorsheet Tree Fall.png"
+dest_files=["res://.godot/imported/Colorsheet Tree Fall.png-8b4664a0a18fc54cfdabacc8d08feb33.ctex"]
 
 [params]
 

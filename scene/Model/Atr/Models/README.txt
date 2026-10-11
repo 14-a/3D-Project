@@ -1,4 +1,4 @@
-﻿Thank you for purchasing this pack!
+Thank you for purchasing this pack!
 If you have any problems, please don't hesitate to mail us (support@brokenvector.com).
 
 

@@ -11,7 +11,7 @@ config_version=5
 [addons]
 
 csg_blockout/material_preset=3
-csg_blockout/custom_material_path="res://Texture/PNG/Light/顺时针旋转.tres"
+csg_blockout/custom_material_path="res://Materials/TempMatertials/Temp-Door.tres"
 csg_blockout/language_override="zh_CN"
 csg_blockout/bake/lod=true
 csg_blockout/room/open_top=false
@@ -36,7 +36,7 @@ window/stretch/aspect="expand"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/csg_blockout/plugin.cfg", "res://addons/gator_audio_studio/plugin.cfg", "res://addons/gator_sprite_studio/plugin.cfg", "res://addons/poibuilder/plugin.cfg")
+enabled=PackedStringArray("res://addons/csg_blockout/plugin.cfg", "res://addons/gator_audio_studio/plugin.cfg", "res://addons/gator_sprite_studio/plugin.cfg")
 
 [input]
 
