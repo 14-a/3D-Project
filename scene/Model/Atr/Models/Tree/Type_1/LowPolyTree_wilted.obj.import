@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://b7i2dq28i4wnm"
+path="res://.godot/imported/LowPolyTree_wilted.obj-0ec4652f9fe1a088cc07ece9bd03dfba.mesh"
+
+[deps]
+
+files=["res://.godot/imported/LowPolyTree_wilted.obj-0ec4652f9fe1a088cc07ece9bd03dfba.mesh"]
+
+source_file="res://scene/Model/Atr/Models/Tree/Type_1/LowPolyTree_wilted.obj"
+dest_files=["res://.godot/imported/LowPolyTree_wilted.obj-0ec4652f9fe1a088cc07ece9bd03dfba.mesh", "res://.godot/imported/LowPolyTree_wilted.obj-0ec4652f9fe1a088cc07ece9bd03dfba.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

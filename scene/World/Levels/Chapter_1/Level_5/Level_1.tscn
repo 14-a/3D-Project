@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bu003mo73hx2e"]
 
 [ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_emrbm"]
-[ext_resource type="PackedScene" uid="uid://cu7di0bk6we1n" path="res://scene/World/Levels/Chapter_2/Level_2/Level_2.tscn" id="2_3moq0"]
+[ext_resource type="PackedScene" uid="uid://cyxuyyhwlco20" path="res://scene/World/Levels/Chapter_1/Level_6/Level_6.tscn" id="2_emrbm"]
 [ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="3_6yqxs"]
 [ext_resource type="Script" uid="uid://yeqxrycecog0" path="res://scene/World/Levels/Chapter_1/Level_5/map.gd" id="4_c5qea"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="5_kbcj2"]
@@ -18,7 +18,7 @@ size = Vector3(1.6357422, 2.8831787, 1)
 
 [node name="Level1" type="Node3D" unique_id=998201690]
 script = ExtResource("1_emrbm")
-NextScene = ExtResource("2_3moq0")
+NextScene = ExtResource("2_emrbm")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1024844913]
 transform = Transform3D(-0.82308424, 0.4927273, -0.28240454, 0.086846724, 0.6006152, 0.7948078, 0.5612398, 0.6296678, -0.5371486, 4.077153, -4.7683716e-07, 6.6575737)

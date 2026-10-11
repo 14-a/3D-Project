@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://cyxuyyhwlco20"]
+
+[ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="1_kxlhi"]
+[ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="2_npth6"]
+[ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="3_n5lx4"]
+
+[node name="Level6" type="Node3D" unique_id=2114917572]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=511055372]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1151696157]
+environment = ExtResource("1_kxlhi")
+
+[node name="Map" type="Node3D" parent="." unique_id=305268387]
+
+[node name="静止平台" type="Node3D" parent="Map" unique_id=964192386]
+
+[node name="ready" type="Node3D" parent="Map/静止平台" unique_id=1015356915]
+
+[node name="Block_ready_01" type="CSGBox3D" parent="Map/静止平台/ready" unique_id=1749131245]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50000024, 0)
+use_collision = true
+size = Vector3(8, 0.9999995, 8)
+material = ExtResource("2_npth6")
+
+[node name="Player" parent="." unique_id=1765428193 instance=ExtResource("3_n5lx4")]
