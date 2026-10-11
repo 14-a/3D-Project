@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install — PoiBuilder 0.9.167</title>
+<meta name="description" content="Get the addon into your project — AssetLib import, a copied folder, or a library download — then enable the plugin in Project Settings. Nothing else to compile.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Start here</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Install</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html" class="current">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Install</h1><p class="lead">Get the addon into your project — AssetLib import, a copied folder, or a library download — then enable the plugin in Project Settings. Nothing else to compile.</p><blockquote class="">PoiBuilder is in <strong>alpha</strong> (first release). Expect rough edges, and expect breaking changes to saved scenes until 1.0 — pick the newest build you can.</blockquote>
+<h2 id="requirements">Requirements</h2>
+<ul><li><strong>Godot 4.x</strong> (standard or .NET — the plugin is pure GDScript). Developed and extensively tested on <strong>Godot 4.7</strong> (4.7.2). Surface-level testing on <strong>Godot 4.6 stable</strong> passes; older 4.x versions are untested.</li><li>A 3D scene. The toolbar lives under the spatial editor.</li></ul>
+<h2 id="the-three-ways-to-install">The three ways to install</h2>
+<p>All three end at the same place — <code>addons/poibuilder/</code> inside your project. Pick whichever fits how you already work:</p>
+<ol class="steps"><li><strong>AssetLib tab → Import</strong> <em>(recommended)</em>. Download a release zip from <a href="https://github.com/Francesco149/poibuilder/releases">Releases</a>, then in Godot open the <strong>AssetLib</strong> tab, click <strong>Import…</strong>, and pick the zip. Release zips are cut directly from this repository and carry the offline documentation (the toolbar <strong>Docs</strong> button works offline).</li><li><strong>Copy the folder to the project.</strong> Extract a release zip (or copy <code>addons/poibuilder/</code> from the repository&#x27;s <code>project/</code>) so it sits next to your <code>project.godot</code>. Same result as the Import path, minus the dialog.</li><li><strong>Search the Asset Library.</strong> In the <strong>AssetLib</strong> tab, search <strong>PoiBuilder</strong>, press <strong>Download</strong>, keep the listed files checked. The library listing is a snapshot: it is <strong>not guaranteed to be up to date</strong> with bleeding-edge changes, and it does not include the offline docs copy (the <strong>Docs</strong> button opens the online manual instead).</li></ol>
+<blockquote class="gotcha"><strong>Whichever way you installed, the plugin does not turn itself on.</strong> Open <strong>Project → Project Settings → Plugins</strong> and tick <strong>Enable</strong> next to PoiBuilder. No enable, no toolbar — this is the single most common &quot;it installed but nothing happened&quot; report.</blockquote>
+<p>Nightly builds (auto-built from master, marked pre-release) live under the <code>nightly</code> tag on the same <a href="https://github.com/Francesco149/poibuilder/releases">releases page</a>.</p>
+<h2 id="after-enabling-is-it-working">After enabling — is it working?</h2>
+<ol class="steps"><li><strong>Project → Project Settings → Plugins</strong> → <strong>PoiBuilder</strong> must show a check.</li><li>Open a 3D scene. PoiBuilder&#x27;s toolbar rows appear under the engine&#x27;s 3D toolbar.</li><li>The <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_docs.svg" width="13" height="13" alt="">Docs<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Export..."><img src="assets/icons/icon_export.svg" width="16" height="16" alt="Export..." title="Export..."></span><span class="tl-btn tl-target" title="Docs"><img src="assets/icons/icon_docs.svg" width="16" height="16" alt="Docs" title="Docs"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 2 · Export</span><span class="br-head"><img src="assets/icons/icon_docs.svg" width="26" height="26" alt=""><span class="br-title">Docs</span></span><span class="br-desc">Opens the bundled offline documentation (the site you are reading).</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> button at the right end of that toolbar opens the manual — offline from the copy bundled inside the plugin (release zip installs), or these online pages when no local copy exists.</li></ol>
+<p>If the toolbar row never appears: the plugin is disabled, or the scene is not 3D. That is the whole checklist.</p>
+<h2 id="installing-from-a-release-zip-step-by-step">Installing from a release zip, step by step</h2>
+<p>(Paths 1 and 2 above, spelled out.)</p>
+<ol class="steps"><li>Download the zip from <a href="https://github.com/Francesco149/poibuilder/releases">Releases</a> — <code>PoiBuilder-vX.Y.Z.zip</code> (or <code>PoiBuilder-nightly.zip</code> for the nightly). Either import it through the <strong>AssetLib → Import…</strong> dialog, or extract it at your project root so <code>addons/poibuilder/</code> lands next to <code>project.godot</code>.</li><li>Wait for Godot to finish its first import of the addon (the spinner in the bottom-right; on a fresh project it imports the addon&#x27;s icons and shaders).</li><li><strong>Project → Project Settings → Plugins</strong> → enable <strong>PoiBuilder</strong>.</li><li>Open a 3D scene. The toolbar rows appear; the <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_docs.svg" width="13" height="13" alt="">Docs<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Export..."><img src="assets/icons/icon_export.svg" width="16" height="16" alt="Export..." title="Export..."></span><span class="tl-btn tl-target" title="Docs"><img src="assets/icons/icon_docs.svg" width="16" height="16" alt="Docs" title="Docs"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 2 · Export</span><span class="br-head"><img src="assets/icons/icon_docs.svg" width="26" height="26" alt=""><span class="br-title">Docs</span></span><span class="br-desc">Opens the bundled offline documentation (the site you are reading).</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> button opens this manual offline from <code>addons/poibuilder/docs-site/</code>.</li></ol>
+<blockquote class="">[tip] On a fresh import you may see console messages like <code>Condition &quot;p_enabled &amp;&amp; addon_name_to_plugin.has(addon_path)&quot; is true</code>, <code>!tasks.has(p_task)</code> from <code>progress_dialog.cpp</code>, or <code>Task &#x27;reimport&#x27; already exists</code>. These come from Godot&#x27;s own first-import machinery when a plugin is enabled while that first scan is still running — they are benign: the import completes and the plugin ends up enabled exactly once. Waiting for the first import to finish before enabling (step 2 above) avoids them entirely, and the messages are largely fixed in newer Godot versions.</blockquote>
+<h2 id="reading-these-docs-online-without-installing">Reading these docs online without installing</h2>
+<p>These pages are built from the same repository. When you are ready to try the plugin, grab a release zip (above) — the install is the extract plus enable, and the offline docs ride along inside the addon.</p>
+<h2 id="from-this-repository">From this repository</h2>
+<p>The plugin <em>is</em> <code>project/addons/poibuilder/</code>. Clone the repo, open <code>project/project.godot</code> in Godot and enable the plugin the same way. This is the bleeding edge — nightly-quality, untested between commits.</p>
+<h2 id="what-appears">What appears</h2>
+<ul><li>Persistent toolbar rows under the 3D toolbar (four rows; the extended Rows 3 &amp; 4 ship visible and can be folded with the <strong>Extended Tools</strong> toggle). They never hide. Buttons disable outside a PoiBuilder context — the <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_export.svg" width="13" height="13" alt="">Export...<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Export..."><img src="assets/icons/icon_export.svg" width="16" height="16" alt="Export..." title="Export..."><span class="tl-target-ring"></span></span><span class="tl-btn" title="Docs"><img src="assets/icons/icon_docs.svg" width="16" height="16" alt="Docs" title="Docs"></span></span><span class="br-row">Row 2 · Export</span><span class="br-head"><img src="assets/icons/icon_export.svg" width="26" height="26" alt=""><span class="br-title">Export...</span></span><span class="br-desc">Opens the export dialog: PBM (the retro .pbm map, default) or GLB — modern bake (lightmap-ready) or retro baked (vertex-lit) — with the bake options.</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> and <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_docs.svg" width="13" height="13" alt="">Docs<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Export..."><img src="assets/icons/icon_export.svg" width="16" height="16" alt="Export..." title="Export..."></span><span class="tl-btn tl-target" title="Docs"><img src="assets/icons/icon_docs.svg" width="16" height="16" alt="Docs" title="Docs"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 2 · Export</span><span class="br-head"><img src="assets/icons/icon_docs.svg" width="26" height="26" alt=""><span class="br-title">Docs</span></span><span class="br-desc">Opens the bundled offline documentation (the site you are reading).</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> buttons are always available.</li><li>A floating overlay in the viewport (selection readout, params modal). Pin it with <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_panel.svg" width="13" height="13" alt="">Panel<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Material &amp; UV"><img src="assets/icons/icon_materials.svg" width="16" height="16" alt="Material &amp; UV" title="Material &amp; UV"></span><span class="tl-btn" title="UV"><img src="assets/icons/icon_uv_unwrap.svg" width="16" height="16" alt="UV" title="UV"></span><span class="tl-btn tl-target" title="Panel"><img src="assets/icons/icon_panel.svg" width="16" height="16" alt="Panel" title="Panel"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Reset Panel"><img src="assets/icons/icon_panel_reset.svg" width="16" height="16" alt="Reset Panel" title="Reset Panel"></span><span class="tl-btn" title="Settings"><img src="assets/icons/icon_settings.svg" width="16" height="16" alt="Settings" title="Settings"></span></span><span class="br-row">Row 2 · Docks</span><span class="br-head"><img src="assets/icons/icon_panel.svg" width="26" height="26" alt=""><span class="br-title">Panel</span></span><span class="br-desc">Pins the floating overlay panel on (it otherwise auto-hides when nothing is selected).</span><span class="br-req">Needs: Nothing</span></span></span>; recover it with <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_panel_reset.svg" width="13" height="13" alt="">Reset Panel<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Material &amp; UV"><img src="assets/icons/icon_materials.svg" width="16" height="16" alt="Material &amp; UV" title="Material &amp; UV"></span><span class="tl-btn" title="UV"><img src="assets/icons/icon_uv_unwrap.svg" width="16" height="16" alt="UV" title="UV"></span><span class="tl-btn" title="Panel"><img src="assets/icons/icon_panel.svg" width="16" height="16" alt="Panel" title="Panel"></span><span class="tl-btn tl-target" title="Reset Panel"><img src="assets/icons/icon_panel_reset.svg" width="16" height="16" alt="Reset Panel" title="Reset Panel"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Settings"><img src="assets/icons/icon_settings.svg" width="16" height="16" alt="Settings" title="Settings"></span></span><span class="br-row">Row 2 · Docks</span><span class="br-head"><img src="assets/icons/icon_panel_reset.svg" width="26" height="26" alt=""><span class="br-title">Reset Panel</span></span><span class="br-desc">Recovers the overlay panel and dock to the bottom-left corner if they were dragged away.</span><span class="br-req">Needs: Nothing</span></span></span> if it leaves the screen.</li><li>A <strong>Material &amp; UV</strong> dock on the right.</li><li>A <strong>UV Editor</strong> bottom panel, opened from the toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_uv_unwrap.svg" width="13" height="13" alt="">UV<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Material &amp; UV"><img src="assets/icons/icon_materials.svg" width="16" height="16" alt="Material &amp; UV" title="Material &amp; UV"></span><span class="tl-btn tl-target" title="UV"><img src="assets/icons/icon_uv_unwrap.svg" width="16" height="16" alt="UV" title="UV"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Panel"><img src="assets/icons/icon_panel.svg" width="16" height="16" alt="Panel" title="Panel"></span><span class="tl-btn" title="Reset Panel"><img src="assets/icons/icon_panel_reset.svg" width="16" height="16" alt="Reset Panel" title="Reset Panel"></span><span class="tl-btn" title="Settings"><img src="assets/icons/icon_settings.svg" width="16" height="16" alt="Settings" title="Settings"></span></span><span class="br-row">Row 2 · Docks</span><span class="br-head"><img src="assets/icons/icon_uv_unwrap.svg" width="26" height="26" alt=""><span class="br-title">UV</span></span><span class="br-desc">Opens the dedicated 2D UV editor panel in the bottom dock.</span><span class="br-req">Needs: A PBMesh</span></span></span> button.</li><li>An <strong>Export</strong> dialog.</li></ul>
+<p>The overlay title reads <code>PoiBuilder vX.Y.Z</code>. If the version does not match the docs you are reading, you are on a different build.</p>
+<h2 id="first-action">First action</h2>
+<p><a href="shapes.html">New Shape</a> is always enabled. You do not need a selection to create. Open the menu, pick <strong>Cube</strong>, drag on the grid.</p>
+<p>Continue in <a href="first-minutes.html">First minutes</a>.</p>
+<h2 id="uninstall">Uninstall</h2>
+<p>Disable the plugin, then delete <code>addons/poibuilder/</code>. Overlay position and grid settings live in Editor Settings under <code>poibuilder/</code> — they survive until you clear them.</p>
+<blockquote class="gotcha">Godot 4.8-dev APIs are not the target. The development engine is 4.7.2; 4.6 stable is surface-tested. If a script error mentions a missing editor method on another version, that is the first suspect.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="index.html"><span class="dir">← Previous</span><strong class="pager-title">Welcome</strong></a><a class="pager-card pager-next" href="first-minutes.html"><span class="dir">Next →</span><strong class="pager-title">First minutes</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

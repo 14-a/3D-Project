@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keys — PoiBuilder 0.9.167</title>
+<meta name="description" content="Compiled-in defaults. Rebind in Editor Settings → Shortcuts under poibuilder/*. Viewport keys use physical keycodes, so they survive keyboard layouts.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Reference</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Keys</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html" class="current">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Keys</h1><p class="lead">Compiled-in defaults. Rebind in Editor Settings → Shortcuts under poibuilder/*. Viewport keys use physical keycodes, so they survive keyboard layouts.</p><p>Godot already binds H (hide node) and [ / ] (animation keys). On first enable the plugin unbinds those three so vertex mode and grid elevation work. Rebind them in Editor Settings if you need them back.</p>
+<table><thead><tr><th>Action</th><th>Default</th><th>Id</th></tr></thead><tbody><tr><td>Select: Vertex Mode</td><td><kbd>H</kbd></td><td><code>select_vertex</code></td></tr><tr><td>Select: Edge Mode</td><td><kbd>J</kbd></td><td><code>select_edge</code></td></tr><tr><td>Select: Face Mode</td><td><kbd>K</kbd></td><td><code>select_face</code></td></tr><tr><td>Select: Texture Mode</td><td><kbd>6</kbd></td><td><code>select_texture</code></td></tr><tr><td>Select: Object Mode</td><td>—</td><td><code>select_object</code></td></tr><tr><td>Cycle Gizmo Space</td><td><kbd>X</kbd></td><td><code>cycle_space</code></td></tr><tr><td>Toggle Snapping</td><td><kbd>Y</kbd></td><td><code>toggle_snap</code></td></tr><tr><td>Toggle Draw On Grid</td><td><kbd>G</kbd></td><td><code>toggle_on_grid</code></td></tr><tr><td>Toggle Grid Overlay</td><td>—</td><td><code>toggle_grid</code></td></tr><tr><td>Grid: Finer (Subdiv +1)</td><td><kbd>=</kbd></td><td><code>subdiv_increase</code></td></tr><tr><td>Grid: Coarser (Subdiv -1)</td><td><kbd>-</kbd></td><td><code>subdiv_decrease</code></td></tr><tr><td>Grid: Unit x2</td><td><kbd>Shift</kbd><kbd>=</kbd></td><td><code>unit_increase</code></td></tr><tr><td>Grid: Unit /2</td><td><kbd>Shift</kbd><kbd>-</kbd></td><td><code>unit_decrease</code></td></tr><tr><td>Grid: Raise Elevation</td><td><kbd>]</kbd></td><td><code>grid_raise</code></td></tr><tr><td>Grid: Lower Elevation</td><td><kbd>[</kbd></td><td><code>grid_lower</code></td></tr><tr><td>Grid: Reset Elevation</td><td><kbd>\</kbd></td><td><code>grid_reset</code></td></tr><tr><td>Snap Selection To Grid</td><td>—</td><td><code>snap_selection</code></td></tr><tr><td>Selection: Select All</td><td>—</td><td><code>select_all</code></td></tr><tr><td>Selection: Invert Selection</td><td><kbd>Ctrl</kbd><kbd>I</kbd></td><td><code>invert_selection</code></td></tr><tr><td>Selection: Grow Selection</td><td><kbd>Alt</kbd><kbd>G</kbd></td><td><code>grow_selection</code></td></tr><tr><td>Selection: Shrink Selection</td><td><kbd>Shift</kbd><kbd>Alt</kbd><kbd>G</kbd></td><td><code>shrink_selection</code></td></tr><tr><td>Selection: Select Coplanar</td><td><kbd>Alt</kbd><kbd>C</kbd></td><td><code>select_coplanar</code></td></tr><tr><td>Selection: Select Similar</td><td>—</td><td><code>select_similar</code></td></tr><tr><td>Selection: Select Boundary</td><td>—</td><td><code>select_boundary</code></td></tr><tr><td>Selection: Face Loop</td><td><kbd>Alt</kbd><kbd>L</kbd></td><td><code>select_face_loop</code></td></tr><tr><td>Selection: Face Ring</td><td><kbd>Alt</kbd><kbd>R</kbd></td><td><code>select_face_ring</code></td></tr><tr><td>Snapping: Toggle Vertex Snap</td><td>—</td><td><code>toggle_vertex_snap</code></td></tr><tr><td>Snapping: Toggle Proportional</td><td>—</td><td><code>toggle_proportional</code></td></tr><tr><td>Mesh Op: Extrude</td><td><kbd>Alt</kbd><kbd>E</kbd></td><td><code>op_extrude</code></td></tr><tr><td>Mesh Op: Inset</td><td><kbd>Alt</kbd><kbd>I</kbd></td><td><code>op_inset</code></td></tr><tr><td>Mesh Op: Bevel / Chamfer</td><td><kbd>Ctrl</kbd><kbd>B</kbd></td><td><code>op_bevel</code></td></tr><tr><td>Mesh Op: Insert Edge Loop</td><td>—</td><td><code>op_loop_cut</code></td></tr><tr><td>Mesh Op: Merge Faces</td><td>—</td><td><code>op_merge</code></td></tr><tr><td>Mesh Op: Subdivide Faces</td><td>—</td><td><code>op_subdivide</code></td></tr><tr><td>Mesh Op: Weld Vertices</td><td>—</td><td><code>op_weld</code></td></tr><tr><td>Mesh Op: Detach Faces</td><td>—</td><td><code>op_detach</code></td></tr><tr><td>Mesh Op: Delete Faces</td><td>—</td><td><code>op_delete</code></td></tr><tr><td>Mesh Op: Knife Tool</td><td>—</td><td><code>op_knife</code></td></tr><tr><td>Mesh Op: Bridge Edges</td><td><kbd>Alt</kbd><kbd>B</kbd></td><td><code>op_bridge</code></td></tr><tr><td>Mesh Op: Connect</td><td>—</td><td><code>op_connect</code></td></tr><tr><td>Mesh Op: Collapse</td><td>—</td><td><code>op_collapse</code></td></tr><tr><td>Mesh Op: Fill Hole</td><td>—</td><td><code>op_fill_hole</code></td></tr><tr><td>Object: Merge Selected Objects</td><td>—</td><td><code>obj_merge</code></td></tr><tr><td>Object: Mirror Across X</td><td>—</td><td><code>obj_mirror</code></td></tr><tr><td>Object: Center Pivot</td><td>—</td><td><code>obj_center_pivot</code></td></tr><tr><td>Object: Freeze Transform</td><td>—</td><td><code>obj_freeze_transform</code></td></tr><tr><td>Object: Poibuilderize (Convert to PBMesh)</td><td>—</td><td><code>obj_poibuilderize</code></td></tr><tr><td>Object: Poibuilderize (Legacy alias)</td><td>—</td><td><code>obj_probuilderize</code></td></tr><tr><td>Object: Toggle Lit (Selected)</td><td>—</td><td><code>obj_toggle_lit</code></td></tr><tr><td>Object: Toggle Cast Shadows (Selected)</td><td>—</td><td><code>obj_toggle_shadows</code></td></tr><tr><td>CSG: Union Selected Objects</td><td>—</td><td><code>csg_union</code></td></tr><tr><td>CSG: Subtract From Active Object</td><td>—</td><td><code>csg_subtract</code></td></tr><tr><td>CSG: Intersect Selected Objects</td><td>—</td><td><code>csg_intersect</code></td></tr><tr><td>Normals: Auto-Smooth Mesh (45 deg)</td><td>—</td><td><code>smooth_auto</code></td></tr><tr><td>Tool: Place Billboard / Sprite</td><td><kbd>B</kbd></td><td><code>tool_sprite</code></td></tr><tr><td>Environment: Dawn</td><td>—</td><td><code>env_dawn</code></td></tr><tr><td>Environment: Day</td><td>—</td><td><code>env_day</code></td></tr><tr><td>Environment: Dusk</td><td>—</td><td><code>env_dusk</code></td></tr><tr><td>Environment: Night</td><td>—</td><td><code>env_night</code></td></tr><tr><td>Environment: Cycle Time of Day</td><td>—</td><td><code>env_cycle</code></td></tr></tbody></table>
+<p>Mesh-op keys that ship unbound still have toolbar buttons.</p>
+<p>Related: <a href="interface.html">Interface</a>, <a href="faq.html">FAQ</a>.</p>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="performance.html"><span class="dir">← Previous</span><strong class="pager-title">Performance</strong></a><a class="pager-card pager-next" href="modern-glb-splat.html"><span class="dir">Next →</span><strong class="pager-title">Splat in a modern .glb</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

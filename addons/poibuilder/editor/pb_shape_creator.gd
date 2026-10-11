@@ -1,0 +1,686 @@
+## PBShapeCreator — ProBuilder-style drag-to-create state machine.
+##
+## Pure logic + geometry (no editor classes, headless-testable). The plugin
+## drives it from viewport input:
+##
+##   ARMED  — a shape was picked from the New Shape menu; waiting for an
+##            LMB press on a surface (PBMesh face or the editor grid plane).
+##   BASE   — LMB held: the base rect grows coplanar with the surface that
+##            was pressed (the plane is captured at press and never changes).
+##   HEIGHT — LMB released: mouse motion adjusts the 3rd dimension along the
+##            surface normal (the shape preview grows from its base); the
+##            next LMB click confirms.
+##   OFFSET — the sprite and plane flows: the third dimension is a STAND-OFF
+##            from the surface rather than a size. The sprite reaches it by a
+##            single click that anchors it ON the surface; the plane drags a
+##            base rect out parallel to the surface first and then lifts clear
+##            of it. Either way mouse motion displaces the shape along the
+##            surface normal (clamped >= 0), and the next click confirms.
+##   PARAMS — the overlay parameter modal is open (live preview, Apply /
+##            Cancel). Cancel restores session_values (the state at modal
+##            open); neither destroys the shape — only ESC before the
+##            confirming click aborts without creating anything.
+##
+## The plugin owns the preview PBMesh node; the creator supplies the data
+## (PBShapeParams.build) and the placement transform that anchors the data's
+## base face onto the drag plane at the rect center.
+@tool
+class_name PBShapeCreator
+extends RefCounted
+
+enum State { INACTIVE, ARMED, BASE, HEIGHT, OFFSET, PARAMS }
+
+## Sentinel for "ray missed the plane" from ray_plane_intersect.
+const RAY_MISS := Vector3(INF, INF, INF)
+
+## Minimum base extent so a stray click cannot create a degenerate shape.
+const MIN_EXTENT := 0.1
+
+var state: State = State.INACTIVE
+
+## The factory shape being created.
+var shape_id: StringName = &""
+
+## Current parameter values (starts from PBShapeParams defaults; the base
+## drag writes the size dims, the modal writes anything).
+var values: Dictionary = {}
+
+## Snapshot of `values` at base release — the baseline the height drag applies
+## against for round shapes (sphere/torus/arch resize RELATIVELY from here).
+var base_values: Dictionary = {}
+
+## Snapshot taken when the params modal opened — Cancel restores it.
+var session_values: Dictionary = {}
+
+## The captured creation plane (surface pressed at begin).
+var plane_point: Vector3 = Vector3.ZERO
+var plane_normal: Vector3 = Vector3.UP
+
+## Orthonormal in-plane axis along the drag direction (u); the perpendicular
+## in-plane axis is plane_normal.cross(u_dir).
+var u_dir: Vector3 = Vector3.RIGHT
+
+## False until the first meaningful drag motion locks the width axis: on
+## axis-aligned surfaces u_dir then snaps to the nearest world axis
+## (ProBuilder behavior — shapes come out axis aligned); on arbitrary
+## surfaces it follows the drag direction in the surface plane.
+var _u_locked: bool = false
+
+## First press point and current rect center, both on the plane.
+var base_start: Vector3 = Vector3.ZERO
+var rect_center: Vector3 = Vector3.ZERO
+
+## Base rect extents along u_dir / the in-plane perpendicular.
+var u_size: float = 0.0
+var v_size: float = 0.0
+
+## Signed extent along the plane normal (negative = grows below the surface).
+var height: float = 0.0
+
+## In-plane world-space unit direction the shape's LOCAL +Z ("forward": the
+## high side of stairs) points to. Follows the drag heuristic: the dimension
+## (u or v) that received the biggest delta in the last significant movement,
+## signed away from the drag start — so it can be nudged while placing.
+var facing: Vector3 = Vector3.ZERO
+
+## The corner of the base rect the cursor dragged out (world, on the plane):
+## one end of the base drag, kept for the creation vertex gizmos.
+var base_end: Vector3 = Vector3.ZERO
+
+## Last surface point seen (drag steps are measured against it).
+var _last_point: Vector3 = Vector3.ZERO
+## Steps smaller than this don't re-point the facing arrow (dead zone): the
+## rect's aspect must be clearly one way before the arrow turns.
+const FACING_DEAD_ZONE := 0.08
+
+## When true (e.g. while holding Ctrl), the facing direction is locked to its
+## current vector and will not be recomputed or flipped during mouse drag.
+var lock_direction: bool = false
+## When true (e.g. while holding Alt during HEIGHT state), the gizmo renders
+## a translucent infinite white plane representing the shape's current height.
+var show_height_plane: bool = false
+
+
+## Threshold difference between u_size and v_size to consider one dimension clearly dominant.
+const ASPECT_BIAS_THRESHOLD := 0.20
+## The live preview node (owned and managed by the plugin; the creator only
+## supplies data + placement for it). Null while nothing is being drawn.
+var preview_node: PBMesh = null
+
+## The plugin's grid/snapping state (null = unsnapped). When active, the
+## press point snaps to the grid on CARDINAL surfaces (the surface-normal
+## axis is masked, so walls keep their exact plane coordinate), the base
+## extents and the height quantize to the snap step.
+var grid: PBGrid = null
+
+## Vertex-snap hooks for the height/offset drag, injected by the plugin
+## (inert when unset, so headless shape tests need nothing). The first
+## reports whether V-snap is active (toolbar toggle or held V); the second
+## returns the scene's candidate vertices with the preview node excluded.
+var vertex_snap_active_fn: Callable = Callable()
+var vertex_snap_candidates_fn: Callable = Callable()
+
+# ── Queries ──────────────────────────────────────────────────────────────────
+
+func is_active() -> bool:
+	return state != State.INACTIVE
+
+## Local-space facing direction for the creation arrow (ZERO = none).
+func facing_direction() -> Vector3:
+	return PBShapeParams.facing_direction(shape_id)
+
+## The world-space direction the creation arrow points to (unit, in-plane).
+## Falls back to the shape's canonical facing before the drag starts.
+func arrow_direction() -> Vector3:
+	if facing.length_squared() > 0.5:
+		return facing.normalized()
+	return plane_normal.cross(u_dir).normalized()
+
+## Builds the current shape data from the current values.
+func build_data() -> PBMeshData:
+	if shape_id == &"":
+		return null
+	return PBShapeParams.build(shape_id, values)
+
+## Node transform placing `data` so its base face lies IN the drag plane,
+## centered on rect_center. The basis orients local +Z along `facing` (the
+## drag heuristic direction), local +Y along the surface normal — so e.g.
+## stairs rise toward the arrow.
+##
+## Height sign anchors the base face (>= 0, sits on the surface) or the top
+## face (< 0, grows below — ProBuilder behavior) — EXCEPT for shapes that
+## must stay pinned to the surface (PBShapeParams.stays_on_surface): round
+## shapes SHRINK on a negative drag rather than flipping underground, and the
+## sprite/plane ride the normal offset on top of their plane-aligned base.
+func placement_transform(data: PBMeshData) -> Transform3D:
+	if shape_id == &"trim":
+		return _trim_placement()
+	var f := arrow_direction()
+	var x_axis := plane_normal.cross(f).normalized()
+	var basis := Basis(x_axis, plane_normal, f)
+	var aabb := _aabb_of(data)
+	var lift: float = -aabb.position.y
+	if height < 0.0 and not PBShapeParams.stays_on_surface(shape_id):
+		lift = -(aabb.position.y + aabb.size.y)
+	elif PBShapeParams.height_drags_offset(shape_id):
+		lift += height
+	var aabb_center_local := aabb.get_center()
+	var center_offset: Vector3 = basis * Vector3(aabb_center_local.x, 0.0, aabb_center_local.z)
+	return Transform3D(basis, rect_center - center_offset + plane_normal * lift)
+
+## Trim placement — the drawn rect is the strip's FACE (its length by its
+## height; the depth is never dragged). Unlike every other shape the strip is
+## NOT centered on the rect: the Unibuilder spec stands it on the drag's start
+## edge so a drag begun at the wall leaves the trim's back flush with it.
+##   - Horizontal surface (floor): the strip STANDS UP on the line through the
+##     drag start along its RUN — the longer side of the drawn rect — with the
+##     depth running toward the drift along the other side ("on a floor ...
+##     start at the wall"). Which side is longer must not depend on the u
+##     lock (the first centimetres of motion): mapping u→length literally let
+##     an accidental perpendicular wobble stand the whole drag length TALL.
+##   - Any other surface (a wall): the strip lies FLAT ON the surface — face
+##     in the surface plane, bottom on the drag's lower edge, depth
+##     protruding along the surface normal (out of the wall). The height axis
+##     is world-up in the surface plane and the run is the more horizontal
+##     side, so mouldings sit upright whatever the lock did.
+## The trim's local space: +Z = length (centered span), +X = depth from the
+## back (x=0) out, +Y = height from the bottom (y=0) up — so the placement
+## basis directly maps those axes onto the drag geometry, and later Depth /
+## Height retypes in the adjust panel keep the back-bottom corner pinned.
+func _trim_placement() -> Transform3D:
+	var u := u_dir
+	var v_dir := plane_normal.cross(u).normalized()
+	var drag := base_end - base_start
+	var along_u := drag.dot(u)
+	var along_v := drag.dot(v_dir)
+	var z_axis: Vector3
+	var y_axis: Vector3
+	var origin: Vector3
+	if absf(plane_normal.dot(Vector3.UP)) > 0.999:
+		var run_is_u := u_size >= v_size
+		var run_unsigned := u if run_is_u else v_dir
+		var run_signed := along_u if run_is_u else along_v
+		var side_dir := v_dir if run_is_u else u
+		var side_signed := along_v if run_is_u else along_u
+		# Floor (or ceiling): stand up on the start line.
+		y_axis = plane_normal
+		z_axis = run_unsigned
+		# x = y × z is ±side_dir; flip the RUN (a straight strip is symmetric
+		# along its length) until the depth axis points along the drag side.
+		if y_axis.cross(z_axis).dot(side_dir * signf(side_signed)) < 0.0:
+			z_axis = -z_axis
+		origin = base_start + run_unsigned * (run_signed * 0.5)
+	else:
+		# Wall / tilted surface: lie flat on the surface, protrude along its
+		# normal, bottom on the lower edge of the drag.
+		var in_plane_up := Vector3.UP - plane_normal * Vector3.UP.dot(plane_normal)
+		if in_plane_up.length_squared() < 0.0001:
+			in_plane_up = v_dir
+		in_plane_up = in_plane_up.normalized()
+		var run_is_u := absf(u.dot(in_plane_up)) <= absf(v_dir.dot(in_plane_up))
+		var run_unsigned := u if run_is_u else v_dir
+		var run_signed := along_u if run_is_u else along_v
+		var side_dir := v_dir if run_is_u else u
+		var side_signed := along_v if run_is_u else along_u
+		z_axis = run_unsigned
+		if in_plane_up.cross(z_axis).dot(plane_normal) < 0.0:
+			z_axis = -z_axis
+		y_axis = (in_plane_up - z_axis * in_plane_up.dot(z_axis)).normalized()
+		if y_axis.dot(Vector3.UP) < 0.0:
+			# Keep the profile upright; flipping y requires flipping z too so
+			# x = y × z still points out of the wall.
+			y_axis = -y_axis
+			z_axis = -z_axis
+		var along_height := side_signed * side_dir.dot(y_axis)
+		origin = base_start + run_unsigned * (run_signed * 0.5) \
+			+ y_axis * minf(0.0, along_height)
+	var x_axis := y_axis.cross(z_axis).normalized()
+	return Transform3D(Basis(x_axis, y_axis, z_axis), origin)
+
+# ── Transitions ──────────────────────────────────────────────────────────────
+
+## Arms creation for `p_shape_id` (a New Shape menu pick). Nothing exists yet.
+func arm(p_shape_id: StringName) -> void:
+	state = State.ARMED
+	shape_id = p_shape_id
+	values = PBShapeParams.get_default_values(p_shape_id)
+	session_values = {}
+
+## Begins the base drag on the surface point/normal under the press. `view_z`
+## is the camera's forward direction — the drag axis seeds from the view so
+## Computes the snapped starting point on a surface when grid snapping is enabled
+## on cardinal surfaces, or returns the un-snapped surface point otherwise.
+func snap_starting_point(surface_point: Vector3, surface_normal: Vector3) -> Vector3:
+	var n := surface_normal.normalized()
+	if grid != null and grid.enabled and PBGrid.is_cardinal(n):
+		return grid.snap_point_masked(surface_point, n)
+	return surface_point
+
+## horizontal drags feel natural on walls too.
+func begin(surface_point: Vector3, surface_normal: Vector3, view_z: Vector3) -> void:
+	state = State.BASE
+	plane_normal = surface_normal.normalized()
+	var press := snap_starting_point(surface_point, plane_normal)
+	plane_point = press
+	# Seed the drag axis: camera forward projected into the plane, falling
+	# back to the plane-perpendicular-of-up and then world X.
+	var seed_dir: Vector3 = _project_on_plane(-view_z, plane_normal)
+	if seed_dir.length_squared() < 0.01:
+		seed_dir = _project_on_plane(Vector3.RIGHT, plane_normal)
+	if seed_dir.length_squared() < 0.01:
+		seed_dir = _project_on_plane(Vector3.UP.cross(plane_normal), plane_normal)
+	u_dir = seed_dir.normalized() if seed_dir.length_squared() > 0.0001 else Vector3.RIGHT
+	base_start = press
+	rect_center = press
+	u_size = 0.0
+	v_size = 0.0
+	height = 0.0
+	_u_locked = false
+	base_end = press
+	_last_point = press
+	# At rest the forward arrow sits along v (perpendicular to the drag seed)
+	# so the initial extent mapping matches "u → width, v → depth"; the first
+	# significant movement re-points it via the heuristic.
+	facing = plane_normal.cross(u_dir).normalized()
+	# The stand-off plane is the exception: its in-plane axes come from the
+	# WORLD (V down a wall, +Z on a floor), not from the drag, because its
+	# texture flow rides those axes — see PBShapeParams.plane_flow_axis. The
+	# axis is locked here so the drag below cannot re-point it.
+	if PBShapeParams.world_aligned_in_plane(shape_id):
+		facing = PBShapeParams.plane_flow_axis(plane_normal)
+		u_dir = plane_normal.cross(facing).normalized()
+		_u_locked = true
+	_apply_drag_extents()
+
+## Updates the base rect from a point ON the captured plane. Height-driven
+## values are untouched here (the base stage doesn't know the height yet).
+## The first meaningful drag motion LOCKS the width axis: axis-aligned
+## surfaces snap it to the nearest world axis (shapes come out axis
+## aligned); arbitrary surfaces keep the drag direction in the plane.
+func update_base(point_on_plane: Vector3) -> void:
+	if state != State.BASE:
+		return
+	var drag := point_on_plane - base_start
+	if not _u_locked and drag.length() > 0.05:
+		var drag_in_plane := _project_on_plane(drag, plane_normal)
+		if drag_in_plane.length_squared() > 0.0001:
+			u_dir = _snap_axis(drag_in_plane)
+			_u_locked = true
+	var v_dir := plane_normal.cross(u_dir).normalized()
+	var along_u := drag.dot(u_dir)
+	var along_v := drag.dot(v_dir)
+	if grid != null and grid.enabled:
+		# Quantize the two in-plane extents to the snap step (incremental —
+		# ProBuilder's GetPoint on the draw state's delta).
+		along_u = grid.snap_val(along_u)
+		along_v = grid.snap_val(along_v)
+	var snapped_drag := u_dir * along_u + v_dir * along_v
+	u_size = absf(along_u)
+	v_size = absf(along_v)
+	rect_center = base_start + snapped_drag * 0.5
+	base_end = base_start + snapped_drag
+	_update_facing(base_end)
+	_apply_drag_extents()
+
+## Ends the base drag (LMB release). Returns false (and aborts) when the
+## drag was too small to be intentional. The DOMINANT extent must reach
+## the minimum — an accidental click with a sliver of jitter used to pass
+## (the old check only rejected both-tiny drags, so a ~12 cm one-axis
+## jitter committed a degenerate sliver cube: broken node, stray overlay).
+## The floor is the grid step whether or not quantization is on — the step
+## is the unit of an intentional draw even with snapping off. The LATERAL
+## extent may stay small on purpose: a straight 2 m x 5 cm drag is a
+## legitimate thin wall.
+func end_base() -> bool:
+	if state != State.BASE:
+		return false
+	var min_extent := MIN_EXTENT
+	if grid != null:
+		min_extent = maxf(MIN_EXTENT, grid.step())
+	if maxf(u_size, v_size) < min_extent:
+		reset()
+		return false
+	# Stand-off shapes (sprite, plane) do not grow a third dimension: the next
+	# stage lifts the sheet off the surface instead, so the value the base drag
+	# sized stays the shape's final size.
+	state = State.OFFSET if PBShapeParams.height_drags_offset(shape_id) else State.HEIGHT
+	height = 0.0
+	# The values NOW are the baseline the height drag works against (round
+	# shapes resize relative to their base-release footprint).
+	base_values = values.duplicate()
+	_apply_drag_extents()
+	return true
+
+## Sprite-style anchor placement: a single press pins the shape ON the
+## surface (no base rect — the drag stages are skipped entirely); mouse
+## motion then displaces it along the captured normal (OFFSET state).
+func begin_anchor(surface_point: Vector3, surface_normal: Vector3, view_z: Vector3) -> void:
+	begin(surface_point, surface_normal, view_z)
+	state = State.OFFSET
+	facing = Vector3.ZERO  # no base drag → no facing heuristic, no arrow
+	# begin() seeded the size dims from the zero rect; the anchor flow never
+	# drags a base, so the shape keeps its default parameters.
+	values = PBShapeParams.get_default_values(shape_id)
+	base_values = values.duplicate()
+
+## Updates the height (or the sprite's / plane's normal offset) from a world
+## point (already projected onto the view-parallel plane by the caller). On
+## walls the normal extent maps to the shape's DEPTH (the shape grows along
+## the face normal); on floors it maps to the height. The facing arrow LOCKS
+## at the base release — height motion must not re-point it. The sprite/plane
+## offset never goes negative (they ride ON the surface, not through it);
+## height-param shapes keep signed growth (negative = below).
+func update_height_point(world_point: Vector3) -> void:
+	if state != State.HEIGHT and state != State.OFFSET:
+		return
+	height = (world_point - plane_point).dot(plane_normal)
+	if grid != null and grid.enabled:
+		height = grid.snap_val(height)
+	height = _vertex_snap_height(height)
+	if state == State.OFFSET:
+		height = maxf(0.0, height)
+	_apply_drag_extents()
+
+## Magnetic vertex snap for the rising shape: the base rect corners are the
+## snap sources; when one of them would pass within the magnet radius of a
+## scene vertex along the surface normal, the height locks onto that vertex
+## (a catch overrides the grid-quantized height — vertices win while V-snap
+## is active).
+func _vertex_snap_height(raw_height: float) -> float:
+	if not (vertex_snap_active_fn.is_valid() and vertex_snap_active_fn.call()):
+		return raw_height
+	if not vertex_snap_candidates_fn.is_valid():
+		return raw_height
+	var candidates: PackedVector3Array = vertex_snap_candidates_fn.call()
+	if candidates.is_empty():
+		return raw_height
+	var n := plane_normal.normalized()
+	if n.length_squared() < 0.5:
+		return raw_height
+	var res := PBElementEditor.snap_axis_delta(base_rect_corners(), candidates, n,
+		raw_height, PBElementEditor.vertex_snap_radius(grid))
+	return float(res["d"]) if res["caught"] else raw_height
+
+## The dragged base rect's four corners IN WORLD SPACE (on the captured
+## plane) — the BASE-phase outline the gizmo draws while the mesh preview is
+## still hidden.
+func base_rect_corners() -> PackedVector3Array:
+	var v_dir := plane_normal.cross(u_dir).normalized()
+	var u := u_dir * (u_size * 0.5)
+	var v := v_dir * (v_size * 0.5)
+	return PackedVector3Array([
+		rect_center - u - v,
+		rect_center + u - v,
+		rect_center + u + v,
+		rect_center - u + v,
+	])
+
+## LMB click in HEIGHT (or the sprite's OFFSET): keep the shape, open the
+## params modal.
+func confirm_height() -> void:
+	if state == State.HEIGHT or state == State.OFFSET:
+		state = State.PARAMS
+		session_values = values.duplicate()
+
+## A modal parameter edit. Height-like changes re-anchor the placement.
+func set_param(param_name: String, value: float) -> void:
+	values[param_name] = value
+	if param_name == "height" or param_name == "radius" or param_name == "outer_radius":
+		if values.has("height"):
+			height = values["height"]
+
+## Cancel in the modal: restore the values from modal-open.
+func cancel_params() -> void:
+	if state == State.PARAMS:
+		values = session_values.duplicate()
+		if values.has("height"):
+			height = values["height"]
+
+## Tears everything down (ESC before the confirming click creates nothing).
+func reset() -> void:
+	state = State.INACTIVE
+	shape_id = &""
+	values = {}
+	base_values = {}
+	session_values = {}
+	height = 0.0
+	u_size = 0.0
+	v_size = 0.0
+	_u_locked = false
+	facing = Vector3.ZERO
+	lock_direction = false
+	show_height_plane = false
+	_last_point = Vector3.ZERO
+	preview_node = null
+
+## Facing-arrow rule: the base rect's ASPECT decides, in the surface's own
+## frame, snapped to the nearest world axis on a cardinal surface:
+##    - Doors: parallel to the SHORTER dimension (the opening spans the width,
+##      the depth is the wall thickness).
+##    - Stairs: along the LONGER dimension (the steps rise along the run).
+##    - Other shapes: along the longer dimension.
+## The sign points away from the drag start.
+##
+## THERE IS NO LATERAL "NUDGE" WHILE THE RECT IS BEING DRAGGED, and there cannot
+## be one: for a shape that faces ACROSS its dominant extent (a door), the drag
+## that grows the rect IS motion along the facing's perpendicular, i.e. every
+## frame of an ordinary drag is indistinguishable from a deliberate nudge. The
+## old heuristic read that motion as one and flipped the doorway 90 degrees
+## mid-drag ("the doorway faces the wrong way", and — because the extents are
+## mapped through the facing — a 4x1 m opening came out 1 m wide with its
+## frame legs clamped shut: a plain slab). To orient a doorway the other way,
+## drag the rect the other way (the sign follows the drag) or draw the rect
+## with the aspect you want.
+func _update_facing(point: Vector3) -> void:
+	if lock_direction or PBShapeParams.world_aligned_in_plane(shape_id):
+		_last_point = point
+		return
+	if shape_id == &"trim":
+		# The arrow tracks the RUN — the longer side on a floor, the more
+		# horizontal side on a wall (matching _trim_placement) — signed away
+		# from the drag start. No aspect-flip heuristic churn.
+		_last_point = point
+		if u_size < 0.05 and v_size < 0.05:
+			return
+		var v2 := plane_normal.cross(u_dir).normalized()
+		var cum := point - base_start
+		var run_dir: Vector3
+		if absf(plane_normal.dot(Vector3.UP)) > 0.999:
+			run_dir = u_dir if u_size >= v_size else v2
+		else:
+			var in_plane_up := (Vector3.UP - plane_normal * Vector3.UP.dot(plane_normal)).normalized()
+			run_dir = u_dir if absf(u_dir.dot(in_plane_up)) <= absf(v2.dot(in_plane_up)) else v2
+		var s := cum.dot(run_dir)
+		facing = run_dir * (signf(s) if s != 0.0 else 1.0)
+		return
+	var step := _project_on_plane(point - _last_point, plane_normal)
+	_last_point = point
+	var cum := point - base_start
+	var v_dir := plane_normal.cross(u_dir).normalized()
+
+	var prefers_shorter := PBShapeParams.facing_prefers_shorter(shape_id)
+	var is_stair := shape_id == &"stair" or shape_id == &"curved_stair"
+
+	# Determine the natural axis from the base rect's dimensions (with
+	# hysteresis, so a near-square rect does not ping-pong).
+	var longer_is_u: bool
+	if absf(u_size - v_size) >= FACING_DEAD_ZONE:
+		longer_is_u = u_size >= v_size
+	else:
+		longer_is_u = absf(facing.dot(u_dir)) >= absf(facing.dot(v_dir)) if is_stair else absf(facing.dot(v_dir)) >= absf(facing.dot(u_dir))
+
+	var longer_dir := u_dir if longer_is_u else v_dir
+	var shorter_dir := v_dir if longer_is_u else u_dir
+	var chosen_axis := shorter_dir if prefers_shorter else longer_dir
+	# A shape with a facing (door, stairs) gets its facing axis snapped to the
+	# nearest WORLD axis on a cardinal surface. Without this the axis is picked in
+	# the DRAG's own frame, which is camera-relative: the same doorway came out
+	# facing sideways or forward depending only on where the camera happened to
+	# be, and a sideways doorway reads as a plain cube from the courtyard.
+	if (prefers_shorter or is_stair) and PBGrid.is_cardinal(plane_normal):
+		chosen_axis = _world_axis_near(chosen_axis)
+
+	var toward := cum.dot(chosen_axis)
+	var sign_val: float = signf(toward) if toward != 0.0 else signf(step.dot(chosen_axis))
+	facing = chosen_axis * (sign_val if sign_val != 0.0 else 1.0)
+
+
+## Nearest world XZ axis to `axis` (used to keep a facing off diagonals).
+func _world_axis_near(axis: Vector3) -> Vector3:
+	var fx := absf(axis.x)
+	var fz := absf(axis.z)
+	if fx < 0.0001 and fz < 0.0001:
+		return axis
+	return Vector3.RIGHT if fx >= fz else Vector3.BACK
+
+## Returns a human-readable readout of the shape's live extents during placement
+## (e.g. "W: 4.00m  D: 2.00m  H: 2.50m" or "Radius: 1.00m  Height: 2.00m").
+func get_extents_readout() -> String:
+	match state:
+		State.BASE:
+			if shape_id == &"sphere":
+				return "Radius: %.2fm" % float(values.get("radius", maxf(u_size, v_size) * 0.5))
+			elif shape_id == &"torus":
+				return "Radius: %.2fm" % float(values.get("outer_radius", maxf(u_size, v_size) * 0.5))
+			elif values.has("radius") or values.has("outer_radius"):
+				var r: float = float(values.get("radius", values.get("outer_radius", maxf(u_size, v_size) * 0.5)))
+				return "Radius: %.2fm" % r
+			else:
+				var w: float = float(values.get("width", u_size))
+				var d: float = float(values.get("depth", v_size))
+				return "W: %.2fm  D: %.2fm" % [w, d]
+		State.HEIGHT:
+			if shape_id == &"sphere":
+				return "Radius: %.2fm" % float(values.get("radius", 0.5))
+			elif shape_id == &"torus":
+				return "Outer R: %.2fm  Tube R: %.2fm" % [
+					float(values.get("outer_radius", 1.0)),
+					float(values.get("tube_radius", 0.2))
+				]
+			elif values.has("radius") or values.has("outer_radius"):
+				var r: float = float(values.get("radius", values.get("outer_radius", 0.5)))
+				var h: float = float(values.get("height", height))
+				return "Radius: %.2fm  Height: %.2fm" % [r, h]
+			else:
+				var w: float = float(values.get("width", u_size))
+				var d: float = float(values.get("depth", v_size))
+				var h: float = float(values.get("height", height))
+				return "W: %.2fm  D: %.2fm  H: %.2fm" % [w, d, h]
+		State.OFFSET:
+			if shape_id == &"sprite":
+				return "Offset: %.2fm" % height
+			return "W: %.2fm  D: %.2fm  Offset: %.2fm" % [
+				float(values.get("width", u_size)),
+				float(values.get("depth", v_size)),
+				height
+			]
+		_:
+			return ""
+
+## Returns the live (x, y, z) extents text displayed next to the cursor during placement.
+## x and y are the base box dimensions drawn, and z is the height (0.00 during BASE).
+func get_cursor_extents_text() -> String:
+	match state:
+		State.BASE:
+			return "(%.2f, %.2f, 0.00)" % [u_size, v_size]
+		State.HEIGHT:
+			return "(%.2f, %.2f, %.2f)" % [u_size, v_size, absf(height)]
+		State.OFFSET:
+			# The sprite has no base rect (it is sized by its parameters), the
+			# plane's footprint is what the base drag just drew.
+			if shape_id == &"sprite":
+				return "(0.00, 0.00, %.2f)" % absf(height)
+			return "(%.2f, %.2f, %.2f)" % [u_size, v_size, absf(height)]
+		_:
+			return ""
+## parameters (width, depth, height, radius). One mapping fits every surface:
+## local Y along the face normal, local +Z along facing (depth), and local +X
+## perpendicular (width).
+func _apply_drag_extents() -> void:
+	if state == State.OFFSET:
+		return  # anchor flow (sprite): the drag drives the normal offset only
+	if shape_id == &"trim":
+		# Trim: the drag IS the strip's face — the LONGER side of the rect is
+		# the run (length), the shorter is the height, and the DEPTH is never
+		# dragged (it keeps the project's last value). The u axis locks to the
+		# first centimetres of motion, so a literal u→length mapping let a
+		# perpendicular wobble at the drag start stand the strip the whole
+		# drag length TALL. On walls the split is by WORLD direction instead:
+		# the vertical extent is the height, the horizontal one the length —
+		# mouldings sit upright whatever the lock did.
+		if absf(plane_normal.dot(Vector3.UP)) > 0.999:
+			values["length"] = maxf(0.1, maxf(u_size, v_size))
+			var short_side := minf(u_size, v_size)
+			if short_side > 0.03:
+				values["height"] = maxf(0.03, short_side)
+		else:
+			var v_dir := plane_normal.cross(u_dir).normalized()
+			var u_is_vertical := absf(u_dir.dot(Vector3.UP)) > absf(v_dir.dot(Vector3.UP))
+			values["length"] = maxf(0.1, v_size if u_is_vertical else u_size)
+			var vertical := u_size if u_is_vertical else v_size
+			if vertical > 0.03:
+				values["height"] = maxf(0.03, vertical)
+		return
+	var height_value: float = height if state >= State.HEIGHT else NAN
+	var v_dir := plane_normal.cross(u_dir).normalized()
+	var forward_along_u: bool = absf(arrow_direction().dot(u_dir)) > absf(arrow_direction().dot(v_dir))
+	var width := v_size if forward_along_u else u_size
+	var depth := u_size if forward_along_u else v_size
+	PBShapeParams.apply_drag_extents(values, maxf(width, MIN_EXTENT),
+		maxf(depth, MIN_EXTENT), height_value, base_values,
+		grid.step() if grid != null else 0.0)
+
+## Snaps an in-plane direction to the nearest world axis (keeping the drag's
+## sign) when the captured surface is axis aligned; arbitrary surfaces keep
+## the drag direction. This is what makes created shapes axis aligned
+## instead of camera aligned (ProBuilder behavior).
+func _snap_axis(direction: Vector3) -> Vector3:
+	for axis in [Vector3.RIGHT, Vector3.UP, Vector3.BACK]:
+		if absf(axis.dot(plane_normal)) > 0.999:
+			# The surface normal IS axis aligned → snap the drag to the
+			# nearest world axis orthogonal to the normal.
+			var best_axis := Vector3.ZERO
+			var best_dot := -1.0
+			for candidate in [Vector3.RIGHT, Vector3.UP, Vector3.BACK]:
+				if absf(candidate.dot(plane_normal)) > 0.5:
+					continue
+				var d := absf(direction.normalized().dot(candidate))
+				if d > best_dot:
+					best_dot = d
+					best_axis = candidate
+			if best_axis != Vector3.ZERO:
+				return best_axis * signf(direction.dot(best_axis))
+			return direction.normalized()
+	return direction.normalized()
+
+static func _project_on_plane(v: Vector3, normal: Vector3) -> Vector3:
+	return v - normal * v.dot(normal)
+
+## Ray∩plane, or RAY_MISS when parallel/behind.
+static func ray_plane_intersect(ray_origin: Vector3, ray_dir: Vector3,
+		plane_point: Vector3, plane_normal: Vector3) -> Vector3:
+	var denom := ray_dir.dot(plane_normal)
+	if absf(denom) < 0.000001:
+		return RAY_MISS
+	var t: float = (plane_point - ray_origin).dot(plane_normal) / denom
+	if t < 0.0:
+		return RAY_MISS
+	return ray_origin + ray_dir * t
+
+## The world point to drive the height from: the mouse ray intersected with
+## the plane through `plane_point` parallel to the camera image plane — the
+## standard "follow the cursor" projection for extrude-style drags.
+static func height_reference_point(camera_origin: Vector3, camera_dir: Vector3,
+		ray_origin: Vector3, ray_dir: Vector3, plane_point: Vector3) -> Vector3:
+	var hit := ray_plane_intersect(ray_origin, ray_dir, plane_point, camera_dir)
+	if hit == RAY_MISS:
+		return plane_point
+	return hit
+
+static func _aabb_of(data: PBMeshData) -> AABB:
+	if data == null or data.positions.is_empty():
+		return AABB(Vector3.ZERO, Vector3.ONE)
+	var aabb := AABB(data.positions[0], Vector3.ZERO)
+	for p in data.positions:
+		aabb = aabb.expand(p)
+	return aabb

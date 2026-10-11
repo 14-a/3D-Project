@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The PBM format specification — PoiBuilder 0.9.167</title>
+<meta name="description" content="The .pbm v3 binary map format, normative and complete — file layout, chunks, the standard emitters lump, and the consumer rules. What the exporter writes and the reference PSP engine reads.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Retro</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">The PBM format specification</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html" class="current">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>The PBM format specification</h1><p class="lead">The .pbm v3 binary map format, normative and complete — file layout, chunks, the standard emitters lump, and the consumer rules. What the exporter writes and the reference PSP engine reads.</p><p>This page is the normative format document for the <code>.pbm</code> map, maintained in the repository as <a href="https://github.com/Francesco149/poibuilder/blob/master/SPEC_RETRO_FORMAT.md"><code>SPEC_RETRO_FORMAT.md</code></a>. A writer is the editor&#x27;s exporter (<code>addons/poibuilder/export/pb_map_exporter.gd</code>); the reference reader is the demo engine&#x27;s loader (<a href="https://github.com/Francesco149/poibuilder/blob/master/retro_engine/psp/pbm.h"><code>pbm.h</code></a> + <a href="https://github.com/Francesco149/poibuilder/blob/master/retro_engine/psp/pbm_loader.c"><code>pbm_loader.c</code></a>). Every byte below is cross-checked against both.</p>
+<blockquote class=""><strong>What v3 added on top of that:</strong> the standard lumps in §8 — payload layouts the specification defines, carried by the extensible metadata table (§7). They need no version change: a loader that does not know a lump&#x27;s tag skips it.  <strong>What v3 changed (breaking):</strong> the mesh header grew from 64 to 72 bytes by appending the animated-UV-scroll words <code>uv_scroll_u</code> / <code>uv_scroll_v</code>, and the texture header&#x27;s <code>has_alpha</code> became a three-valued <code>alpha_mode</code> (<code>NONE</code> / <code>CUTOUT</code> / <code>BLEND</code>). Both changes are what makes scrolling and translucent textures a first-class part of the format instead of something an engine has to infer. v1 and v2 files still load (see §3.1) — their meshes are simply static and their alpha is a cutout.</blockquote>
+<hr>
+<h2 id="1-overview-architectural-goals">1. Overview &amp; Architectural Goals</h2>
+<p>The <strong>PoiBuilder Retro Map</strong> format (<code>.pbm</code>) is a compact, zero-overhead, memory-mapped binary 3D map format designed specifically for fixed-function and resource-constrained retro hardware (such as the Sony PlayStation Portable, Nintendo DS/3DS, Dreamcast, PlayStation 2) as well as custom low-overhead software and OpenGL ES 1.x/2.0 renderers.</p>
+<h3 id="core-design-principles">Core Design Principles</h3>
+<ol class="steps"><li><strong>Direct DMA / Hardware Alignment</strong>: All vertex data is pre-interleaved into a single 24-byte structure matching native GPU registers (<code>GU_TEXTURE_32BITF | GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D</code> on Sony PSP GU). Vertices require zero runtime rearrangement or format conversion.</li><li><strong>Zero Runtime Decompression</strong>: Textures are stored in native uncompressed power-of-two formats (16-bit <code>RGBA5551</code> or 32-bit <code>RGBA8888</code>) ready for immediate VRAM upload via DMA (<code>sceGuTexImage</code>).</li><li><strong>Texture Swizzling Support</strong>: 16-bit textures can be swizzled into 16-byte × 8-row cache-friendly Morton/tile blocks to eliminate memory bus thrashing.</li><li><strong>Tile-Based Texture Atlasing</strong>: Discrete baked tiles (splats, stamps, decals) are packed into 512x512 texture atlases whose slots map <strong>edge-to-edge</strong> (a tile samples right up to its slot border and the sampler clamps at the atlas edge; there is deliberately no half-texel inset, which would shift the pattern at every slot boundary).</li><li><strong>Baked Vertex Lighting &amp; AO</strong>: Static scene illumination (directional sun, omni lights, shadows, and hemisphere ambient occlusion) is fully pre-baked into 32-bit vertex colors (<code>0xAABBGGRR</code>).</li><li><strong>Built-in Physical Collision</strong>: Dedicated bounding-box and triangle-mesh collision hulls are stored alongside visual meshes for native player collision and raycasting.</li><li><strong>Arbitrary Binary Metadata &amp; Entity Scripting</strong>: Version 2 introduces an extensible metadata chunk table for embedding arbitrary binary payloads, level descriptors, waypoints, scripting logic, and entity definitions directly within the map file.</li></ol>
+<hr>
+<h2 id="2-file-structure-memory-layout">2. File Structure &amp; Memory Layout</h2>
+<p>A <code>.pbm</code> file is composed of five sequential contiguous binary chunks in Little-Endian byte order:</p>
+<pre><code class="lang-">+-------------------------------------------------------------+
+| PbmHeader (64 bytes)                                        |
++-------------------------------------------------------------+
+| Texture Chunk (num_textures entries)                        |
+|   ├── PbmTextureHeader (44 bytes)                           |
+|   └── Raw Pixel Buffer (data_size bytes, packed)            |
+|   └── ...                                                   |
++-------------------------------------------------------------+
+| Mesh Chunk (num_meshes entries)                             |
+|   ├── PbmMeshHeader (72 bytes)                              |
+|   └── Vertex Buffer (num_vertices * 24 bytes, packed)       |
+|   └── ...                                                   |
++-------------------------------------------------------------+
+| Collider Chunk (num_colliders entries)                      |
+|   ├── PbmColliderHeader (64 bytes)                          |
+|   └── Triangle Buffer (num_triangles * 36 bytes)            |
+|   └── ...                                                   |
++-------------------------------------------------------------+
+| Metadata Chunk (num_metadata entries) [NEW in v2.0]         |
+|   ├── PbmMetadataHeader (40 bytes)                          |
+|   └── Raw Payload (data_size bytes, 4-byte padded)          |
+|   └── ...                                                   |
++-------------------------------------------------------------+</code></pre>
+<p><strong>The file is packed.</strong> Every chunk follows the previous one back-to-back with no file-level alignment: texture pixel buffers and vertex buffers carry no padding (a consumer that wants aligned buffers for its own hardware aligns its COPY, as the reference PSP loader does when it swizzles textures into VRAM). The one exception is the metadata chunk, where each payload is padded to a multiple of 4 bytes so the next 40-byte header stays aligned.</p>
+<hr>
+<h2 id="3-header-specification">3. Header Specification</h2>
+<p>The file begins with an exact 64-byte header:</p>
+<h3 id="pbmheader-64-bytes-packed"><code>PbmHeader</code> (64 bytes, packed)</h3>
+<table><thead><tr><th>Offset</th><th>Type</th><th>Field Name</th><th>Description</th></tr></thead><tbody><tr><td><code>0x00</code></td><td><code>uint32_t</code></td><td><code>magic</code></td><td>Magic identifier. Must be <code>0x334D4250</code> (<code>&quot;PBM3&quot;</code> in ASCII Little-Endian). Version 2 used <code>0x324D4250</code> (<code>&quot;PBM2&quot;</code>), version 1 <code>0x314D4250</code> (<code>&quot;PBM1&quot;</code>).</td></tr><tr><td><code>0x04</code></td><td><code>uint32_t</code></td><td><code>version</code></td><td>Format major version number. Must be <code>3</code> for PBM3.</td></tr><tr><td><code>0x08</code></td><td><code>uint32_t</code></td><td><code>num_textures</code></td><td>Total number of texture records in the Texture Chunk.</td></tr><tr><td><code>0x0C</code></td><td><code>uint32_t</code></td><td><code>num_meshes</code></td><td>Total number of visual mesh records in the Mesh Chunk.</td></tr><tr><td><code>0x10</code></td><td><code>uint32_t</code></td><td><code>num_colliders</code></td><td>Total number of collision shapes in the Collider Chunk.</td></tr><tr><td><code>0x14</code></td><td><code>uint32_t</code></td><td><code>num_metadata</code></td><td>Total number of metadata entries in the Metadata Chunk. (<code>0</code> in v1).</td></tr><tr><td><code>0x18</code></td><td><code>float[3]</code></td><td><code>spawn_pos</code></td><td>Default player camera/spawn position (X, Y, Z) in world meters.</td></tr><tr><td><code>0x24</code></td><td><code>float</code></td><td><code>spawn_rot</code></td><td>Default player camera spawn yaw orientation in radians.</td></tr><tr><td><code>0x28</code></td><td><code>float[3]</code></td><td><code>bounds_min</code></td><td>Scene Axis-Aligned Bounding Box (AABB) minimum coordinates (X, Y, Z).</td></tr><tr><td><code>0x34</code></td><td><code>float[3]</code></td><td><code>bounds_max</code></td><td>Scene Axis-Aligned Bounding Box (AABB) maximum coordinates (X, Y, Z).</td></tr><tr><td><code>0x40</code></td><td><code>uint8_t[0]</code></td><td><em>(end)</em></td><td>Total size = 64 bytes.</td></tr></tbody></table>
+<h3 id="versioning-breaking-change-policy">Versioning &amp; Breaking Change Policy</h3>
+<ul><li><strong>Minor Version Increments</strong>: Backwards-compatible additions (e.g. new optional metadata tags or hints) MUST NOT increment the major version.</li><li><strong>Breaking Format Changes</strong>: Any structural change to existing headers, vertex layouts, or chunk order MUST increment <code>PBM_VERSION</code> and update the magic string (e.g. <code>PBM3</code>).</li><li><strong>Loader Compliance Rule</strong>: Loaders MUST inspect <code>header.version</code>. If <code>header.version &gt; PBM_SUPPORTED_VERSION</code>, the loader MUST reject the file with an explicit diagnostic: <code>[PBM] Error: Incompatible map version %u (supported: 1..%u). Breaking format change detected.</code> Loaders supporting version 3 SHOULD maintain backwards-compatibility with version 1 and 2 files.</li></ul>
+<h3 id="3-1-version-differences-a-loader-must-handle">3.1 Version Differences a Loader Must Handle</h3>
+<table><thead><tr><th></th><th>v1</th><th>v2</th><th>v3</th></tr></thead><tbody><tr><td>magic</td><td><code>PBM1</code></td><td><code>PBM2</code></td><td><code>PBM3</code></td></tr><tr><td><code>PbmHeader</code> size</td><td>60</td><td>64</td><td>64</td></tr><tr><td>Metadata chunk</td><td>absent (<code>num_metadata</code> = 0)</td><td>present</td><td>present</td></tr><tr><td>Mesh header size</td><td>64</td><td>64</td><td><strong>72</strong></td></tr><tr><td>Texture <code>has_alpha</code></td><td>0 / 1</td><td>0 / 1</td><td><strong><code>alpha_mode</code> 0 / 1 / 2</strong></td></tr></tbody></table>
+<p>Practical rule: read the version first, then read <code>PBM_MESH_HEADER_V2</code> (64) bytes of every mesh header when the version is below 3, and treat the missing <code>uv_scroll_*</code> words as <code>0,0</code> (static). A v1/v2 map therefore renders exactly as it did before the upgrade.</p>
+<hr>
+<h2 id="4-texture-chunk-specification">4. Texture Chunk Specification</h2>
+<p>The Texture Chunk contains <code>header.num_textures</code> sequential records. Each record consists of a 44-byte <code>PbmTextureHeader</code> followed immediately by <code>data_size</code> bytes of raw uncompressed pixel data.</p>
+<h3 id="pbmtextureheader-44-bytes-packed"><code>PbmTextureHeader</code> (44 bytes, packed)</h3>
+<table><thead><tr><th>Offset</th><th>Type</th><th>Field Name</th><th>Description</th></tr></thead><tbody><tr><td><code>0x00</code></td><td><code>char[32]</code></td><td><code>name</code></td><td>Null-terminated ASCII texture name / identifier (max 31 chars + <code>\0</code>).</td></tr><tr><td><code>0x20</code></td><td><code>uint16_t</code></td><td><code>width</code></td><td>Texture width in pixels. Must be a power of two (≥ 16, e.g. 128, 256, 512).</td></tr><tr><td><code>0x22</code></td><td><code>uint16_t</code></td><td><code>height</code></td><td>Texture height in pixels. Must be a power of two (≥ 8, e.g. 128, 256, 512).</td></tr><tr><td><code>0x24</code></td><td><code>uint16_t</code></td><td><code>format</code></td><td>Pixel storage format (<code>PBM_TEX_FMT_*</code>).</td></tr><tr><td><code>0x26</code></td><td><code>uint16_t</code></td><td><code>alpha_mode</code></td><td>How the surface blends, <code>PBM_ALPHA_*</code> (see below). v1/v2 called this <code>has_alpha</code> and used only <code>0</code>/<code>1</code>, which load as <code>NONE</code>/<code>CUTOUT</code>.</td></tr><tr><td><code>0x28</code></td><td><code>uint32_t</code></td><td><code>data_size</code></td><td>Length of pixel payload in bytes (= width × height × bytes_per_pixel).</td></tr></tbody></table>
+<h3 id="alpha-modes">Alpha Modes</h3>
+<table><thead><tr><th>Constant</th><th>Value</th><th>Meaning</th><th>Engine behaviour</th></tr></thead><tbody><tr><td><code>PBM_ALPHA_NONE</code></td><td><code>0</code></td><td>Fully opaque</td><td>Opaque pass; mip chain built.</td></tr><tr><td><code>PBM_ALPHA_CUTOUT</code></td><td><code>1</code></td><td>Hard-edged transparency (foliage, decals, lace)</td><td>Alpha-tested in the alpha pass (a threshold near 1/16 of full range); mip chain built with an <strong>alpha-preserving combine</strong> — ANY opaque texel of a 2x2 block keeps the level&#x27;s texel opaque, so the silhouette dilates by half a texel per level. A plain box filter would instead make every level further transparent and eat the silhouette, which is why an implementation may be tempted to ship cutouts with no chain; doing so costs a texture-cache miss per fragment on art that is routinely 256x512 or larger.</td></tr><tr><td><code>PBM_ALPHA_BLEND</code></td><td><code>2</code></td><td>Soft, partial alpha (water, glass, smoke, wetness overlays)</td><td>Blended in the alpha pass with a zero threshold (only fully transparent texels are discarded, which keeps early-Z working); mip chain built.</td></tr></tbody></table>
+<p><strong>A <code>BLEND</code> texture MUST be stored as <code>PBM_TEX_FMT_RGBA8888</code>.</strong> The 16-bit formats carry a single alpha bit, which can only cut a texel out — a soft edge quantised to it becomes a hard one, which is precisely the difference between the two modes. Exporters derive the mode from the authoring tool (in Godot: <code>transparency = Alpha</code> → <code>BLEND</code>, <code>Alpha Scissor</code>/<code>Alpha Hash</code> → <code>CUTOUT</code>, everything else → <code>NONE</code>; in glTF: <code>alphaMode</code> <code>BLEND</code> / <code>MASK</code> / absent).</p>
+<h3 id="pixel-storage-formats">Pixel Storage Formats</h3>
+<table><thead><tr><th>Constant</th><th>Value</th><th>BPP</th><th>Layout Description</th></tr></thead><tbody><tr><td><code>PBM_TEX_FMT_RGBA8888</code></td><td><code>0</code></td><td>32</td><td>32-bit direct color: 8 bits Red, 8 bits Green, 8 bits Blue, 8 bits Alpha.</td></tr><tr><td><code>PBM_TEX_FMT_RGBA5551</code></td><td><code>1</code></td><td>16</td><td>16-bit direct color: 5 bits Red, 5 bits Green, 5 bits Blue, 1 bit Alpha (<code>R:0..4, G:5..9, B:10..14, A:15</code>). Halves VRAM usage.</td></tr><tr><td><code>PBM_TEX_FMT_RGBA4444</code></td><td><code>2</code></td><td>16</td><td>16-bit direct color: 4 bits per channel, including alpha. <strong>Legal in the format, not produced by the reference exporters.</strong></td></tr><tr><td><code>PBM_TEX_FMT_RGB565</code></td><td><code>3</code></td><td>16</td><td>16-bit direct color: 5/6/5 with no alpha. <strong>Legal in the format, not produced by the reference exporters.</strong></td></tr></tbody></table>
+<p>The reference exporters emit only <code>RGBA5551</code> (opaque and <code>CUTOUT</code>: 2 bytes per texel, swizzleable, one alpha bit is enough to cut a hard edge) and <code>RGBA8888</code> (<code>BLEND</code>: soft alpha needs 8 bits). Consumers that cannot sample 4444/565 MUST <strong>reject them explicitly</strong> rather than bind them as something else — the reference loader treats any other value as fatal, because a silently mis-sampled texture (a 4444 payload read as 8888) renders garbage that is far harder to diagnose than a refusal.</p>
+<h3 id="memory-swizzling-specification">Memory Swizzling Specification</h3>
+<p>The FILE stores texels as plain linear, row-major, top-down pixel arrays — no swizzling is applied on the way out, and a loader reads them exactly as written. For 16-bit textures (<code>RGBA5551</code>) targeting Sony PSP GU hardware, a consumer SHOULD swizzle into 16-byte × 8-row tiles when copying the pixels into VRAM (the reference loader does exactly this at load time; the destination buffer is what needs the alignment):</p>
+<pre><code class="lang-c">void swizzle_texture_16(uint8_t* out, const uint8_t* in, unsigned int width, unsigned int height) {
+    unsigned int block_address = 0;
+    unsigned int row_blocks = (width * 2) / 16;
+    for (unsigned int y = 0; y &lt; height; ++y) {
+        for (unsigned int x = 0; x &lt; width * 2; x += 16) {
+            unsigned int block_x = x / 16;
+            unsigned int block_y = y / 8;
+            unsigned int block_index = block_y * row_blocks + block_x;
+            unsigned int block_offset = block_index * 128;
+            unsigned int row_in_block = y % 8;
+            memcpy(&amp;out[block_offset + row_in_block * 16], &amp;in[y * width * 2 + x], 16);
+        }
+    }
+}</code></pre>
+<hr>
+<h2 id="5-mesh-chunk-specification">5. Mesh Chunk Specification</h2>
+<p>The Mesh Chunk contains <code>header.num_meshes</code> records. Each record consists of a 72-byte <code>PbmMeshHeader</code> followed immediately by <code>num_vertices * sizeof(PbmVertex)</code> bytes of interleaved vertex data.</p>
+<h3 id="pbmmeshheader-72-bytes-packed"><code>PbmMeshHeader</code> (72 bytes, packed)</h3>
+<table><thead><tr><th>Offset</th><th>Type</th><th>Field Name</th><th>Description</th></tr></thead><tbody><tr><td><code>0x00</code></td><td><code>char[32]</code></td><td><code>name</code></td><td>Null-terminated ASCII mesh name (e.g. <code>&quot;CourtyardFloor_0&quot;</code>).</td></tr><tr><td><code>0x20</code></td><td><code>int32_t</code></td><td><code>texture_id</code></td><td>Zero-based index into Texture Chunk, or <code>-1</code> if untextured (vertex color only).</td></tr><tr><td><code>0x24</code></td><td><code>uint32_t</code></td><td><code>num_vertices</code></td><td>Total vertices. Must be a multiple of 3 (triangles = num_vertices / 3).</td></tr><tr><td><code>0x28</code></td><td><code>float[3]</code></td><td><code>bounds_min</code></td><td>Mesh AABB minimum coordinates (X, Y, Z) in world space.</td></tr><tr><td><code>0x34</code></td><td><code>float[3]</code></td><td><code>bounds_max</code></td><td>Mesh AABB maximum coordinates (X, Y, Z) in world space.</td></tr><tr><td><code>0x40</code></td><td><code>float</code></td><td><code>uv_scroll_u</code></td><td>Animated UV scroll along U (§5.1). <code>0.0</code> = static.</td></tr><tr><td><code>0x44</code></td><td><code>float</code></td><td><code>uv_scroll_v</code></td><td>Animated UV scroll along V (§5.1). <code>0.0</code> = static.</td></tr></tbody></table>
+<p><em>(The 64-byte v2 mesh header ended at <code>0x40</code>; the two scroll words are what makes a v3 header 72 bytes.)</em></p>
+<h3 id="5-1-standard-specification-animated-uv-scrolling">5.1 Standard Specification: Animated UV Scrolling</h3>
+<p>The PBM specification formalizes animated scrolling textures through a <strong>minimal, universal common denominator</strong>: a continuous 2D linear translation offset.</p>
+<h4 id="5-1-1-scope-and-guarantees">5.1.1 Scope and Guarantees</h4>
+<p>The specification guarantees <strong>only</strong> the simplest linear translation model:</p>
+<pre><code class="lang-">uv(t) = uv(0) + t * (uv_scroll_u, uv_scroll_v)</code></pre>
+<p>Where:</p>
+<ul><li><code>t</code> is scene elapsed time in seconds.</li><li><code>uv_scroll_u</code> and <code>uv_scroll_v</code> are float values expressing velocity in <strong>texture repeats per second</strong> along the surface&#x27;s local UV axes.</li><li><code>0.0, 0.0</code> denotes a static mesh.</li></ul>
+<p><strong>Intentional Minimalism:</strong> The format deliberately does <em>not</em> specify full animated UV node graphs, arbitrary rotation matrices, non-linear spline curves, or procedural UV distortion. Restricting the guarantee to linear 2D translation ensures universal compatibility across:</p>
+<ol class="steps"><li><strong>Fixed-function retro hardware:</strong> Sony PlayStation Portable (PSP) Graphics Engine (GE) via hardware coordinate offset registers (<code>sceGuTexOffset</code>), with zero CPU vertex transformation, zero bus traffic, and zero allocation.</li><li><strong>Modern GPU pipelines:</strong> Direct material shader uniforms (<code>StandardMaterial3D.uv1_offset</code>) or vertex shader additions with near-zero overhead.</li><li><strong>Software and minimal rasterizers:</strong> Single addition per vertex or scanline iterator step.</li></ol>
+<h4 id="5-1-2-format-constraints">5.1.2 Format Constraints</h4>
+<p>To guarantee correct rasterization across all targets:</p>
+<ol class="steps"><li><strong>Standalone Texture Enforcement:</strong> Any mesh with non-zero scroll velocity <strong>MUST</strong> reference a dedicated, standalone texture. It must <strong>NEVER</strong> be packed into a shared tile atlas. Atlased textures use clamped sampling within sub-rectangle coordinate slots; applying an offset to an atlased mesh would drag texture coordinates across slot boundaries into neighboring tiles.</li><li><strong>Repeat Wrapping (<code>GU_REPEAT</code> / <code>GL_REPEAT</code>):</strong> The referenced texture must wrap seamlessly along the scrolling axis.</li><li><strong>Alpha Blending:</strong> Scrolling surfaces requiring soft transparency (e.g. water streams, mist, glass) use <code>alpha_mode = PBM_ALPHA_BLEND</code> (RGBA8888 with mip chain retained). Hard-edged cutouts use <code>alpha_mode = PBM_ALPHA_CUTOUT</code>.</li></ol>
+<h4 id="5-1-3-sign-and-direction-convention">5.1.3 Sign and Direction Convention</h4>
+<p><code>uv_scroll_u</code> and <code>uv_scroll_v</code> describe the direction the <strong>pattern travels</strong> across the surface:</p>
+<ul><li><strong>Walls:</strong> The surface V axis points vertically upward. A downward-falling waterfall moves toward -V; therefore, falling water has <strong>negative</strong> <code>uv_scroll_v</code> (e.g. <code>-0.75</code>).</li><li><strong>Floors:</strong> The surface V axis points toward world +Z. A fluid churning away from a wall (toward +Z) travels along +V; under the coordinate offset relation (<code>uv(t) = uv(0) + v · t</code>), advancing the offset translates the pattern outward.</li><li><strong>Billboards:</strong> Rising steam, smoke, or mist moving upward has <strong>positive</strong> <code>uv_scroll_v</code> (e.g. <code>+0.35</code>).</li></ul>
+<h4 id="5-1-4-authoring-workflow-in-poibuilder">5.1.4 Authoring Workflow in PoiBuilder</h4>
+<p>The canonical workflow to author scrolling textures in PoiBuilder:</p>
+<ol class="steps"><li><strong>Shape Creation (Plane):</strong> Select <strong>New Shape → Plane</strong> (or press <code>B</code> / toolbar shortcut).</li><li><strong>Surface Drag:</strong> Click and drag on any surface (wall, floor, or sloped ramp) to establish a base rectangle parallel to the surface.</li><li><strong>Standoff Offset:</strong> Release mouse button; move the cursor along the surface normal (clamped ≥ 0) to set the standoff elevation (keeping the sheet clear of wall/floor z-fighting), then click to confirm.</li><li><strong>Material &amp; UV Dock:</strong> Select the face in Face Mode, navigate to <strong>Scrolling Texture (UV Animation)</strong> in the dock: - Enter <code>Speed U</code> and <code>Speed V</code> in repeats/second (the dock displays live equivalent m/s translation). - Click <strong>Apply Scroll</strong>. The material is automatically duplicated so other faces are not unintentionally animated, and metadata <code>poi_uv_scroll</code> is set.</li><li><strong>Live In-Editor Preview:</strong> The <strong>Animate in Viewport</strong> checkbox animates the scrolling texture live in the 3D editor viewport at 60 FPS while editing.</li><li><strong>Export:</strong> Exporting via <strong>Export → PoiRetro (.pbm)</strong> or GLB automatically writes <code>uv_scroll_u</code> / <code>uv_scroll_v</code> and keeps the texture standalone.</li></ol>
+<hr>
+<h2 id="6-collider-chunk-specification">6. Collider Chunk Specification</h2>
+<p>The Collider Chunk contains <code>header.num_colliders</code> collision hulls. Each record has a 64-byte <code>PbmColliderHeader</code> followed by triangle vertex data if <code>type == PBM_COL_TRIMESH</code>.</p>
+<h3 id="pbmcolliderheader-64-bytes-packed"><code>PbmColliderHeader</code> (64 bytes, packed)</h3>
+<table><thead><tr><th>Offset</th><th>Type</th><th>Field Name</th><th>Description</th></tr></thead><tbody><tr><td><code>0x00</code></td><td><code>char[32]</code></td><td><code>name</code></td><td>Collider name (e.g. <code>&quot;Collider_NorthWall&quot;</code>).</td></tr><tr><td><code>0x20</code></td><td><code>uint32_t</code></td><td><code>type</code></td><td>Collider type: <code>0</code> = BOX, <code>1</code> = TRIMESH, <code>2</code> = RAMP.</td></tr><tr><td><code>0x24</code></td><td><code>float[3]</code></td><td><code>bounds_min</code></td><td>Collider AABB minimum (X, Y, Z).</td></tr><tr><td><code>0x30</code></td><td><code>float[3]</code></td><td><code>bounds_max</code></td><td>Collider AABB maximum (X, Y, Z).</td></tr><tr><td><code>0x3C</code></td><td><code>uint32_t</code></td><td><code>num_triangles</code></td><td>Number of triangles in payload (<code>0</code> for simple AABB BOX).</td></tr></tbody></table>
+<p><em>(<code>PbmColliderHeader</code> is 64 bytes as implemented and written; there is no padding field in the binary layout.)</em></p>
+<ul><li>If <code>num_triangles &gt; 0</code>, exactly <code>num_triangles * 9 * sizeof(float)</code> bytes follow (3 vertices × 3 floats (x, y, z) per triangle, total 36 bytes per triangle).</li></ul>
+<hr>
+<h2 id="7-metadata-chunk-specification-new-in-v2-0">7. Metadata Chunk Specification (New in v2.0)</h2>
+<p>The Metadata Chunk contains <code>header.num_metadata</code> entries. This chunk allows embedding arbitrary binary metadata, scripting tables, entity lists, audio triggers, and custom data blocks.</p>
+<h3 id="pbmmetadataheader-40-bytes-packed"><code>PbmMetadataHeader</code> (40 bytes, packed)</h3>
+<table><thead><tr><th>Offset</th><th>Type</th><th>Field Name</th><th>Description</th></tr></thead><tbody><tr><td><code>0x00</code></td><td><code>char[32]</code></td><td><code>tag</code></td><td>Null-terminated ASCII tag identifier (e.g. <code>&quot;map_name&quot;</code>, <code>&quot;entities&quot;</code>, <code>&quot;waypoints&quot;</code>).</td></tr><tr><td><code>0x20</code></td><td><code>uint32_t</code></td><td><code>type</code></td><td>Payload type identifier (<code>PBM_META_*</code>).</td></tr><tr><td><code>0x24</code></td><td><code>uint32_t</code></td><td><code>data_size</code></td><td>Length of payload in bytes.</td></tr></tbody></table>
+<h3 id="metadata-type-constants">Metadata Type Constants</h3>
+<table><thead><tr><th>Constant</th><th>Value</th><th>Description</th></tr></thead><tbody><tr><td><code>PBM_META_RAW</code></td><td><code>0</code></td><td>Raw unformatted binary blob.</td></tr><tr><td><code>PBM_META_STRING</code></td><td><code>1</code></td><td>UTF-8 / ASCII null-terminated text string.</td></tr><tr><td><code>PBM_META_JSON</code></td><td><code>2</code></td><td>Plain UTF-8 JSON object string for flexible high-level scripting.</td></tr><tr><td><code>PBM_META_ENTITY</code></td><td><code>3</code></td><td>Binary structured entity record list (see Section 8).</td></tr></tbody></table>
+<p>Following each <code>PbmMetadataHeader</code>, exactly <code>data_size</code> bytes of binary data are stored. If <code>data_size</code> is not a multiple of 4, the writer MUST pad with <code>0x00</code> bytes to maintain 4-byte alignment for subsequent headers.</p>
+<h3 id="standard-tags-written-by-the-reference-exporter">Standard Tags Written by the Reference Exporter</h3>
+<p>The tag space is open — anything not listed here is the author&#x27;s engine&#x27;s to define (see §9 for the recipe tags: <code>player_spawn</code>, <code>walkable_mesh</code>, <code>triggers</code>, <code>rigid_bodies</code>, <code>entities</code>). Three tags are written by the reference exporter on every export and read by the reference demo engine:</p>
+<table><thead><tr><th>Tag</th><th>Type</th><th>Payload</th></tr></thead><tbody><tr><td><code>map_name</code></td><td><code>PBM_META_STRING</code></td><td>Human-readable map title (NUL-terminated UTF-8). Defaults to the export file&#x27;s base name.</td></tr><tr><td><code>env_preset</code></td><td><code>PBM_META_STRING</code></td><td>Environment preset name (<code>dawn</code> / <code>day</code> / <code>dusk</code> / <code>night</code>), stamped from the editor&#x27;s Time of Day menu; the demo engine rebuilds its sky/fog/ambient from it.</td></tr><tr><td><code>emitters</code></td><td>—</td><td>The standard particle-emitter lump, normative in §8.</td></tr></tbody></table>
+<hr>
+<h2 id="8-standard-lump-particle-emitters-tag-emitters">8. Standard Lump: Particle Emitters (<code>tag = &quot;emitters&quot;</code>)</h2>
+<p>A <strong>standard lump</strong> is a metadata entry (§7) whose payload layout this specification defines, rather than the author&#x27;s engine. <code>&quot;emitters&quot;</code> is the first one: the metadata table is the transport, and the payload is normative. It is a compatible addition <em>within</em> v3 — the chunk is already extensible, and a loader that does not know the tag skips it — so the major version does not move.</p>
+<h3 id="8-1-the-model-a-looping-stateless-particle-stream">8.1 The model: a looping, stateless particle stream</h3>
+<p>An emitter does <strong>not</strong> own a particle array. At any scene time <code>t</code>, particle <code>i</code> of an emitter is a <strong>pure function of <code>t</code>, <code>i</code>, and the emitter&#x27;s <code>seed</code></strong>:</p>
+<pre><code class="lang-">age_i(t)  = frac(t / life_i + phase_i)        # 0 at birth, → 1 at death
+tau       = age_i(t) * life_i                 # the particle&#x27;s age in seconds
+position  = origin + spawn_i + closed_form(tau)
+size      = size_i * curve(tau / life_i)
+colour    = colour_curve(tau / life_i)
+rotation  = angle0_i + spin_i * tau
+frame     = atlas cell at frac(age * anim_loops + anim_offset_i)</code></pre>
+<p>Every particle is therefore always alive and always at a different point of its own loop, which is what makes a fixed budget of them read as a continuous emission. Two consequences are worth stating, because they are the reason this model is in the format at all:</p>
+<ul><li>A runtime needs <strong>no per-particle state, no allocation, and no integration</strong>: the per-particle constants (<code>life</code>, <code>speed</code>, <code>size</code>, <code>spin</code>, <code>angle0</code>, <code>dir</code>, <code>spawn</code>, <code>phase</code>, <code>anim_offset</code>, <code>wobble_phase</code>) are derived <strong>once</strong> from the seed, and the per-frame cost is the closed form plus two triangles per particle.</li><li>The look is <strong>deterministic</strong>: an implementation that derives the constants as §8.3 specifies shows the same particle field as the reference, so a preview in an authoring tool and the device output can be compared directly.</li></ul>
+<p>The cost profile that shaped it, measured on PSP hardware (see §11): fill rate is the only real budget — a full screen of cache-resident textured fill is ≈0.3 ms, one draw call is ≈0.94 µs, and a few hundred transformed vertices are noise. The design goal is therefore &quot;as few fragments as the effect needs&quot;, not &quot;as few vertices&quot;. Particles may be large, but not many.</p>
+<h3 id="8-2-lump-layout-normative">8.2 Lump layout (normative)</h3>
+<pre><code class="lang-">&quot;emitters&quot; payload =
+  PbmEmitterLumpHeader        (16 bytes)
+  PbmEmitter records[N]       (176 bytes each)</code></pre>
+<h4 id="pbmemitterlumpheader"><code>PbmEmitterLumpHeader</code></h4>
+<table><thead><tr><th>Offset</th><th>Type</th><th>Field</th><th>Meaning</th></tr></thead><tbody><tr><td><code>0x00</code></td><td><code>uint32</code></td><td><code>magic</code></td><td><code>0x54494D45</code> (<code>&quot;EMIT&quot;</code>, little-endian)</td></tr><tr><td><code>0x04</code></td><td><code>uint32</code></td><td><code>version</code></td><td><code>1</code>. A loader MUST reject a <strong>higher</strong> version by skipping the lump</td></tr><tr><td><code>0x08</code></td><td><code>uint32</code></td><td><code>count</code></td><td>Number of <code>PbmEmitter</code> records</td></tr><tr><td><code>0x0C</code></td><td><code>uint32</code></td><td><code>reserved</code></td><td>MUST be 0</td></tr></tbody></table>
+<h4 id="pbmemitter-176-bytes-packed-little-endian"><code>PbmEmitter</code> (176 bytes, packed, little-endian)</h4>
+<table><thead><tr><th>Offset</th><th>Type</th><th>Field</th><th>Meaning</th></tr></thead><tbody><tr><td><code>0x00</code></td><td><code>char[24]</code></td><td><code>name</code></td><td>Label (debug only)</td></tr><tr><td><code>0x18</code></td><td><code>float[3]</code></td><td><code>pos</code></td><td>Emitter origin, world space</td></tr><tr><td><code>0x24</code></td><td><code>float[3]</code></td><td><code>dir</code></td><td>Emission axis, unit length</td></tr><tr><td><code>0x30</code></td><td><code>float</code></td><td><code>spread</code></td><td>Cone half-angle, <strong>radians</strong>; <code>PI</code> = sphere</td></tr><tr><td><code>0x34</code></td><td><code>float</code></td><td><code>speed_min</code></td><td>Initial speed along the particle&#x27;s own direction, m/s</td></tr><tr><td><code>0x38</code></td><td><code>float</code></td><td><code>speed_max</code></td><td></td></tr><tr><td><code>0x3C</code></td><td><code>float</code></td><td><code>life_min</code></td><td>Particle lifetime, seconds (&gt; 0)</td></tr><tr><td><code>0x40</code></td><td><code>float</code></td><td><code>life_max</code></td><td></td></tr><tr><td><code>0x44</code></td><td><code>float[3]</code></td><td><code>gravity</code></td><td>Constant acceleration, m/s²</td></tr><tr><td><code>0x50</code></td><td><code>float</code></td><td><code>damping</code></td><td>Exponential drag λ, per second; <code>0</code> = none</td></tr><tr><td><code>0x54</code></td><td><code>float</code></td><td><code>size_min</code></td><td>Quad <strong>height</strong> at birth, metres</td></tr><tr><td><code>0x58</code></td><td><code>float</code></td><td><code>size_max</code></td><td></td></tr><tr><td><code>0x5C</code></td><td><code>float</code></td><td><code>size_mid</code></td><td>Height multiplier at the knee (<code>1</code> = unchanged)</td></tr><tr><td><code>0x60</code></td><td><code>float</code></td><td><code>size_end</code></td><td>Height multiplier at death</td></tr><tr><td><code>0x64</code></td><td><code>float</code></td><td><code>aspect</code></td><td>Width ÷ height of the quad (<code>1</code> = square)</td></tr><tr><td><code>0x68</code></td><td><code>float</code></td><td><code>angle_min</code></td><td>Initial screen-plane rotation, radians</td></tr><tr><td><code>0x6C</code></td><td><code>float</code></td><td><code>angle_max</code></td><td></td></tr><tr><td><code>0x70</code></td><td><code>float</code></td><td><code>spin_min</code></td><td>Rotation speed over life, rad/s</td></tr><tr><td><code>0x74</code></td><td><code>float</code></td><td><code>spin_max</code></td><td></td></tr><tr><td><code>0x78</code></td><td><code>float</code></td><td><code>wobble_amp</code></td><td>Lateral sinusoidal displacement, metres (<code>0</code> = none)</td></tr><tr><td><code>0x7C</code></td><td><code>float</code></td><td><code>wobble_freq</code></td><td>Wobble frequency, Hz</td></tr><tr><td><code>0x80</code></td><td><code>float</code></td><td><code>spawn_radius</code></td><td>Spawn sphere radius, metres (<code>0</code> = point)</td></tr><tr><td><code>0x84</code></td><td><code>float</code></td><td><code>knee</code></td><td>Life fraction of the mid key, <code>0.05…0.95</code> (<code>0.5</code> typical)</td></tr><tr><td><code>0x88</code></td><td><code>uint32</code></td><td><code>color_start</code></td><td><code>0xAABBGGRR</code> at birth</td></tr><tr><td><code>0x8C</code></td><td><code>uint32</code></td><td><code>color_mid</code></td><td>…at the knee</td></tr><tr><td><code>0x90</code></td><td><code>uint32</code></td><td><code>color_end</code></td><td>…at death</td></tr><tr><td><code>0x94</code></td><td><code>int32</code></td><td><code>texture_id</code></td><td>Texture chunk index, or <code>-1</code> for the built-in radial glow</td></tr><tr><td><code>0x98</code></td><td><code>uint16</code></td><td><code>count</code></td><td>Simultaneous particles (≥ 1)</td></tr><tr><td><code>0x9A</code></td><td><code>uint16</code></td><td><code>flags</code></td><td><code>PBM_EMIT_*</code></td></tr><tr><td><code>0x9C</code></td><td><code>uint8</code></td><td><code>atlas_cols</code></td><td>Flipbook columns (≥ 1)</td></tr><tr><td><code>0x9D</code></td><td><code>uint8</code></td><td><code>atlas_rows</code></td><td>Flipbook rows (≥ 1)</td></tr><tr><td><code>0x9E</code></td><td><code>uint8</code></td><td><code>anim_loops</code></td><td>Whole animation loops per particle lifetime (≥ 1)</td></tr><tr><td><code>0x9F</code></td><td><code>uint8</code></td><td><code>reserved0</code></td><td>MUST be 0</td></tr><tr><td><code>0xA0</code></td><td><code>uint32</code></td><td><code>seed</code></td><td>Per-emitter random seed</td></tr><tr><td><code>0xA4</code></td><td><code>float[3]</code></td><td><code>reserved</code></td><td>MUST be 0 (minor extensions only)</td></tr></tbody></table>
+<h4 id="flags">Flags</h4>
+<table><thead><tr><th>Constant</th><th>Value</th><th>Meaning</th></tr></thead><tbody><tr><td><code>PBM_EMIT_ADDITIVE</code></td><td><code>1</code></td><td>Additive blending (<code>dst = src·srcA + dst</code>). <strong>Order-independent, so no sorting is needed</strong> — this is the cheap default</td></tr><tr><td><code>PBM_EMIT_Y_LOCKED</code></td><td><code>2</code></td><td>Cylinder billboard: the quad&#x27;s up axis stays world up</td></tr><tr><td><code>PBM_EMIT_VEL_ALIGN</code></td><td><code>4</code></td><td>The quad&#x27;s up axis follows the particle&#x27;s own velocity (overrides <code>Y_LOCKED</code>)</td></tr><tr><td><code>PBM_EMIT_PHASE_ALIGN</code></td><td><code>8</code></td><td>Every particle shares phase 0: a burst repeating once per lifetime, instead of a continuous stream</td></tr></tbody></table>
+<h3 id="8-3-particle-derivation-normative">8.3 Particle derivation (normative)</h3>
+<p><code>pbm_rand(seed, index, channel)</code> is this 32-bit avalanche hash — it is part of the format, because it is what makes the particle field reproducible:</p>
+<pre><code class="lang-c">static inline uint32_t pbm_hash32(uint32_t x) {
+    x ^= x &gt;&gt; 16; x *= 0x7feb352du;
+    x ^= x &gt;&gt; 15; x *= 0x846ca68bu;
+    x ^= x &gt;&gt; 16;
+    return x;
+}
+static inline float pbm_rand(uint32_t seed, uint32_t idx, uint32_t chan) {
+    return (float)(pbm_hash32(seed ^ (idx * 0x9E3779B9u) ^ (chan * 0x85EBCA6Bu)) &gt;&gt; 8)
+           * (1.0f / 16777216.0f);          /* uniform in [0,1) */
+}</code></pre>
+<p>With <code>u_c = pbm_rand(seed, i, c)</code> for particle <code>i</code>:</p>
+<table><thead><tr><th><code>c</code></th><th>Quantity</th></tr></thead><tbody><tr><td>0</td><td><code>life_i    = lerp(life_min, life_max, u_0)</code></td></tr><tr><td>1</td><td>phase jitter (<code>phase_i</code>, below)</td></tr><tr><td>2</td><td><code>speed_i   = lerp(speed_min, speed_max, u_2)</code></td></tr><tr><td>3</td><td><code>size_i    = lerp(size_min, size_max, u_3)</code></td></tr><tr><td>4</td><td><code>spin_i    = lerp(spin_min, spin_max, u_4)</code></td></tr><tr><td>12</td><td><code>angle0_i  = lerp(angle_min, angle_max, u_12)</code></td></tr><tr><td>5</td><td><code>wobble_phase_i = u_5 · 2π</code></td></tr><tr><td>6</td><td><code>anim_offset_i  = u_6</code></td></tr><tr><td>7</td><td>cone polar angle <code>θ = spread · √u_7</code></td></tr><tr><td>8</td><td>cone azimuth <code>φ = u_8 · 2π</code></td></tr><tr><td>9, 10, 11</td><td>spawn point in the sphere: radius <code>spawn_radius · u_9^(1/3)</code>, <code>cos θ_s = 2u_10 − 1</code>, azimuth <code>u_11 · 2π</code></td></tr></tbody></table>
+<p><strong>Direction.</strong> With <code>t1</code> any unit vector perpendicular to <code>dir</code> and <code>t2 = dir × t1</code>:</p>
+<pre><code class="lang-">dir_i = dir·cos θ + (t1·cos φ + t2·sin φ)·sin θ</code></pre>
+<p><strong>Phase.</strong> A continuous emitter spreads its particles evenly through the loop and jitters each one inside its own slot, so no two share a phase:</p>
+<pre><code class="lang-">phase_i = frac(i / count + u_1 / count)        (PBM_EMIT_PHASE_ALIGN: phase_i = 0)</code></pre>
+<p><strong>Position</strong> (closed form; <code>λ = damping</code>). With <code>τ</code> the particle&#x27;s age:</p>
+<pre><code class="lang-">λ = 0 :  p = pos + spawn_i + dir_i·speed_i·τ + ½·gravity·τ²
+λ &gt; 0 :  k1 = (1 − e^(−λτ)) / λ
+         k2 = (τ − k1) / λ
+         p  = pos + spawn_i + dir_i·speed_i·k1 + gravity·k2</code></pre>
+<p>The damped form is the analytic solution of <code>v′ = −λv + g</code>, so a damped emitter never needs integration either; as <code>λ → 0</code> it converges to the ballistic form.</p>
+<p><strong>Wobble</strong> (<code>wobble_amp &gt; 0</code>): with <code>(w1, w2)</code> a right-handed orthonormal basis perpendicular to <code>dir</code>:</p>
+<pre><code class="lang-">p += wobble_amp · (w1·sin(2π·wobble_freq·τ + wobble_phase_i)
+                 + w2·cos(2π·wobble_freq·τ + wobble_phase_i))</code></pre>
+<p><strong>Size</strong> (two segments, meeting at <code>age = knee</code>):</p>
+<pre><code class="lang-">age &lt; knee :  size = size_i · lerp(1, size_mid, age / knee)
+age ≥ knee :  size = size_i · lerp(size_mid, size_end, (age − knee) / (1 − knee))</code></pre>
+<p><strong>Colour</strong>: the same two-segment interpolation over <code>color_start → color_mid → color_end</code>, per channel including alpha. Alpha is the fade: an emitter whose art spans its whole loop should start and end at <code>α = 0</code>, so the loop restart is invisible.</p>
+<p><strong>Rotation</strong>: <code>angle = angle0_i + spin_i · τ</code>, applied in the quad&#x27;s plane.</p>
+<p><strong>Flipbook</strong>: <code>frames = atlas_cols · atlas_rows</code>;</p>
+<pre><code class="lang-">frame = min(frames − 1, floor(frac(age · anim_loops + anim_offset_i) · frames))
+cell  = (frame mod atlas_cols, frame / atlas_cols)          # row-major</code></pre>
+<p>The cell&#x27;s UV rectangle is <strong>inset by half a texel</strong> on every side (<code>0.5 / texture_width</code> in U, <code>0.5 / texture_height</code> in V) so a filter tap at the cell edge cannot reach the neighbouring frame.</p>
+<h3 id="8-4-rendering-normative-intent">8.4 Rendering (normative intent)</h3>
+<p>Each particle is two triangles in the billboard plane:</p>
+<ul><li>the <strong>billboard basis</strong> is the camera&#x27;s right/up (<code>Y_LOCKED</code>: world up, and right perpendicular to it; <code>VEL_ALIGN</code>: the particle&#x27;s velocity and a right vector perpendicular to both);</li><li>the quad spans <code>size · aspect</code> in width and <code>size</code> in height, rotated by <code>angle</code> in that plane;</li><li>the vertex colour is the particle&#x27;s colour, and the texture is sampled with <code>MODULATE</code> (colour × texel) — so a texture&#x27;s RGB <strong>is</strong> the particle&#x27;s shading and its alpha (together with the colour&#x27;s alpha) is the opacity;</li><li>emitters are <strong>unlit</strong>: no baked lighting, no shadows. A particle is its own light source; that is also why additive emitters look right on a dark scene;</li><li>depth <strong>test</strong> on, depth <strong>write</strong> off, backface culling off;</li><li>additive emitters use <code>dst = src·srcA + dst</code> and need <strong>no sorting</strong>; blended emitters use <code>dst = src·srcA + dst·(1 − srcA)</code> and MUST be drawn back-to-front. Within one emitter the particles sort by view depth; between emitters, scene order is the intended order.</li></ul>
+<p>A runtime MAY drop a particle whose projected edge is below ≈3 px: it covers a handful of fragments while its texture fetch is fully minified, which on the GE is the difference between a cache hit and a main-memory round trip (see §11).</p>
+<h3 id="8-5-textures">8.5 Textures</h3>
+<p>A particle texture obeys the same rules as any other texture, plus three specific to emitters:</p>
+<ol class="steps"><li><strong>Standalone.</strong> An emitter texture is never packed into a tile atlas: the cell addressing assumes the whole texture is the flipbook.</li><li><strong>Small.</strong> A texture that fits the hardware&#x27;s texture cache is sampled at full speed even when minified. 64×64 is the sweet spot on the PSP (8 KB in 5551) and is enough for four 32×32 flipbook cells or one soft 64×64 puff.</li><li><strong>No mip chain for emitters.</strong> A mip level of a flipbook averages neighbouring frames together; the reference implementation samples level 0 only and relies on the size cull above for the fetch footprint.</li></ol>
+<p>For <strong>additive</strong> emitters, put the falloff in the texture&#x27;s <strong>RGB</strong>, not in its alpha: one alpha bit (all the 16-bit formats have) can only cut a texel out, while additive blending multiplies by RGB anyway. An emitter with <code>texture_id = -1</code> gets a runtime-generated radial glow (white centre → black edge, alpha 1) and is intended for additive use only.</p>
+<p>Soft-edged particle art (smoke, mist) needs real alpha and therefore travels as <code>RGBA8888</code> with <code>alpha_mode = BLEND</code>, exactly like a soft-alpha surface. Hard art (glows, sparks, flame cells) stays <code>RGBA5551</code> + <code>CUTOUT</code>: half the memory, and it is the difference between fitting the cache and not.</p>
+<p>Every flipbook cell SHOULD keep a fully transparent border ring, so a stray filter tap can only find more transparency.</p>
+<h3 id="8-6-authoring-in-godot">8.6 Authoring in Godot</h3>
+<p>Emitters are authored as ordinary <code>GPUParticles3D</code> nodes — the editor preview and the device playback are then the same effect. The exporter maps:</p>
+<table><thead><tr><th>PBM field</th><th>Godot source</th></tr></thead><tbody><tr><td><code>pos</code></td><td>node global position</td></tr><tr><td><code>dir</code></td><td>node basis × <code>ParticleProcessMaterial.direction</code>, normalized</td></tr><tr><td><code>spread</code></td><td><code>spread</code> (degrees → radians)</td></tr><tr><td><code>speed_min/max</code></td><td><code>initial_velocity_min/max</code></td></tr><tr><td><code>life_min/max</code></td><td><code>lifetime × (1 − lifetime_randomness)</code>, <code>lifetime</code></td></tr><tr><td><code>gravity</code></td><td><code>gravity</code></td></tr><tr><td><code>damping</code></td><td>mean of <code>damping_min/max</code></td></tr><tr><td><code>size_min/max</code></td><td>draw-pass quad height × <code>scale_min/max</code> × <code>scale_curve(0)</code></td></tr><tr><td><code>size_mid/end</code></td><td><code>scale_curve(knee) / scale_curve(0)</code>, <code>scale_curve(1) / scale_curve(0)</code></td></tr><tr><td><code>aspect</code></td><td>draw-pass quad width ÷ height</td></tr><tr><td><code>angle_min/max</code></td><td><code>angle_min/max</code> (degrees → radians)</td></tr><tr><td><code>spin_min/max</code></td><td><code>angular_velocity_min/max</code> (degrees/s → rad/s)</td></tr><tr><td><code>knee</code></td><td>t of the peak of <code>color_ramp</code>&#x27;s alpha (else of <code>scale_curve</code>, else 0.5)</td></tr><tr><td><code>color_start/mid/end</code></td><td><code>color_ramp</code> sampled at 0 / knee / 1, × <code>color</code></td></tr><tr><td><code>count</code></td><td><code>amount</code></td></tr><tr><td><code>atlas_cols/rows</code></td><td>material <code>particles_anim_h_frames/v_frames</code> (in <code>BILLBOARD_PARTICLES</code> mode)</td></tr><tr><td><code>anim_loops</code></td><td><code>anim_speed</code> (Godot counts complete cycles per lifetime too)</td></tr><tr><td><code>flags</code></td><td><code>BLEND_MODE_ADD</code> → additive; <code>one_shot</code> → phase-aligned burst; <code>particle_flag_align_y</code> → velocity-aligned</td></tr><tr><td><code>seed</code></td><td>node <code>seed</code> when <code>use_fixed_seed</code>, else derived from the node name</td></tr><tr><td><code>texture_id</code></td><td>the draw-pass material&#x27;s albedo texture, registered as a standalone texture</td></tr></tbody></table>
+<p>Fields Godot has no concept for are reachable as explicit <code>poi_*</code> metadata on the node — an override list, not a second authoring path: <code>poi_additive</code>, <code>poi_y_locked</code>, <code>poi_wobble_amp</code>, <code>poi_wobble_freq</code>, <code>poi_knee</code>, <code>poi_seed</code>.</p>
+<p>Authoring note (PoiBuilder&#x27;s emitter UI): the flipbook grid is a promise about the texture&#x27;s layout. A cols x rows grid over an image samples it as cells — art that IS a sheet must say so with the <code>_sheet</code> file-name marker (the shipped ones: <code>particle_flame_2x2_sheet.png</code>, <code>particle_flame_sheet.png</code>, <code>particle_smoke_sheet.png</code>; <code>_&lt;cols&gt;x&lt;rows&gt;_sheet</code> also arms the default grid). A grid over a single-frame image is allowed — it samples the image in slices, one fragment per particle — so PoiBuilder&#x27;s readout briefly says when that is what the knobs will do.</p>
+<h3 id="8-7-recipes">8.7 Recipes</h3>
+<p><strong>A looping animation on one quad (the cheapest emitter there is).</strong> Set <code>count = 1</code>, <code>size_min = size_max = the quad&#x27;s size</code>, <code>anim_loops = 1</code>, an atlas whose cells are the animation frames, <code>life_min = life_max = the loop period</code>, <code>color_start = color_end = transparent</code>, <code>color_mid</code> opaque, and no motion at all (<code>speed = 0</code>, <code>gravity = 0</code>, <code>spread = 0</code>). One quad, one draw call, one texture: a torch flame, a magic portal, a fountain plume. <code>size_mid/end</code> can still expand the quad over the loop if the animation breathes.</p>
+<p><strong>A campfire.</strong> Three emitters at one point: a <code>count = 1</code> flame quad as above; a small additive glimmer with <code>spread ≈ 25°</code>, <code>speed ≈ 1…2 m/s</code>, <code>gravity ≈ +0.5</code>, <code>life ≈ 1 s</code> for the sparks; and — if the scene allows transparency — a blended soft puff with <code>damping</code> for the smoke column.</p>
+<p><strong>Testability note</strong>: a looping emitter that is <em>wrong</em> looks exactly like one that is right, in a single frame. Verify motion with two captures at different scene times (see §10).</p>
+<h2 id="9-end-to-end-walkthrough-godot-4-authoring-to-custom-engine-implementation">9. End-to-End Walkthrough: Godot 4 Authoring to Custom Engine Implementation</h2>
+<blockquote class=""><strong>CRITICAL ARCHITECTURAL DISTINCTION — RECIPES VS. STANDARD</strong>: The specific entity tags and structures detailed below (<code>&quot;walkable_mesh&quot;</code>, <code>&quot;triggers&quot;</code>, <code>&quot;player_spawn&quot;</code>, <code>&quot;rigid_bodies&quot;</code>, <code>&quot;entities&quot;</code>) are <strong>EXAMPLE IMPLEMENTATION RECIPES</strong>, <strong>NOT</strong> fixed schema constraints of the specification. Particle emitters are the exception: they graduated from a recipe to a <strong>standard lump</strong> with a normative payload, defined in §8.  The PBMv2 specification defines <strong>only the general binary lump transport container</strong> (Section 7: 32-byte tag string, 32-bit type integer, 32-bit length integer, and raw payload bytes). The payload data can be <strong>anything you want</strong>: flat binary structs, UTF-8 JSON, byte-encoded bytecode, dialog trees, navmesh graphs, or audio cue tables. You are completely free to invent your own tags and payload formats for your custom game engine.  The walkthrough below demonstrates tested, real-world patterns for authoring custom data in the Godot 3D editor, exporting via PoiBuilder, and consuming them in custom C / Raylib / PSP game engines.</blockquote>
+<pre><code class="lang-">  [ Godot 4 3D Editor ]           [ PoiBuilder Exporter ]            [ Custom Engine / Raylib / PSP ]
+  ---------------------           -----------------------            --------------------------------
+  1. Place Visual Geometry        PBMapExporter:                     pbm_load(&quot;map.pbm&quot;):
+  2. Place Marker3D (PlayerSpawn) -&gt; Discovers scene nodes           -&gt; Uploads GPU textures &amp; meshes
+  3. Place Area3D (Trigger)       -&gt; Computes world transforms       -&gt; Parses metadata lump table
+  4. Place Mesh (Walkable)        -&gt; Extracts AABB bounds / triangles-&gt; Initializes Player at Spawn
+  5. Attach Inspector Metadata    -&gt; Encodes JSON / Binary lumps     -&gt; Drops rays onto Walkable Mesh
+  6. Click &quot;Export Retro PBM&quot;     -&gt; Writes PBMv2 (64-byte header)   -&gt; Checks Trigger containment
+                                                                     -&gt; Steps Physics Ball Pit &amp; Particles</code></pre>
+<hr>
+<h3 id="step-1-authoring-in-godot-4-editor">Step 1: Authoring in Godot 4 Editor</h3>
+<p>In the Godot 3D Viewport and Scene Dock, authoring entities uses standard, intuitive node patterns:</p>
+<h4 id="1-player-spawn-point-tag-player-spawn-json">1. Player Spawn Point (<code>tag = &quot;player_spawn&quot;</code>, JSON)</h4>
+<ol class="steps"><li>Add a <code>Marker3D</code> or <code>Node3D</code> anywhere in your level.</li><li>Name the node <code>PlayerSpawn</code> (or any name starting with <code>Spawn</code>).</li><li>Rotate and position it where the player should begin.</li><li><em>(Optional)</em> In the Inspector, scroll to <strong>Metadata</strong>, click <strong>Add Metadata</strong>, and set <code>camera_fov = 75.0</code>.</li></ol>
+<h4 id="2-walkable-mesh-navigation-surface-tag-walkable-mesh-binary-triangles">2. Walkable Mesh Navigation Surface (<code>tag = &quot;walkable_mesh&quot;</code>, Binary Triangles)</h4>
+<ol class="steps"><li>When creating stepped terraced stairs, complex ruins, or decorative balustrades, computing exact physics collision against thousands of detailed visual triangles is slow and prone to snagging.</li><li>Add an invisible <code>MeshInstance3D</code> named <code>Walkable_Floor</code> spanning the walkable area.</li><li>Assign it a simple quad or low-poly ramp surface and set <code>visible = false</code>.</li><li>The exporter extracts its triangles into <code>&quot;walkable_mesh&quot;</code> (<code>num_triangles * 9 * sizeof(float)</code>) and excludes it from opaque visual drawing so it does not render twice.</li></ol>
+<h4 id="3-event-cutscene-trigger-area-tag-triggers-json">3. Event / Cutscene Trigger Area (<code>tag = &quot;triggers&quot;</code>, JSON)</h4>
+<ol class="steps"><li>Add an <code>Area3D</code> or simple box <code>MeshInstance3D</code> named <code>Trigger_VaultDoor</code>.</li><li>Position and scale it over the doorway or entrance volume.</li><li>In the Inspector, under <strong>Metadata</strong>, click <strong>Add Metadata</strong>: - <code>event</code> (String): <code>&quot;open_vault_cutscene&quot;</code> - <code>dialogue_id</code> (String): <code>&quot;vault_lore_01&quot;</code> - <code>oneshot</code> (bool): <code>true</code></li></ol>
+<h4 id="4-particle-emitters-tag-emitters-standard-binary-lump">4. Particle Emitters (<code>tag = &quot;emitters&quot;</code>, standard binary lump)</h4>
+<ol class="steps"><li>Add a <code>GPUParticles3D</code> node named <code>Emitter_*</code> and style it with a <code>ParticleProcessMaterial</code> exactly as for a real-time effect; the editor preview is the effect the device will play.</li><li>Give it a draw pass: a <code>QuadMesh</code> with a <code>StandardMaterial3D</code>. That material supplies the particle texture and the blend mode (choose <code>Add</code> for fire, sparks and glows; leave it on <code>Mix</code> for smoke and mist). For a flipbook, set the material&#x27;s billboard mode to <strong>Particles</strong> and its <code>particles_anim_h/v frames</code> to the sheet&#x27;s grid.</li><li>Export. The exporter writes the standard <code>&quot;emitters&quot;</code> lump (§8) and registers the particle texture as a standalone texture entry.</li></ol>
+<p>The mapping table, the fields Godot cannot express, and the runtime semantics are all in §8; this recipe is the authoring workflow, §8 is the contract.</p>
+<h4 id="5-physics-rigid-bodies-ball-pit-tag-rigid-bodies-json">5. Physics Rigid Bodies / Ball Pit (<code>tag = &quot;rigid_bodies&quot;</code>, JSON)</h4>
+<ol class="steps"><li>Add a container <code>Node3D</code> named <code>BallPit</code>.</li><li>In the Inspector, add metadata: - <code>count</code> (int): <code>24</code> - <code>radius</code> (float): <code>0.22</code> - <code>restitution</code> (float): <code>0.85</code> - <code>mass</code> (float): <code>1.2</code></li></ol>
+<h4 id="6-arbitrary-custom-gameplay-entities-npcs-loot-audio">6. Arbitrary Custom Gameplay Entities (NPCs, Loot, Audio)</h4>
+<p>On <strong>ANY</strong> node in your Godot scene, you can attach arbitrary custom metadata:</p>
+<ol class="steps"><li>Add metadata <code>poi_metadata_tag = &quot;dialogue_npc&quot;</code>.</li><li>Add your custom fields: <code>npc_name = &quot;Elder Olaru&quot;</code>, <code>quest_id = 101</code>, <code>greeting = &quot;Welcome to the Sunken Vault.&quot;</code>.</li><li>The exporter will package all metadata on that node into a clean JSON lump under tag <code>&quot;dialogue_npc&quot;</code>.</li></ol>
+<hr>
+<h3 id="step-2-exporting-from-godot-via-poibuilder">Step 2: Exporting from Godot via PoiBuilder</h3>
+<p>In the PoiBuilder Toolbar, click <strong>Export</strong> → select <strong>PoiRetro (.pbm)</strong> → click <strong>Export</strong>.</p>
+<p>Under the hood, <code>PBMapExporter</code>:</p>
+<ol class="steps"><li>Iterates the authored Godot scene tree (<code>root</code>).</li><li>Resolves world-space transforms (<code>_get_world_transform</code>).</li><li>Dynamically extracts <code>player_spawn</code>, <code>walkable_mesh</code>, <code>triggers</code>, <code>rigid_bodies</code> and custom metadata lumps, and packs every <code>GPUParticles3D</code> into the standard <code>emitters</code> lump (§8).</li><li>Subdivides large surfaces into ≤ 384-vertex spatial chunks and packs textures into 512 × 512 atlases.</li><li>Writes the <code>.pbm</code> v3 binary file with the 64-byte header and lump table.</li></ol>
+<hr>
+<h3 id="step-3-loading-parsing-in-a-custom-engine-c-raylib-psp">Step 3: Loading &amp; Parsing in a Custom Engine (C / Raylib / PSP)</h3>
+<p>In your custom engine, loading metadata is simple and decoupled:</p>
+<pre><code class="lang-c">// 1. Read PBM Header
+PbmHeader hdr;
+fread(&amp;hdr, sizeof(PbmHeader), 1, file);
+
+// 2. Read GPU textures and visual mesh chunks
+// ...
+
+// 3. Read Extensible Metadata Lumps
+for (uint32_t i = 0; i &lt; hdr.num_metadata; ++i) {
+    PbmMetadataHeader mhdr;
+    fread(&amp;mhdr, sizeof(PbmMetadataHeader), 1, file);
+    
+    uint8_t* payload = malloc(mhdr.data_size + 1);
+    fread(payload, mhdr.data_size, 1, file);
+    payload[mhdr.data_size] = &#x27;\0&#x27;;
+    
+    // Skip 4-byte padding
+    uint32_t pad = (4 - (mhdr.data_size % 4)) % 4;
+    if (pad &gt; 0) fseek(file, pad, SEEK_CUR);
+
+    // Route by tag:
+    if (strcmp(mhdr.tag, &quot;walkable_mesh&quot;) == 0) {
+        load_walkable_triangles((float*)payload, mhdr.data_size / sizeof(float));
+    } else if (strcmp(mhdr.tag, &quot;triggers&quot;) == 0) {
+        parse_triggers_json((const char*)payload);
+    } else if (strcmp(mhdr.tag, &quot;player_spawn&quot;) == 0) {
+        parse_spawn_json((const char*)payload);
+    } else if (strcmp(mhdr.tag, &quot;emitters&quot;) == 0) {
+        parse_emitters_lump(payload, mhdr.data_size);   /* standard lump, §8 */
+    } else if (strcmp(mhdr.tag, &quot;rigid_bodies&quot;) == 0) {
+        init_ball_pit_from_json((const char*)payload);
+    } else if (strcmp(mhdr.tag, &quot;dialogue_npc&quot;) == 0) {
+        spawn_npc_from_json((const char*)payload);
+    }
+    
+    free(payload);
+}</code></pre>
+<hr>
+<h3 id="step-4-real-time-runtime-execution-in-custom-engine">Step 4: Real-time Runtime Execution in Custom Engine</h3>
+<p>In your frame loop:</p>
+<ol class="steps"><li><strong>Ground Snapping</strong>: When the player moves, sample ground elevation from the walkable triangles via 2D barycentric raycast: <code>player.y = get_walkable_ground_y(player.x, player.z, 0.0f) + player_eye_height;</code></li><li><strong>Trigger Evaluation</strong>: Check if the player position is contained in any trigger&#x27;s AABB: <code>if (is_in_bounds(player.pos, trigger.min, trigger.max)) fire_event(trigger.event);</code></li><li><strong>Physics Simulation (Ball Pit)</strong>: Integrate gravity, resolve floor bounces (vy = -vy × restitution), boundary walls, and elastic sphere-sphere collisions: ``<code>c Vector3 diff = Vector3Subtract(b2-&gt;pos, b1-&gt;pos); float dist = Vector3Length(diff); float min_dist = b1-&gt;radius + b2-&gt;radius; if (dist &lt; min_dist &amp;&amp; dist &gt; 0.0001f) { Vector3 normal = Vector3Scale(diff, 1.0f / dist); float overlap = 0.5f * (min_dist - dist); b1-&gt;pos = Vector3Subtract(b1-&gt;pos, Vector3Scale(normal, overlap)); b2-&gt;pos = Vector3Add(b2-&gt;pos, Vector3Scale(normal, overlap)); float k = Vector3DotProduct(Vector3Subtract(b1-&gt;vel, b2-&gt;vel), normal); if (k &gt; 0.0f) { float impulse = (1.0f + b1-&gt;restitution) * k / (b1-&gt;mass + b2-&gt;mass); b1-&gt;vel = Vector3Subtract(b1-&gt;vel, Vector3Scale(normal, impulse * b2-&gt;mass)); b2-&gt;vel = Vector3Add(b2-&gt;vel, Vector3Scale(normal, impulse * b1-&gt;mass)); } } </code>``</li><li><strong>Particles</strong>: Evaluate the emitter lump (§8) — particles are stateless: particle <em>i</em>&#x27;s position at scene time <em>t</em> is the closed form p_i(t) = p_0 + d_i·v_i·τ + ½·g·τ² (with the analytic damped form when the emitter drags, §8.3). There is nothing to integrate between frames and nothing to allocate; two implementations that follow §8 show the same particle field.</li></ol>
+<hr>
+<h3 id="step-5-interactive-scratch-project-re-export-loop">Step 5: Interactive Scratch Project &amp; Re-Export Loop</h3>
+<p>To safely edit the map, poke around in Godot, and re-export to test on the target:</p>
+<pre><code class="lang-bash"># 1. Open the isolated scratch project with the showcase map:
+./scratch.sh                     # (or ./test.sh scratch)
+# 2. Edit geometry, move entities, adjust triggers or ball pit parameters in Godot.
+# 3. Export from the editor:  Export -&gt; PoiRetro (.pbm)  (or Modern glTF for other targets)
+# 4. Run the map:
+./run_viewer.sh                  # Godot retro viewer (visuals: baked / vertex colour / textures / wireframe / colliders + play mode)
+./run_psp_hw.sh --app            # the real thing: PSP over USB (performance lives here)</code></pre>
+<hr>
+<h2 id="10-recipe-a-scrolling-texture-waterfall-godot-retro-engine">10. Recipe: A Scrolling Texture (Waterfall), Godot → Retro Engine</h2>
+<p>A worked example of the pattern above, end to end. It is the recipe behind the courtyard waterfall in the showcase map (<code>project/test_scenes/test_map_showcase_builder.gd</code>), and every value in it is read straight out of the Godot material — there is no special-casing anywhere in the pipeline.</p>
+<h3 id="step-1-author-the-surface">Step 1 — Author the surface</h3>
+<ol class="steps"><li><strong>New Shape → Plane</strong>. The plane is the surface-decoration shape: drag it out <strong>parallel to the surface</strong> you are decorating (it starts coplanar with it), then move the mouse to <strong>offset it clear of that surface</strong> and click to confirm. The stand-off is the plane&#x27;s third dimension — it is not a size — so a waterfall sheet can hang a few centimetres in front of a wall without z-fighting it. Plane values are <code>width</code>/<code>depth</code> only; the offset is placement, so it never reaches the params modal.</li><li>Assign the water texture to the face (Material &amp; UV dock) and set its <strong>Tiling</strong> to fix how many metres one repeat covers. That matters for the speed you pick next: <code>metres per second = speed × (metres per repeat)</code>. The dock prints the metres/second figure under the speed fields, so the number can be judged in world terms rather than in texture terms.</li></ol>
+<h3 id="step-2-give-the-material-a-scroll-speed">Step 2 — Give the material a scroll speed</h3>
+<p>In the Material &amp; UV dock, <strong>Scrolling Texture</strong>:</p>
+<table><thead><tr><th>field</th><th>meaning</th></tr></thead><tbody><tr><td>Speed U / Speed V</td><td>texture repeats per second, along the face&#x27;s own U / V axes</td></tr><tr><td>Apply Scroll</td><td>writes the speed onto the selected faces&#x27; material</td></tr><tr><td>Clear</td><td>removes it (the surface becomes static again)</td></tr></tbody></table>
+<p>The sign is a direction, and with the reference implementation (§5.1) the rule that matters for this scene is simple — <strong>negative V travels down a wall and away from a wall on the floor</strong>:</p>
+<ul><li>a sheet falling down a wall: <strong>Speed V negative</strong> (e.g. <code>-0.75</code>),</li><li>a second, faster sheet in front of it: <code>-1.15</code> (the parallax reads as depth),</li><li>churn spreading away from the base of the fall, and a pool drifting with it: <strong>also negative</strong> (e.g. <code>-0.30</code>),</li><li>rising mist on a billboard: positive, because a sprite&#x27;s V runs down its own face — the one place the sign flips.</li></ul>
+<p>Applying a speed duplicates the material when other faces share it, because the animation is a property of the <em>material</em> — that is the unit the exporters split meshes by.</p>
+<h3 id="step-3-choose-the-transparency">Step 3 — Choose the transparency</h3>
+<p>Water almost never wants to be opaque. Set the material&#x27;s <strong>Transparency</strong> and the exporter carries it through:</p>
+<table><thead><tr><th>Godot</th><th>glTF</th><th>PBM <code>alpha_mode</code></th><th>Result in the engine</th></tr></thead><tbody><tr><td>Disabled</td><td><em>(absent)</em></td><td><code>NONE</code></td><td>opaque pass, mip chain</td></tr><tr><td>Alpha Scissor / Hash</td><td><code>MASK</code></td><td><code>CUTOUT</code></td><td>alpha-tested, <strong>no</strong> mip chain</td></tr><tr><td>Alpha</td><td><code>BLEND</code></td><td><code>BLEND</code></td><td>blended, <strong>RGBA8888</strong> + mip chain</td></tr></tbody></table>
+<p><code>Alpha</code> on the waterfall sheet is what lets the stone read through the thin parts of the water. Foliage and other hard-edged cutouts stay on <code>Alpha Scissor</code>: their silhouette is 1-bit, and a mip chain would erode it.</p>
+<h3 id="step-4-export">Step 4 — Export</h3>
+<p>Toolbar <strong>Export → PoiRetro (.pbm)</strong>. For each scrolling face the exporter writes the mesh&#x27;s <code>uv_scroll_u</code>/<code>uv_scroll_v</code>, keeps its texture out of the tile atlases (a scrolling atlas tile would drag across its slot), and stores a blended texture as RGBA8888. Nothing else changes: lighting still bakes into vertex colours, tiles still atlas, colliders still export.</p>
+<p>The same data also rides a GLB export (Modern mode), because the speed is mirrored into the material&#x27;s glTF <code>extras</code> as <code>{&quot;poi_uv_scroll&quot;: [u, v]}</code> for any glTF consumer.</p>
+<h3 id="step-5-consume-it-in-the-engine">Step 5 — Consume it in the engine</h3>
+<pre><code class="lang-c">/* Per frame, before the draw calls: advance each animated mesh&#x27;s texture
+ * coordinates. On the GE this is one register write per axis, and only for
+ * meshes whose offset actually changed — a static scene emits none. */
+static void apply_uv_scroll(PbmMap* map, PbmMesh* mesh, float t,
+                            float* cur_u, float* cur_v) {
+    float su = mesh-&gt;uv_scroll_u, sv = mesh-&gt;uv_scroll_v;
+    if (mesh-&gt;texture_id &lt; 0 ||
+        strstr(map-&gt;textures[mesh-&gt;texture_id].name, &quot;TileAtlas&quot;)) {
+        su = sv = 0.0f;              /* atlases must never be offset (see 5.1) */
+    }
+    /* The register holds one repeat: wrap, so a long-running clock keeps full
+     * fixed-point precision. */
+    float u = t * su, v = t * sv;
+    u -= floorf(u);
+    v -= floorf(v);
+    if (u != *cur_u || v != *cur_v) {
+        sceGuTexOffset(u, v);        /* pattern velocity; the GE inverts it */
+        *cur_u = u; *cur_v = v;
+    }
+}</code></pre>
+<p>Draw scrolling meshes in the same passes as everything else: <code>BLEND</code> meshes belong to the alpha pass (after the opaques), and two translucent layers must be emitted back to front. Scene-tree order is preserved into the file, so list the far sheet before the near one.</p>
+<h3 id="step-6-verify-it-actually-moves">Step 6 — Verify it actually moves</h3>
+<p>A scrolling texture that is wrong looks exactly like one that is frozen. Check the <em>rendered</em> result, not the numbers:</p>
+<pre><code class="lang-bash">cd retro_engine/psp
+./run_psp_headless.sh     # builds, runs the benchmark, writes two PNGs</code></pre>
+<p>The benchmark captures twice — at frame 60 and 20 frames later, with the camera frozen — into <code>screenshot_psp.png</code> and <code>screenshot_psp_scroll.png</code>. Diff them, or correlate the scrolling mesh&#x27;s pixels. To isolate the animation from everything else, zero every <code>uv_scroll</code> field in a copy of the map, capture the same frame from both, and diff: the pixels that change are exactly the ones the scroll owns. (Remember the capture&#x27;s alpha byte is meaningless — the framebuffer is 5551 — so drop it before viewing, or the image looks blank.)</p>
+<p>If the pattern moves the wrong way, the sign flipped somewhere: the file&#x27;s meaning is &quot;where the pattern travels&quot;, and hardware offset registers are commonly the opposite of it (see the implementation note in §5.1).</p>
+<h2 id="11-getting-the-most-out-of-the-format-performance-fidelity-rules">11. Getting the Most Out of the Format (Performance &amp; Fidelity Rules)</h2>
+<p>A <code>.pbm</code> says nothing about how fast it will run: the same file renders at 200 fps or 35 fps depending on decisions the <strong>consuming engine</strong> makes and the <strong>exporter</strong> baked. Every number below was measured on a real PSP; the raw tables and the method are in <code>psp/HARDWARE-TESTING.md</code>, the engine-side rationale is in <code>psp/OPTIMIZATION.md</code>, and the authoring-side companion is <code>../RETRO-AUTHORING.md</code>.</p>
+<h3 id="11-1-textures-decide-everything">11.1 Textures decide everything</h3>
+<p>The GE&#x27;s texture cache is ~8 KB. A fragment whose sampled mip level fits it costs ~2 ns; one that misses costs ~37 ns — measured as <strong>480 vs 27 Mfrag/s</strong>, a 19x per-fragment penalty, and the single most important number in this document.</p>
+<p>A conforming consumer MUST:</p>
+<ol class="steps"><li><strong>Build a mip chain for every texture at load</strong> (one buffer per level, down to 16x16). Without a chain, every minified surface pays the 19x; with one, the fetch footprint collapses to roughly one texel per pixel.</li><li><strong>Sample the chain with a mipmap minification filter</strong> (<code>GU_LINEAR_MIPMAP_NEAREST</code> on PSP). The plain filters ignore the chain entirely — this is the mistake that makes a &quot;fixed&quot; build measure no faster.</li><li><strong>Keep magnification linear</strong>, and drop trilinear unless it is paid for: it doubles the fetch set (two levels per fragment) for a level-crossing smoothness that per-primitive LOD steps through anyway. Measured at the worst view: 25.21 ms (trilinear) vs 14.61 ms (single level) at equal bias.</li><li><strong>Swizzle 16-bit levels, keep 32-bit levels linear.</strong> The 16-bit swizzle layout does not apply to <code>RGBA8888</code>; each level needs its own base/size register either way.</li><li><strong>Downsample alpha-aware</strong>: opaque and <code>BLEND</code> textures by alpha-weighted box filter; <code>CUTOUT</code> textures with an <strong>ANY-opaque-wins</strong> combine, because averaging a 1-bit alpha erodes the silhouette away by the fourth level (and shipping cutouts <em>without</em> a chain costs the full 19x on 256x512 foliage: measured 6.09 → 0.46 ms when the chain arrived).</li><li><strong>Clamp atlas sampling, repeat standalone textures.</strong> An offset applied to an atlas slot drags the tile across its border; a scrolling texture must therefore never be atlased (§5.1.2).</li></ol>
+<p>Recommended LOD policy, and the cliff it sits on:</p>
+<ul><li><strong>Bias the level one step coarser than &quot;sharpest&quot; (<code>+1</code>).</strong> The hardware&#x27;s automatic level is the sharpest that still averages ~1 texel per pixel, and at that level the sampled footprint <em>is</em> the surface&#x27;s on-screen area — so a forward bias is what keeps a close-up surface inside the cache. A <strong>negative</strong> bias samples past the boundary and costs 10-100x at close range: at the showcase&#x27;s worst view, 25.21 ms (bias -1.0) → 11.20 (0.0) → 4.32 (+0.5) → <strong>2.79 (+1.0)</strong> → 1.02 (+2.0).</li><li><strong>Override the bias per mesh where detail matters.</strong> The GE picks one level per primitive, so a floor crossing several levels in a few metres steps in sharpness at every tile boundary — invisible at level 0-1, a visible band once the level is coarse. Pinning the baked tile/splat meshes to ONE constant level removes the step entirely: measured 0.57 ms gpu for the painted floor at a grazing view (326 fps) against 1.68 ms pinned at level 0 and 26.2 ms with no chains at all.</li><li>All of it is tunable at runtime in the reference engine (<code>poi_render.txt</code>: <code>bias=</code>, <code>filter=</code>, <code>level_mode=</code>, <code>detail_mesh=</code>, <code>detail_bias=</code>, <code>detail_const=</code>, <code>cutout_mips=</code>, <code>mips=</code>), so a policy can be A/B&#x27;d on the device without a rebuild.</li></ul>
+<h3 id="11-2-fill-budget-in-screens-per-frame-not-in-objects">11.2 Fill: budget in screens per frame, not in objects</h3>
+<p>A 480x272 screen is 130 560 fragments = ~0.27 ms of untextured fill, measured at 487-490 Mfrag/s. A 60 fps budget is 16.67 ms. Consequences:</p>
+<ul><li>Count <strong>screens</strong>, not models: the showcase&#x27;s worst view spends ~10 screens of fill (4.98 ms/frame) and its most common views ~3-5.</li><li>Every <strong>blended</strong> surface re-shades the pixels underneath it, so stacked alpha (water sheet + core + spray + pool + foam) is the most expensive kind of content per visible pixel. It is affordable at showcase sizes; a screen-filling stack of it is not.</li><li><strong>Close-up hero surfaces</strong> cost the most (their sampled level is the biggest, and they cover the most screen). That is where to look first when a view is slow.</li><li>Backface culling is worth ~3 ms at the showcase&#x27;s worst view. The format&#x27;s winding convention (triangles wound CCW seen from the front, i.e. the outward normal) exists so consumers can cull; do not disable it.</li></ul>
+<h3 id="11-3-geometry-submission">11.3 Geometry &amp; submission</h3>
+<ol class="steps"><li><strong>Vertex layout</strong>: 24-byte interleaved <code>float u, v; uint32_t color; float x, y, z;</code> — <code>GU_TEXTURE_32BITF | GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D</code>. Consumers submit the buffer directly; there is nothing to convert.</li><li><strong>Draw calls and triangles are cheap</strong> (~0.94 µs per draw call, ~2.2 M tris/s). At the showcase&#x27;s 25-30 draws and ~1 500 triangles they are not the bottleneck; two orders of magnitude of fill is.</li><li><strong>Spatial chunking</strong> (exporters emit ≤ 384-vertex chunks) exists so that a mesh&#x27;s bounds are <em>local</em>: one draw call per neighbourhood, bounded per-mesh cost, and tight AABBs for any consumer that wants them. It is <strong>not</strong> a culling mechanism — the reference runtime draws every chunk every frame, and measured that culling was never the win.</li><li><strong>Near plane</strong>: keep it tight (<code>0.05</code>-<code>0.10</code> m; the reference uses 0.08). A 0.5 m near plane puts the floor within arm&#x27;s reach inside the clip volume and forces the hardware clipper to split large treads and floor quads.</li><li><strong>Clipping is effectively free</strong> on this hardware: a guardband-crossing quad measures 0.26 ms with clip planes on and off. Keep <code>GU_CLIP_PLANES</code> on for correctness and the guardband (<code>sceGuViewport(2048, 2048, 480, 272)</code> + <code>sceGuOffset(2048 - 240, 2048 - 136)</code>) for the virtual coordinate space, but do not expect either to be the reason a frame is fast or slow.</li></ol>
+<h3 id="11-4-depth-tested-not-written">11.4 Depth: tested, not written</h3>
+<p>The reference runtime tests depth (<code>GU_LEQUAL</code>) but <strong>never writes it</strong> — <code>GU_DEPTH_MASK</code> stays off in every pass. That makes draw order the visibility order, which is exactly what the exporters arrange: opaque meshes are emitted so the surviving surface is drawn last, and transparent surfaces are emitted in blend order (a scrolling sheet is emitted before the core it must blend onto). Writing depth is measured <strong>free</strong> on this content (0.114 vs 0.114 ms; 2.749 vs 2.735; 0.688 vs 0.683) and buys real occlusion, but it exposes z-fighting between the coplanar floor layers (base material quad and baked tile quads at the same height) that the current arrangement hides — so consumers choosing to write depth should verify those layers. The reference knob is <code>depth_write=1</code>.</p>
+<h3 id="11-5-particles">11.5 Particles</h3>
+<ul><li>The emitter lump (§8) is <strong>stateless by design</strong>: particle state is a pure function of <code>(t, index, seed)</code>, so a consumer evaluates a few flops per particle per frame with no state, no allocation and one draw call per emitter.</li><li><strong>256 particles per map</strong> is the format&#x27;s budget; measured, the whole budget costs 0.72 ms gpu / 1.14 ms cpu — about a fifth of a frame. Particle <em>count</em> is cheap; particle <em>screen area</em> is not.</li><li><strong>Additive</strong> emitters need no sorting (order-independent) and should be the default near the camera. <strong>Blended</strong> emitters must be drawn back-to-front and pay their fill like any surface; keep them small or distant.</li><li>An emitter texture must be <strong>small and power-of-two</strong>, and a <strong>multi-cell flipbook must not be sampled with a mip chain</strong> (a mip level would average neighbouring frames together) — single-cell emitter textures <em>should</em> use the chain, which is what keeps the mist from costing 19x.</li></ul>
+<h3 id="11-6-colliders-metadata-and-entities">11.6 Colliders, metadata and entities</h3>
+<ul><li>Colliders are a separate chunk and cost nothing to render; <code>BOX</code> is an AABB, <code>TRIMESH</code> carries triangles, <code>RAMP</code> is the smooth stair wedge. Pick the cheapest type that is walkable.</li><li>The metadata table (§7) is the extension point: put level descriptors, waypoints, spawn logic, audio triggers and arbitrary payloads in it rather than inventing new chunks. Unknown tags MUST be skipped, so metadata is the compatible way to add anything.</li><li>Scripted entities are just data: the reference runtime animates a patrol sphere along waypoints from the metadata lump, and adds one small draw call.</li></ul>
+<h3 id="11-7-the-shortest-version">11.7 The shortest version</h3>
+<p>If a consumer implements only this list, it will be within ~10% of the reference runtime: swizzled 16-bit + linear 32-bit textures, mip chains for everything with the right alpha combine, a mipmap minification filter with a +1 level bias and per-mesh pinning for painted detail, one interleaved vertex buffer per mesh with no conversion, backface culling, alpha-test + blend for <code>CUTOUT</code>/<code>BLEND</code> and nothing else, and additive-before-blended emitters with no sorting required for the additive half.</p>
+<hr>
+<h2 id="12-compliance-verification">12. Compliance Verification</h2>
+<p>A compliant PBM exporter and loader MUST pass the following tests:</p>
+<ol class="steps"><li><code>magic == 0x334D4250</code> and <code>version == 3</code>.</li><li>Reject files where <code>version &gt; 3</code> with explicit error logging, and load v1/v2 files (64-byte mesh headers, <code>has_alpha</code> 0/1) with their meshes static.</li><li>Successfully load textures with power-of-two dimensions and 16-byte memory alignment.</li><li>Successfully parse arbitrary metadata entries by tag and type.</li><li>Store a <code>BLEND</code> texture as RGBA8888 and never leave it without its mip chain; build a <code>CUTOUT</code> texture&#x27;s chain with the alpha-preserving combine (never without a chain, and never with a plain box filter, which erodes the silhouette).</li><li>Never apply a UV scroll to a tile-atlas texture, and keep every scrolling mesh&#x27;s texture standalone.</li><li>Load the standard <code>emitters</code> lump (§8): skip a lump whose own version is newer than the loader supports, clamp an over-budget <code>count</code> instead of failing (stating the clamp in the log), and derive the per-particle constants with the specified <code>pbm_rand</code> so two implementations show the same particle field.</li><li>Sample a SINGLE-CELL emitter texture through its mip chain and keep a multi-cell flipbook on level 0 (a mip level would average neighbouring frames together); never let an emitter reference a tile-atlas texture.</li><li>Draw additive emitters without sorting them and blended emitters back-to-front; leave the emitters unlit.</li><li>The <code>.pbm</code> writer&#x27;s byte layout is locked by <code>project/tests/test_pb_pbm_export.gd</code> (it builds its own fixture scene and walks the file: header, texture table, chunked meshes, colliders, metadata, the emitter lump).</li></ol>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="export.html"><span class="dir">← Previous</span><strong class="pager-title">Export &amp; retro</strong></a><a class="pager-card pager-next" href="performance.html"><span class="dir">Next →</span><strong class="pager-title">Performance</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

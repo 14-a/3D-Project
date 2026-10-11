@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build the room. Export the map. — PoiBuilder 0.9.167</title>
+<meta name="description" content="PoiBuilder is a ProBuilder-style mesh builder that lives in the Godot 4 editor. Drag shapes on any surface, edit vertices, paint, then export a modern GLB or a retro map measured on a PSP.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="has-hero">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Start here</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Build the room. Export the map.</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html" class="current">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      <header class="hero"><h1>Build the room. Export the map.</h1><p class="lead">PoiBuilder is a ProBuilder-style mesh builder that lives in the Godot 4 editor. Drag shapes on any surface, edit vertices, paint, then export a modern GLB or a retro map measured on a PSP.</p><div class="hero-actions"><a class="btn btn-cyan" href="first-minutes.html">Build a cube in 60 seconds</a><a class="btn btn-ghost" href="install.html">Install</a></div></header>
+      <div class="cards">
+<a class="card" href="first-minutes.html"><strong>60 seconds</strong><span>A cube, a pulled face, a doorway. The first win.</span></a>
+<a class="card" href="walkthrough-modern.html"><strong>Build a map</strong><span>Empty project → splats, decals, waterfall, particles, neon lightmap room → play and export. End to end.</span></a>
+<a class="card" href="walkthrough-retro.html"><strong>Go retro</strong><span>The same map as a .pbm — verify it, then implement the format in your engine from the spec and the reference renderer.</span></a>
+<a class="card" href="ops.html"><strong>Mesh ops</strong><span>Extrude, inset, bevel, knife, loop cut, weld, detach. Shift+Move extrudes live.</span></a>
+<a class="card" href="uv.html"><strong>UV editor</strong><span>A dedicated 2D canvas, selection synced both ways, projections for ramps.</span></a>
+<a class="card" href="export.html"><strong>Retro export</strong><span>Tile-baked .pbm with vertex light, running on a Sony PSP.</span></a>
+</div>
+<figure><video class="shot" autoplay loop muted playsinline controls src="clips/poibuilder-showcase-960.mp4"></video><figcaption>The full showcase film: the courtyard built start to finish in the editor, then the same map running on a real PSP.</figcaption></figure>
+<blockquote class=""><strong>Alpha.</strong> PoiBuilder is in its first alpha release. Grab the newest build from <a href="https://github.com/Francesco149/poibuilder/releases">Releases</a> (or the Asset Library) — see <a href="install.html">Install</a>. Saved scenes may still break between alphas until 1.0.</blockquote>
+<h2 id="what-you-are-looking-at">What you are looking at</h2>
+<p>PoiBuilder is a Godot 4 editor plugin. You enable it, and a toolbar appears under the 3D viewport. From there you create <code>PBMesh</code> nodes — editable meshes that keep faces, UVs, materials and collision in one place.</p>
+<p>It is pure GDScript. It runs on standard Godot and Godot .NET. Development and heavy testing happen on <strong>Godot 4.7</strong>; surface-level testing on <strong>Godot 4.6 stable</strong> passes (see <a href="install.html">Install</a>).</p>
+<p>Typical work:</p>
+<ol class="steps"><li>Drag a floor, walls, stairs, a door.</li><li>Pull faces, cut loops, bevel edges, fill holes.</li><li>Assign materials, paint blends, stamp a poster, scroll a waterfall.</li><li>Nudge how a texture sits on a face from the 3D view itself — texture mode (<kbd>6</kbd>) moves the face&#x27;s UVs with the same gizmo.</li><li>Place particle emitters and billboards from the dock.</li><li>Poibuilderize a GLB prop you dragged in, boolean a hole with CSG.</li><li>Export a modern GLB, or a retro <code>.pbm</code> with textures sanitized for the PSP.</li></ol>
+<p>The <a href="walkthrough-modern.html">walkthroughs</a> do all of it in one pass on one map — with screenshots of the finished result.</p>
+<h2 id="two-ways-to-read-these-docs">Two ways to read these docs</h2>
+<ul><li><strong>Start here</strong> — <a href="install.html">Install</a>, then <a href="first-minutes.html">First minutes</a>. One cube. One pulled face.</li><li><strong>Reference</strong> — every tool, every default key, every gotcha. Use the sidebar. The <a href="keys.html">keys</a> table is generated from the plugin&#x27;s action list.</li></ul>
+<p>The film of the plugin building a courtyard (and the same map on a PSP) is the README embed. Short clips on later pages are cut from that capture.</p>
+<h2 id="where-the-docs-live">Where the docs live</h2>
+<p>These pages are static HTML. No CDN. They work offline.</p>
+<ul><li>Bundled with the addon at <code>addons/poibuilder/docs-site/index.html</code> — the toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_docs.svg" width="13" height="13" alt="">Docs<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Export..."><img src="assets/icons/icon_export.svg" width="16" height="16" alt="Export..." title="Export..."></span><span class="tl-btn tl-target" title="Docs"><img src="assets/icons/icon_docs.svg" width="16" height="16" alt="Docs" title="Docs"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 2 · Export</span><span class="br-head"><img src="assets/icons/icon_docs.svg" width="26" height="26" alt=""><span class="br-title">Docs</span></span><span class="br-desc">Opens the bundled offline documentation (the site you are reading).</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> button opens them.</li><li>GitHub Pages, built from the same Markdown.</li></ul>
+<blockquote class="gotcha">A greyed-out toolbar button is not broken. It is the wrong selection for that op; the tooltip names the context it wants.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><div class="pager-spacer"></div><a class="pager-card pager-next" href="install.html"><span class="dir">Next →</span><strong class="pager-title">Install</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

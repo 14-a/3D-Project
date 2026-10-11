@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First minutes — PoiBuilder 0.9.167</title>
+<meta name="description" content="One cube, one pulled face, one doorway. That is the whole pitch.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Start here</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">First minutes</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html" class="current">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>First minutes</h1><p class="lead">One cube, one pulled face, one doorway. That is the whole pitch.</p><p>Work in the 3D viewport. The PoiBuilder toolbar sits directly under Godot&#x27;s.</p>
+<h2 id="1-make-a-cube">1. Make a cube</h2>
+<ol class="steps"><li>Click <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_new_shape.svg" width="13" height="13" alt="">New Shape<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="New Shape"><img src="assets/icons/icon_new_shape.svg" width="16" height="16" alt="New Shape" title="New Shape"><span class="tl-target-ring"></span></span><span class="tl-btn" title="N-Gon"><img src="assets/icons/icon_ngon.svg" width="16" height="16" alt="N-Gon" title="N-Gon"></span><span class="tl-btn" title="Edit Params"><img src="assets/icons/icon_edit_params.svg" width="16" height="16" alt="Edit Params" title="Edit Params"></span></span><span class="br-row">Row 2 · Shapes</span><span class="br-head"><img src="assets/icons/icon_new_shape.svg" width="26" height="26" alt=""><span class="br-title">New Shape</span></span><span class="br-desc">Arms primitive creation: drag the base on any surface, set the height, click to confirm.</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> and pick <strong>Cube</strong>.</li><li>Press on the grid (or on any <code>PBMesh</code> face). Drag a rectangle. The base stays coplanar with the surface you pressed.</li><li>Release. Move the mouse to set height. Click to confirm.</li><li><kbd>Esc</kbd> before that confirming click creates nothing.</li></ol>
+<figure><img class="shot" src="create-floor.png" alt="The same drag on the floor. Height is the third axis, along the face normal."><figcaption>The same drag on the floor. Height is the third axis, along the face normal.</figcaption></figure>
+<p>A <code>PBMesh</code> node appears in the scene tree. Edit Params stays live until you change the topology.</p>
+<h2 id="2-pull-a-face">2. Pull a face</h2>
+<ol class="steps"><li>Click the cube. Face mode is <kbd>K</kbd> (toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_face.svg" width="13" height="13" alt="">Face<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Object"><img src="assets/icons/icon_object.svg" width="16" height="16" alt="Object" title="Object"></span><span class="tl-btn" title="Vertex"><img src="assets/icons/icon_vertex.svg" width="16" height="16" alt="Vertex" title="Vertex"></span><span class="tl-btn" title="Edge"><img src="assets/icons/icon_edge.svg" width="16" height="16" alt="Edge" title="Edge"></span><span class="tl-btn tl-target" title="Face"><img src="assets/icons/icon_face.svg" width="16" height="16" alt="Face" title="Face"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Texture"><img src="assets/icons/icon_texture_mode.svg" width="16" height="16" alt="Texture" title="Texture"></span></span><span class="br-row">Row 2 · Selection Modes</span><span class="br-head"><img src="assets/icons/icon_face.svg" width="26" height="26" alt=""><span class="br-title">Face</span><kbd class="br-key">K</kbd></span><span class="br-desc">Face mode: pick and move faces; Shift+Move extrudes and Shift+Scale insets live.</span><span class="br-req">Needs: A PBMesh</span></span></span>).</li><li>Click a side. Hover is cyan; selection is yellow.</li><li>Hold <kbd>Shift</kbd> and drag the move gizmo — that is live extrude. Or click <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_extrude.svg" width="13" height="13" alt="">Extrude<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"></span><span class="tl-btn" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"></span><span class="tl-btn" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"></span><span class="tl-btn" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"></span><span class="tl-btn" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span></span><span class="br-row">Row 1 · Mesh Operations</span><span class="br-head"><img src="assets/icons/icon_extrude.svg" width="26" height="26" alt=""><span class="br-title">Extrude</span><kbd class="br-key">Alt + E / Shift + Move</kbd></span><span class="br-desc">Extrudes selected faces along their normal; in edge mode it pulls edge fins. Shift+Move does it live.</span><span class="br-req">Needs: Face or edge selection</span></span></span> on the toolbar (<kbd>Alt</kbd>+<kbd>E</kbd>).</li></ol>
+<figure><img class="shot" src="edit-extrude.png" alt="Shift + drag extrudes. The original face is replaced by the cap and the sides."><figcaption>Shift + drag extrudes. The original face is replaced by the cap and the sides.</figcaption></figure>
+<h2 id="3-put-a-door-in-a-wall">3. Put a door in a wall</h2>
+<ol class="steps"><li>New Shape → <strong>Door</strong>. Drag slightly in the direction you want the door to face (an orange arrow shows the opening direction), hold <kbd>Ctrl</kbd> to lock the facing, then drag sideways to set the width.</li><li>The params modal opens. Tick <strong>Arched</strong>, raise <strong>Arch Segments</strong> if you want a smoother curve, <strong>Apply</strong>.</li><li>Move the doorway so it sits in the wall, or <a href="objects.html">boolean it out</a> with CSG Subtract.</li></ol>
+<figure><img class="shot" src="create-door.png" alt="Arched doorway, built from its parameters, not from a boolean."><figcaption>Arched doorway, built from its parameters, not from a boolean.</figcaption></figure>
+<h2 id="what-to-try-next">What to try next</h2>
+<ul><li><a href="walkthrough-modern.html">Build the whole demo map</a> — every feature in one pass</li><li><a href="shapes.html#a-staircase-between-two-floors">Stairs between two floors</a></li><li><a href="trims.html">Skirting in one drag</a></li><li><a href="uv.html">Fix a stretched ramp in the UV editor</a></li><li><a href="export.html">Export a retro map</a></li></ul>
+<blockquote class="gotcha">When the level is built, <strong>export it and play the export</strong> — the PoiBuilder scene itself is the authoring format, and rendering it live costs significantly more than the baked map (numbers on <a href="performance.html">Performance</a>). Build and iterate in the scene; play and share the baked GLB/PBM.</blockquote>
+<blockquote class="gotcha">Clicking another mesh in an element mode edits <em>that</em> mesh. Object mode (<kbd>H</kbd> is vertex; Object is the toolbar button) is how you move several meshes at once.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="install.html"><span class="dir">← Previous</span><strong class="pager-title">Install</strong></a><a class="pager-card pager-next" href="interface.html"><span class="dir">Next →</span><strong class="pager-title">Interface</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

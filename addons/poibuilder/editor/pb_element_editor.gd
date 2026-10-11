@@ -1,0 +1,2711 @@
+## PBElementEditor — Runtime-safe element editing logic (no editor-only classes).
+##
+## All mesh-element math and drag state for the subgizmo integration lives here
+## so it is fully testable in plain headless runs: EditorNode3DGizmoPlugin
+## refuses direct instantiation outside the editor process, so PBGizmoPlugin
+## is a thin adapter that delegates to this class.
+##
+## Drag model (mirrors how the engine drives subgizmos):
+## - begin_drag(): snapshot positions + per-id start transforms for the whole
+##   engine-side subgizmo selection.
+## - set_subgizmo_transform(): the engine delivers an ABSOLUTE node-local
+##   target transform per selected id per motion. We derive the gesture's
+##   node-space delta as rel = target * start^-1 and recompute the full result
+##   from the snapshot each call — repeated delivery is IDEMPOTENT, which is
+##   the guarantee that killed the "teleporting cube" regression.
+## - commit(): registers an EditorUndoRedoManager action with exact
+##   before/after position subsets; cancel restores the snapshot.
+@tool
+class_name PBElementEditor
+extends RefCounted
+
+# ==============================================================================
+# Wiring
+# ==============================================================================
+
+## Shared editor state (select mode, orientation space, selection).
+var editor: PBEditor = null
+
+## The plugin's grid/snapping state (null = snapping off; injected by the
+## plugin). MOVE drags snap the translation delta, ROTATE drags snap the
+## angle, EXTRUDE snaps the cap distance along the normal; scale and inset
+## stay unsnapped (ProBuilder parity).
+var grid: PBGrid = null
+
+## Undo manager (EditorUndoRedoManager in the editor; duck-typed fake in tests).
+var undo: Object = null
+
+## Logger for diagnostics.
+var logger: PBLogger = null
+
+## Emitted while a subgizmo drag updates (for the Tool Properties dock).
+## active=false is emitted on commit/cancel with zeroed values.
+signal element_drag_updated(active: bool, translation: Vector3, rotation_deg: Vector3, scale: Vector3)
+
+## Emitted when a committed drag rewrote TOPOLOGY (shift+move extrude,
+## shift+scale inset): face ids are stale, so the plugin must clear the
+## engine subgizmo selection + mirrors and redraw.
+signal drag_topology_committed(node: PBMesh, new_face_ids: PackedInt32Array)
+
+# ==============================================================================
+# Snapping & Proportional Editing Definitions
+# ==============================================================================
+
+enum ProportionalFalloff {
+	SMOOTH,
+	SPHERE,
+	LINEAR,
+	SHARP,
+	CONSTANT,
+}
+
+## Hold V vertex snapping state
+var vertex_snap_enabled: bool = false
+var vertex_snap_held: bool = false
+
+## Returns true if vertex snapping is currently active (via toolbar toggle or held V key).
+func is_vertex_snap_active() -> bool:
+	return vertex_snap_enabled or vertex_snap_held
+
+## Proportional editing (soft selection) state
+var proportional_enabled: bool = false
+var proportional_radius: float = 2.0
+var proportional_falloff: ProportionalFalloff = ProportionalFalloff.SMOOTH
+
+## Computes the soft selection weight for a given distance and radius.
+static func calculate_proportional_weight(distance: float, radius: float,
+		falloff: ProportionalFalloff = ProportionalFalloff.SMOOTH) -> float:
+	if radius <= 0.0001 or distance > radius:
+		return 0.0
+	var t: float = clampf(distance / radius, 0.0, 1.0)
+	match falloff:
+		ProportionalFalloff.SMOOTH:
+			var inv := 1.0 - t
+			return inv * inv * (3.0 - 2.0 * inv)
+		ProportionalFalloff.SPHERE:
+			return sqrt(maxf(0.0, 1.0 - t * t))
+		ProportionalFalloff.LINEAR:
+			return 1.0 - t
+		ProportionalFalloff.SHARP:
+			var inv := 1.0 - t
+			return inv * inv
+		ProportionalFalloff.CONSTANT:
+			return 1.0
+	return 0.0
+
+## Returns the world transform of a Node3D, properly composing parent transforms
+## even in headless tests where nodes are not yet inside a live scene tree.
+func _node_world_xf(n: Node3D) -> Transform3D:
+	if n == null:
+		return Transform3D()
+	if n.is_inside_tree():
+		return n.global_transform
+	var xf := n.transform
+	var p: Node = n.get_parent()
+	while p != null and p is Node3D:
+		xf = (p as Node3D).transform * xf
+		p = p.get_parent()
+	return xf
+
+## Gathers world positions of all candidate snap vertices across PBMesh nodes,
+## excluding vertices currently being moved by the drag.
+func _get_candidate_vertices(node: PBMesh) -> PackedVector3Array:
+	var candidates := PackedVector3Array()
+	var scene_root: Node = null
+	if node != null and node.is_inside_tree() and node.get_tree() != null:
+		scene_root = node.get_tree().current_scene
+	if scene_root == null and node != null:
+		var top: Node = node
+		while top.get_parent() != null:
+			top = top.get_parent()
+		scene_root = top
+
+	var meshes: Array[PBMesh] = []
+	if scene_root != null:
+		var stack: Array[Node] = [scene_root]
+		while not stack.is_empty():
+			var n: Node = stack.pop_back()
+			if n is PBMesh and (n as PBMesh).pb_mesh_data != null:
+				meshes.append(n as PBMesh)
+			for child in n.get_children():
+				stack.append(child)
+	elif node != null:
+		meshes = [node]
+
+	# Collect the drag's START positions to exclude coincident duplicates on
+	# the same mesh. Measured from the same snapshot the snap solver uses:
+	# live positions wander with the drag, and stale keys would wrongly drop
+	# scene vertices the selection has snapped onto (un-catch on the next
+	# motion — the ping-pong bug).
+	var source_positions := {}
+	if node != null and node.pb_mesh_data != null:
+		var xf := _node_world_xf(node)
+		var md: PBMeshData = node.pb_mesh_data
+		var base: PackedVector3Array = _drag_original_positions \
+			if _drag_original_positions.size() > 0 else md.positions
+		for idx in _drag_union:
+			if idx >= 0 and idx < base.size():
+				var p: Vector3 = xf * base[idx]
+				var key := Vector3i(roundi(p.x * 1000.0), roundi(p.y * 1000.0), roundi(p.z * 1000.0))
+				source_positions[key] = true
+
+	var seen: Dictionary = {}
+	for m in meshes:
+		var m_xf := _node_world_xf(m)
+		var md: PBMeshData = m.pb_mesh_data
+		if md == null:
+			continue
+		var is_self := (m == node)
+		for idx in range(md.positions.size()):
+			if is_self and _drag_union.has(idx):
+				continue
+			var v_world: Vector3 = m_xf * md.positions[idx]
+			var key := Vector3i(roundi(v_world.x * 1000.0), roundi(v_world.y * 1000.0), roundi(v_world.z * 1000.0))
+			if is_self and source_positions.has(key):
+				continue
+			if seen.has(key):
+				continue
+			seen[key] = true
+			candidates.append(v_world)
+	return candidates
+
+## Gathers the world positions of the dragged element's corners AT DRAG START.
+## Vertex snapping measures displacements from the drag-start snapshot (the
+## engine's rel is a displacement from that same snapshot); reading live
+## positions instead made each caught snap un-catch on the next motion and
+## re-catch at the raw cursor position — the "ping-pong" bug.
+func _get_source_vertices(node: PBMesh) -> PackedVector3Array:
+	var sources := PackedVector3Array()
+	if node == null or node.pb_mesh_data == null:
+		return sources
+	var xf := _node_world_xf(node)
+	if not _drag_union.is_empty():
+		var md: PBMeshData = node.pb_mesh_data
+		var base: PackedVector3Array = _drag_original_positions \
+			if _drag_original_positions.size() > 0 else md.positions
+		var seen: Dictionary = {}
+		for idx in _drag_union:
+			if idx >= 0 and idx < base.size():
+				var v_world: Vector3 = xf * base[idx]
+				var key := Vector3i(roundi(v_world.x * 1000.0), roundi(v_world.y * 1000.0), roundi(v_world.z * 1000.0))
+				if not seen.has(key):
+					seen[key] = true
+					sources.append(v_world)
+	if sources.is_empty() and _drag_start_xf.has(_drag_latest_id):
+		sources.append(xf * _drag_start_xf[_drag_latest_id].origin)
+	return sources
+
+## Finds the nearest vertex position in world space across all PBMesh nodes.
+func _find_nearest_scene_vertex(node: PBMesh, target_world: Vector3, max_dist: float = INF) -> Vector3:
+	var best_pos := target_world
+	var best_dist := max_dist
+	var candidates := _get_candidate_vertices(node)
+	for v in candidates:
+		var d := target_world.distance_to(v)
+		if d < best_dist:
+			best_dist = d
+			best_pos = v
+	return best_pos
+
+# ==============================================================================
+# Drag gestures (tool + modifier keys decide how a drag applies)
+# ==============================================================================
+
+enum DragGesture {
+	NORMAL,        ## Raw rel transform from the engine (move/free scale/rotate)
+	EXTRUDE_MOVE,  ## Shift+move: extrude the selection at drag begin, drag the caps
+	CENTER_SCALE,  ## Dragging the center scale handle: uniform scale about the pivot
+	CENTER_INSET,  ## Shift+center handle on faces: uniform per-face inset
+	INSET_SCALE,   ## Shift+scale handles on faces: per-face inset driven by the scale factor (ProBuilder Shift+Scale)
+}
+
+## What the current drag does (decided once at drag begin — mid-drag
+## modifier flaps do not re-decide it). Axis/plane scale drags are FREE
+## (engine rel applies raw); uniform scaling and inset live on the center
+## scale handle the gizmo plugin draws.
+var _drag_gesture: DragGesture = DragGesture.NORMAL
+
+## Positions a topology-creating gesture drags (caps/fins' lifted corners or
+## inset inner faces). Empty for NORMAL/CENTER_SCALE — the union then comes
+## from the element ids.
+var _drag_union_override: PackedInt32Array = PackedInt32Array()
+
+## Precomputed union of all vertex position indices moved by the current drag.
+## Computed once at drag begin so per-motion deliveries never re-evaluate it.
+var _drag_union: PackedInt32Array = PackedInt32Array()
+## Full-mesh snapshot taken BEFORE a gesture's begin-op (extrude/inset).
+## Non-null makes commit/cancel swap whole-mesh snapshots instead of
+## per-position payloads (topology changed, indexes don't correspond).
+var _drag_before_op: PBMeshData = null
+
+## Per-face inset bases: [{idxs: PackedInt32Array, centroid: Vector3,
+## pre: PackedVector3Array}] — pre-op corner positions and their centroid
+## (the centroid is invariant under uniform lerp, so idempotent replay works).
+var _drag_inset_bases: Array = []
+
+## Ring faces' INNER corners (separate duplicates of the pulled corners):
+## they must follow the inner face's lerp or a hole opens between the ring
+## and the shrinking inner face. Entries: {idx, base, k} — corner position
+## index and the inset base/pre-corner it mirrors.
+var _drag_ring_bases: Array = []
+
+## Latest inset amount applied this gesture (readout only).
+var _last_inset_amount: float = 0.0
+
+## EXTRUDE_MOVE bookkeeping for the live side-winding flip: when the cap is
+## dragged back through its base plane, the side quads (wound for the
+## original extrude direction at drag begin) would render inside-out —
+## "missing faces". The flip rewrites their index triples each update from
+## the drag-start snapshot (idempotent, like the position replay).
+var _drag_side_faces: Array[PBFace] = []
+var _drag_side_tris: Array = []  # PackedInt32Array per side face (original)
+var _drag_side_base_e1: Array[Vector3] = []  # base edge (qa->qb) per side face
+var _drag_side_flipped: PackedByteArray = PackedByteArray()
+var _drag_cap_faces: Array[PBFace] = []
+## Face ids of the last gesture's op output (the moved caps) — the commit
+## selects them so the whole converted/grouped set stays the selection.
+var _drag_cap_face_ids: PackedInt32Array = PackedInt32Array()
+var _drag_cap_tris: Array = []  # PackedInt32Array per cap face (original)
+var _drag_cap_flipped: bool = false
+var _drag_extrude_region_center: Vector3 = Vector3.ZERO  # seed cap center
+var _drag_extrude_normal: Vector3 = Vector3.ZERO
+var _extrude_constrained: bool = false
+
+## Live mouse feed (editor only): the plugin forwards every viewport motion
+## so the extrude gesture can drive the cap distance from the CURSOR instead
+## of trusting the engine's transform composition (4.7.2 delivers a
+## basis-relative composition for subgizmo drags whose origin does not track
+## the mouse on permuted/flipped element bases — "backwards, doesn't follow
+## the mouse"). The mouse-driven path only engages once a REAL motion event
+## arrives during the drag; synthetic deliveries (tests) keep the rel path.
+var mouse_camera: Camera3D = null
+var mouse_screen: Vector2 = Vector2.ZERO
+var mouse_has: bool = false
+var drag_mouse_active: bool = false
+var _extrude_mouse_start: Vector2 = Vector2.ZERO
+var _extrude_pivot_world: Vector3 = Vector3.ZERO
+var _extrude_normal_world: Vector3 = Vector3.ZERO
+var _extrude_px_per_world: float = 0.0
+var _drag_mouse_driven: bool = false
+
+## Called by the plugin on every viewport motion event (cheap; always on).
+func track_mouse(camera: Camera3D, screen_pos: Vector2) -> void:
+	mouse_camera = camera
+	mouse_screen = screen_pos
+	mouse_has = camera != null
+	if drag_active:
+		# A real mouse move while a drag runs — the cursor is live.
+		drag_mouse_active = true
+
+## Center-handle drag state: screen-space radius ratio about the pivot, and
+## the captured pivot/start point. Driven by PBGizmoPlugin handle callbacks.
+var _center_factor: float = 1.0
+var _center_start_screen: Vector2 = Vector2.ZERO
+var _center_pivot: Vector3 = Vector3.ZERO  # node-local
+var _center_has_start: bool = false
+
+## Rel cache for engine-delivered drags: identical rels (repeated deliveries
+## of the same motion) skip the full position recompute + rebuild.
+var _last_rel: Transform3D = Transform3D()
+var _last_rel_valid: bool = false
+
+## Reads live modifier state. Editor-process only (headless tests inject
+## shift directly into _decide_gesture).
+static func shift_held() -> bool:
+	return Input.is_key_pressed(KEY_SHIFT)
+
+## Pure decision (testable): tool + shift → gesture for ENGINE-delivered
+## drags (the center handle decides its own gesture explicitly).
+func _decide_gesture(shift: bool) -> DragGesture:
+	if editor == null:
+		return DragGesture.NORMAL
+	match editor.tool_mode:
+		PBEditor.ToolMode.MOVE:
+			if shift and editor.select_mode == PBEditor.SelectMode.FACE:
+				return DragGesture.EXTRUDE_MOVE
+			if shift and editor.select_mode == PBEditor.SelectMode.EDGE:
+				return DragGesture.EXTRUDE_MOVE
+		PBEditor.ToolMode.SCALE:
+			# ProBuilder spec (VertexManipulationTool.cs): Shift + Scale on
+			# faces extrudes zero-thickness and shrinks the new faces inward
+			# toward their centroids — a face INSET driven by the scale drag.
+			if shift and editor.select_mode == PBEditor.SelectMode.FACE:
+				return DragGesture.INSET_SCALE
+		_:
+			pass
+	return DragGesture.NORMAL
+
+# ==============================================================================
+# Drag state (one native drag gesture at a time)
+# ==============================================================================
+
+## True between begin_drag and commit.
+var drag_active: bool = false
+
+## Full position array snapshot taken when the drag begins.
+var _drag_original_positions: PackedVector3Array = PackedVector3Array()
+
+## Per-id start transform (node-local, as delivered to the engine).
+var _drag_start_xf: Dictionary = {}
+
+## Latest target transforms received this gesture, per id.
+var _drag_pending: Dictionary = {}
+
+## Id whose pending transform was stored most recently.
+var _drag_latest_id: int = -1
+
+## The engine selection captured at drag begin (center drags carry no
+## per-motion deliveries, so _apply_drag falls back to these).
+var _drag_ids: PackedInt32Array = PackedInt32Array()
+
+## Per-element "side" face recorded at pick time (the face under the cursor).
+## ProBuilder UX: the ELEMENT-space gizmo for an edge/vertex is oriented by
+## the normal of the face you selected it FROM, not an average of all
+## adjacent faces.
+var pick_side_faces: Dictionary = {}
+
+## Edge spread selection (alt+click = the edge LOOP, shift+alt+click = the edge
+## RING): engine edge id → the ids of every common edge in that walk. Selected
+## ids expand to their spread for dragging, highlight, and the PBSelection
+## mirror; a plain click (no alt) drops back to the single edge.
+var selected_loops: Dictionary = {}
+
+## Multi-face selection groups (e.g. UV islands or programmatic multi-face selection):
+## seed face id -> PackedInt32Array of all face ids in that group.
+var selected_face_groups: Dictionary = {}
+
+## Mode-conversion groups (ProBuilder parity: switching modes converts the
+## selection — a face becomes its verts, etc.). The engine's script API holds
+## a SINGLE subgizmo id, so the converted set is carried as seed id ->
+## every id the conversion produced in the current mode. Selected ids expand
+## through it for dragging, highlighting, the PBSelection mirror, and the
+## pivot origin (the seed reports the set's centroid). Same lifecycle as the
+## loop/group maps: reset_side_faces clears it, a plain click on the seed
+## drops it, and the mirror prunes it when the seed leaves the engine
+## selection.
+var selected_conversion: Dictionary = {}
+
+## Double-click tracking for the click path only (hover never reaches it).
+var _last_click_msec: int = -10000
+var _last_click_id: int = -1
+var _last_click_alt: bool = false
+
+## Clears recorded pick-side faces and loop selections (mode switch /
+## selection cleared / post-op).
+func reset_side_faces() -> void:
+	pick_side_faces.clear()
+	selected_loops.clear()
+	selected_face_groups.clear()
+	selected_conversion.clear()
+	_last_click_msec = -10000
+	_last_click_id = -1
+	_last_click_alt = false
+## The mesh node being dragged.
+var _drag_mesh: PBMesh = null
+
+## Texture Mode drag state
+var _drag_texture_snapshot: PackedVector2Array = PackedVector2Array()
+var _drag_texture_uv_center: Vector2 = Vector2.ZERO
+var _drag_texture_face_ids: PackedInt32Array = PackedInt32Array()
+
+## Last emitted drag values, for on-demand dock refresh.
+var _last_drag_active: bool = false
+var _last_drag_translation: Vector3 = Vector3.ZERO
+var _last_drag_rotation_deg: Vector3 = Vector3.ZERO
+var _last_drag_scale: Vector3 = Vector3.ONE
+
+# ==============================================================================
+# State queries
+# ==============================================================================
+
+## True when `node` is the active mesh in an element mode (not Object).
+## All element picking/dragging is gated on this so native object-level
+## behavior takes over otherwise.
+func is_editing_node(node: PBMesh) -> bool:
+	return editor != null and editor.active_mesh == node \
+		and editor.select_mode != PBEditor.SelectMode.OBJECT
+
+# ==============================================================================
+# Element geometry helpers (per select mode)
+# ==============================================================================
+
+## Local-space vertex indices belonging to subgizmo `id` (coincident-expanded).
+func element_indices(mesh_data: PBMeshData, id: int) -> PackedInt32Array:
+	if mesh_data == null or id < 0:
+		return PackedInt32Array()
+	match editor.select_mode:
+		PBEditor.SelectMode.VERTEX:
+			# Subgizmo ids are shared-vertex GROUP indices here — return the
+			# group's positions directly. (Passing the group id to
+			# get_coincident_vertices* would look it up as a POSITION index
+			# and move a different corner — the "moves a different vert" bug.)
+			# A mode-conversion seed expands to every converted group first,
+			# so dragging the seed moves the whole converted set.
+			var groups := expand_conversion_ids(PackedInt32Array([id]))
+			var out := PackedInt32Array()
+			for gid in groups:
+				if gid < 0 or gid >= mesh_data.shared_vertices.size():
+					continue
+				var sv: PBSharedVertex = mesh_data.shared_vertices[gid]
+				if sv == null:
+					continue
+				out.append_array(sv.indices)
+			return out
+		PBEditor.SelectMode.EDGE:
+			var edges := mesh_data.get_common_edges()
+			if id >= edges.size():
+				return PackedInt32Array()
+			var edge_objs: Array[PBEdge] = []
+			for eid in expand_edge_ids(mesh_data, PackedInt32Array([id])):
+				edge_objs.append(edges[eid])
+			return mesh_data.get_coincident_vertices_from_edges(edge_objs)
+		PBEditor.SelectMode.FACE, PBEditor.SelectMode.TEXTURE:
+			return mesh_data.get_coincident_vertices_from_faces(expand_face_ids(mesh_data, PackedInt32Array([id])))
+		_:
+			return PackedInt32Array()
+
+## Local-space representative point of subgizmo `id` (the gizmo pivot origin).
+func element_origin(mesh_data: PBMeshData, id: int) -> Vector3:
+	if mesh_data == null or id < 0:
+		return Vector3.ZERO
+	var positions := mesh_data.positions
+	match editor.select_mode:
+		PBEditor.SelectMode.VERTEX:
+			if id >= mesh_data.shared_vertices.size():
+				return Vector3.ZERO
+			var sv: PBSharedVertex = mesh_data.shared_vertices[id]
+			if sv == null or sv.indices.is_empty():
+				return Vector3.ZERO
+			var idx: int = sv.indices[0]
+			return positions[idx] if idx >= 0 and idx < positions.size() else Vector3.ZERO
+		PBEditor.SelectMode.EDGE:
+			var edges := mesh_data.get_common_edges()
+			if id >= edges.size():
+				return Vector3.ZERO
+			var edge: PBEdge = edges[id]
+			if edge.a < 0 or edge.a >= positions.size() or edge.b < 0 or edge.b >= positions.size():
+				return Vector3.ZERO
+			return (positions[edge.a] + positions[edge.b]) * 0.5
+		PBEditor.SelectMode.FACE, PBEditor.SelectMode.TEXTURE:
+			var fids := expand_face_ids(mesh_data, PackedInt32Array([id]))
+			if fids.size() > 1:
+				var sum := Vector3.ZERO
+				var count: int = 0
+				for fid in fids:
+					if fid < mesh_data.faces.size() and mesh_data.faces[fid] != null:
+						for idx in mesh_data.faces[fid].get_distinct_indexes():
+							if idx >= 0 and idx < positions.size():
+								sum += positions[idx]
+								count += 1
+				return sum / float(count) if count > 0 else Vector3.ZERO
+			if id >= mesh_data.faces.size() or mesh_data.faces[id] == null:
+				return Vector3.ZERO
+			var face: PBFace = mesh_data.faces[id]
+			var indices := face.get_distinct_indexes()
+			if indices.is_empty():
+				return Vector3.ZERO
+			var sum := Vector3.ZERO
+			var count: int = 0
+			for idx in indices:
+				if idx >= 0 and idx < positions.size():
+					sum += positions[idx]
+					count += 1
+			return sum / float(count) if count > 0 else Vector3.ZERO
+	return Vector3.ZERO
+
+## Local-space orientation basis for subgizmo `id`, per editor.orientation_space.
+## The engine displays the transform gizmo at node_global_transform * this basis,
+## so: ELEMENT → element axes (face normal), OBJECT → node local axes,
+## WORLD → world axes.
+func element_basis(mesh_data: PBMeshData, node: PBMesh, id: int) -> Basis:
+	if mesh_data == null or node == null:
+		return Basis.IDENTITY
+	match editor.orientation_space:
+		PBEditor.OrientationSpace.WORLD:
+			# Display basis should be identity in world → invert node rotation
+			# locally (orthonormalized().inverse() = inverse of the rotation part).
+			return node.global_transform.basis.orthonormalized().inverse()
+		PBEditor.OrientationSpace.OBJECT:
+			return Basis.IDENTITY
+		PBEditor.OrientationSpace.ELEMENT:
+			if editor != null and editor.select_mode == PBEditor.SelectMode.TEXTURE:
+				if id >= 0 and id < mesh_data.faces.size() and mesh_data.faces[id] != null:
+					var face_normal := PBMath.normal_from_positions(mesh_data.positions, mesh_data.faces[id].get_indexes())
+					var basis_dict := PBUv.get_planar_basis(face_normal)
+					return Basis(basis_dict["u"], basis_dict["v"], face_normal.normalized())
+			var side: int = pick_side_faces.get(id, -1)
+			if side is int and side >= 0 and side < mesh_data.faces.size() \
+					and mesh_data.faces[side] != null:
+				var side_normal := PBMath.normal_from_positions(
+					mesh_data.positions, mesh_data.faces[side].get_indexes())
+				return _basis_from_normal(side_normal)
+			return _element_local_basis(mesh_data, id)
+	return Basis.IDENTITY
+
+## Right-handed orthonormal basis with Z along `normal`.
+func _basis_from_normal(normal: Vector3) -> Basis:
+	if normal.length_squared() < PBMath.FLT_EPSILON:
+		return Basis.IDENTITY
+	normal = normal.normalized()
+	var reference: Vector3 = Vector3.UP if absf(normal.dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
+	var x_axis: Vector3 = reference.cross(normal).normalized()
+	var y_axis: Vector3 = normal.cross(x_axis).normalized()
+	return Basis(x_axis, y_axis, normal)
+
+## Element-aligned basis derived from the element's geometry (local space).
+## Z axis = element normal (average adjacent face normals), X/Y orthonormal.
+func _element_local_basis(mesh_data: PBMeshData, id: int) -> Basis:
+	var normal := Vector3.ZERO
+	var positions := mesh_data.positions
+	var face_indexes: Array = []
+
+	match editor.select_mode:
+		PBEditor.SelectMode.FACE, PBEditor.SelectMode.TEXTURE:
+			if id >= 0 and id < mesh_data.faces.size() and mesh_data.faces[id] != null:
+				face_indexes.append(id)
+		PBEditor.SelectMode.EDGE:
+			var edges := mesh_data.get_common_edges()
+			if id < edges.size():
+				face_indexes = _faces_touching_edge(mesh_data, edges[id])
+		PBEditor.SelectMode.VERTEX:
+			var sv: PBSharedVertex = mesh_data.shared_vertices[id] if id < mesh_data.shared_vertices.size() else null
+			if sv != null:
+				face_indexes = _faces_touching_vertex(mesh_data, sv)
+
+	for fi in face_indexes:
+		var face: PBFace = mesh_data.faces[fi]
+		if face == null:
+			continue
+		normal += PBMath.normal_from_positions(positions, face.get_indexes())
+
+	if normal.length_squared() < PBMath.FLT_EPSILON:
+		return Basis.IDENTITY
+	normal = normal.normalized()
+
+	var reference: Vector3 = Vector3.UP if absf(normal.dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
+	var x_axis: Vector3 = reference.cross(normal).normalized()
+	var y_axis: Vector3 = normal.cross(x_axis).normalized()
+	return Basis(x_axis, y_axis, normal)
+
+func _faces_touching_edge(mesh_data: PBMeshData, edge: PBEdge) -> Array:
+	var result: Array = []
+	var common: PBEdge = mesh_data.get_common_edge(edge)
+	if common == null:
+		return result
+	for fi in range(mesh_data.faces.size()):
+		var face: PBFace = mesh_data.faces[fi]
+		if face == null:
+			continue
+		for fe in face.get_edges():
+			var fe_common: PBEdge = mesh_data.get_common_edge(fe)
+			if fe_common != null and fe_common.equals(common):
+				result.append(fi)
+				break
+	return result
+
+func _faces_touching_vertex(mesh_data: PBMeshData, sv: PBSharedVertex) -> Array:
+	var result: Array = []
+	var lookup := mesh_data.get_shared_vertex_lookup()
+	for fi in range(mesh_data.faces.size()):
+		var face: PBFace = mesh_data.faces[fi]
+		if face == null:
+			continue
+		for idx in face.get_distinct_indexes():
+			if lookup.get(idx, -1) in sv.indices:
+				result.append(fi)
+				break
+	return result
+
+# ==============================================================================
+# Picking (element ids from camera ray / frustum; gating is the caller's job)
+# ==============================================================================
+
+## Nearest element id under a camera ray through screen_pos, or -1.
+## `record_side`: only the CLICK path may write the pick-side face — the
+## gizmo must stay locked to the side the element was selected from; hover
+## passes false so merely moving the cursor over the other side never
+## re-orients the gizmo mid-usage.
+func pick_ray(mesh_data: PBMeshData, mesh_transform: Transform3D,
+		camera: Camera3D, screen_pos: Vector2, record_side: bool = true) -> int:
+	if mesh_data == null or mesh_data.positions.is_empty() or camera == null:
+		return -1
+
+	var ray_origin: Vector3 = camera.project_ray_origin(screen_pos)
+	var ray_dir: Vector3 = camera.project_ray_normal(screen_pos)
+	var id: int = -1
+	var hit_dist: float = INF
+	match editor.select_mode:
+		PBEditor.SelectMode.FACE, PBEditor.SelectMode.TEXTURE:
+			var res := PBPicking.pick_face(mesh_data, mesh_transform, ray_origin, ray_dir)
+			id = res.face_index
+			hit_dist = res.distance
+			if id >= 0 and record_side:
+				pick_side_faces[id] = id
+		PBEditor.SelectMode.EDGE:
+			var result: PBPicking.EdgePickResult = PBPicking.pick_edge(mesh_data, mesh_transform, screen_pos, camera)
+			if result.edge != null:
+				id = _common_edge_index(mesh_data, result.edge)
+				if id >= 0:
+					hit_dist = camera.global_position.distance_to(mesh_transform * element_origin(mesh_data, id))
+					if result.face_index >= 0 and record_side:
+						pick_side_faces[id] = result.face_index
+		PBEditor.SelectMode.VERTEX:
+			var vresult: PBPicking.VertexPickResult = PBPicking.pick_vertex(mesh_data, mesh_transform, screen_pos, camera)
+			if vresult.common_index >= 0:
+				id = vresult.common_index
+				hit_dist = camera.global_position.distance_to(mesh_transform * element_origin(mesh_data, id))
+				if vresult.face_index >= 0 and record_side:
+					pick_side_faces[id] = vresult.face_index
+	if id < 0:
+		return -1
+
+	# Occlusion check: if another visible PBMesh in the scene intersects the ray
+	# closer to the camera than this element, this element is occluded. Returning -1
+	# allows the engine to fall through to selecting the closer object (e.g. clicking
+	# an object sitting on top of a massive floor selects the object, not the floor).
+	if _is_element_occluded_by_other_pbmesh(mesh_data, hit_dist, ray_origin, ray_dir, camera):
+		return -1
+
+	return id
+
+func _is_element_occluded_by_other_pbmesh(own_mesh_data: PBMeshData, own_dist: float, ray_o: Vector3, ray_d: Vector3, camera: Camera3D) -> bool:
+	if camera == null or not camera.is_inside_tree():
+		return false
+	var scene_root: Node = camera.get_tree().edited_scene_root
+	if scene_root == null:
+		return false
+
+	var stack: Array[Node] = [scene_root]
+	while not stack.is_empty():
+		var cur: Node = stack.pop_back()
+		if cur is PBMesh and cur.is_visible_in_tree() and cur.pb_mesh_data != null and cur.pb_mesh_data != own_mesh_data:
+			var res: PBPicking.FacePickResult = PBPicking.pick_face(cur.pb_mesh_data, cur.global_transform, ray_o, ray_d)
+			if res.face_index >= 0 and res.distance < own_dist - 0.001:
+				return true
+		for child in cur.get_children():
+			stack.append(child)
+	return false
+## All element ids whose representative point lies inside the frustum planes.
+func pick_frustum(mesh_data: PBMeshData, mesh_transform: Transform3D,
+		frustum_planes: Array, camera: Camera3D = null) -> PackedInt32Array:
+	var result := PackedInt32Array()
+	if mesh_data == null or mesh_data.positions.is_empty():
+		return result
+
+	var planes: Array[Plane] = []
+	for p in frustum_planes:
+		planes.append(p as Plane)
+
+	match editor.select_mode:
+		PBEditor.SelectMode.FACE, PBEditor.SelectMode.TEXTURE:
+			for fi in range(mesh_data.faces.size()):
+				var origin := mesh_transform * element_origin(mesh_data, fi)
+				if not _point_in_frustum(origin, planes):
+					continue
+				if camera != null and _point_occluded(mesh_data, mesh_transform, camera, origin, fi):
+					continue
+				result.append(fi)
+		PBEditor.SelectMode.EDGE:
+			var edges := mesh_data.get_common_edges()
+			for ei in range(edges.size()):
+				var origin := mesh_transform * element_origin(mesh_data, ei)
+				if not _point_in_frustum(origin, planes):
+					continue
+				if camera != null and _point_occluded(mesh_data, mesh_transform, camera, origin, -1, edges[ei]):
+					continue
+				result.append(ei)
+		PBEditor.SelectMode.VERTEX:
+			for sv_idx in range(mesh_data.shared_vertices.size()):
+				var origin := mesh_transform * element_origin(mesh_data, sv_idx)
+				if not _point_in_frustum(origin, planes):
+					continue
+				if camera != null:
+					var sv: PBSharedVertex = mesh_data.shared_vertices[sv_idx]
+					if _point_occluded(mesh_data, mesh_transform, camera, origin, -1, null, sv):
+						continue
+				result.append(sv_idx)
+	return result
+
+## True when the first mesh surface between the camera and `point` belongs to
+## a face the element is not part of — i.e. the element is hidden behind the
+## mesh from this viewpoint. Box/rubber-band selection then matches what the
+## user sees (an edge-on cube's far corners are not grabbed through it).
+func _point_occluded(mesh_data: PBMeshData, mesh_transform: Transform3D,
+		camera: Camera3D, point: Vector3, face_id: int = -1,
+		edge: PBEdge = null, sv: PBSharedVertex = null) -> bool:
+	var cam_pos: Vector3 = camera.global_position
+	var to_point: Vector3 = point - cam_pos
+	var distance: float = to_point.length()
+	if distance < 0.001:
+		return false
+	var dir: Vector3 = to_point / distance
+
+	var hit := PBPicking._first_ray_hit(mesh_data, mesh_transform, cam_pos, dir)
+	var hit_face: int = hit["face"]
+	if hit_face == -1:
+		return false
+
+	var own: bool
+	if face_id != -1:
+		own = hit_face == face_id
+	elif edge != null:
+		own = PBPicking._face_contains_common_edge(mesh_data, mesh_data.faces[hit_face], edge)
+	else:
+		own = PBPicking._face_contains_common_vertex(mesh_data, mesh_data.faces[hit_face], sv)
+	if own:
+		return false
+
+	return hit["t"] + PBPicking.OCCLUSION_EPSILON < distance - PBPicking.OCCLUSION_EPSILON
+
+## Maps an edge (raw position pair, as returned by PBPicking) to its subgizmo
+## id in get_common_edges(). Comparison is by SHARED-GROUP pair on both sides —
+## the previous version compared a group pair against raw position pairs with
+## .equals(), which only matched by numeric coincidence (4 of 12 cube edges),
+## leaving every other edge unselectable.
+func _common_edge_index(mesh_data: PBMeshData, edge: PBEdge) -> int:
+	if edge == null:
+		return -1
+	var lookup := mesh_data.get_shared_vertex_lookup()
+	var ca: int = lookup.get(edge.a, -1)
+	var cb: int = lookup.get(edge.b, -1)
+	var key := Vector2i(mini(ca, cb), maxi(ca, cb))
+	var edges := mesh_data.get_common_edges()
+	for i in range(edges.size()):
+		var e: PBEdge = edges[i]
+		if e == null:
+			continue
+		var ea: int = lookup.get(e.a, -1)
+		var eb: int = lookup.get(e.b, -1)
+		if Vector2i(mini(ea, eb), maxi(ea, eb)) == key:
+			return i
+	return -1
+
+static func _point_in_frustum(point: Vector3, planes: Array[Plane]) -> bool:
+	for plane in planes:
+		if plane.distance_to(point) > 0.0:
+			return false
+	return true
+
+# ==============================================================================
+# Edge-loop selection (alt+click / double-click)
+# ==============================================================================
+
+## Call from the CLICK path only (engine _subgizmos_intersect_ray) after an
+## EDGE-mode pick. The gesture is ProBuilder's:
+##   - alt+click (or a double-click on the same edge) → the edge LOOP: the chain
+##     of edges running END TO END through 4-valence corners.
+##   - shift+alt+click (or shift+double-click) → the edge RING: the parallel
+##     edges crossed by the quad strip perpendicular to the seed (the loop cut's
+##     input).
+## Both are recorded and returned as common-edge ids; a plain click returns
+## empty and drops any expansion recorded for `id`.
+func record_edge_click(mesh_data: PBMeshData, id: int, alt_held: bool, ring_held := false) -> PackedInt32Array:
+	if mesh_data == null or id < 0:
+		return PackedInt32Array()
+	if not alt_held:
+		ring_held = false          # shift alone is the engine's add-to-selection
+	var now := Time.get_ticks_msec()
+	var double_click := id == _last_click_id and not alt_held and not _last_click_alt \
+		and now - _last_click_msec <= DOUBLE_CLICK_MS
+	_last_click_msec = now
+	_last_click_id = id
+	_last_click_alt = alt_held or double_click
+	if not alt_held and not double_click:
+		selected_loops.erase(id)
+		# A plain click on a conversion seed re-selects just that element.
+		selected_conversion.erase(id)
+		return PackedInt32Array()
+	var spread := edge_ring_ids(mesh_data, id) if ring_held else edge_loop_ids(mesh_data, id)
+	if spread.size() > 1:
+		selected_loops[id] = spread
+		return spread
+	return PackedInt32Array()
+
+## All common-edge ids in the edge LOOP through common edge `id` (seed
+## included). The loop runs end to end and stops wherever a vertex has a
+## valence other than 4 (a cube corner, a boundary), which is why a plain cube
+## returns just the seed and a subdivided band returns the whole chain.
+func edge_loop_ids(mesh_data: PBMeshData, id: int) -> PackedInt32Array:
+	var edges := mesh_data.get_common_edges()
+	if id < 0 or id >= edges.size():
+		return PackedInt32Array()
+	return _spread_ids(mesh_data, edges, PBTopology.get_edge_loop(mesh_data, [edges[id]]))
+## All common-edge ids in the edge RING through common edge `id` (seed
+## included). Rings cross quads only, so they stop at fans and n-gons.
+func edge_ring_ids(mesh_data: PBMeshData, id: int) -> PackedInt32Array:
+	var edges := mesh_data.get_common_edges()
+	if id < 0 or id >= edges.size():
+		return PackedInt32Array()
+	return _spread_ids(mesh_data, edges, PBTopology.get_edge_ring(mesh_data, [edges[id]]))
+
+## Maps a walk's PBEdge results back onto common-edge ids.
+func _spread_ids(mesh_data: PBMeshData, edges: Array[PBEdge], spread: Array[PBEdge]) -> PackedInt32Array:
+	var lookup := mesh_data.get_shared_vertex_lookup()
+	var id_of_key := {}
+	for i in range(edges.size()):
+		id_of_key[_edge_key(lookup, edges[i].a, edges[i].b)] = i
+	var ids := PackedInt32Array()
+	for e in spread:
+		var eid: int = id_of_key.get(_edge_key(lookup, e.a, e.b), -1)
+		if eid >= 0:
+			ids.append(eid)
+	return ids
+
+## Expands engine-selected edge ids through recorded loops AND conversion
+## groups (stable order, deduplicated). Plain ids pass through unchanged.
+func expand_edge_ids(mesh_data: PBMeshData, ids: PackedInt32Array) -> PackedInt32Array:
+	if ids.is_empty() or (selected_loops.is_empty() and selected_conversion.is_empty()):
+		return ids
+	var out := PackedInt32Array()
+	var seen := {}
+	for eid in ids:
+		for spread in [selected_loops.get(eid, PackedInt32Array()),
+				selected_conversion.get(eid, PackedInt32Array())]:
+			if spread.is_empty():
+				continue
+			for sid in spread:
+				if not seen.has(sid):
+					seen[sid] = true
+					out.append(sid)
+		if not seen.has(eid) \
+				and selected_loops.get(eid, PackedInt32Array()).is_empty() \
+				and selected_conversion.get(eid, PackedInt32Array()).is_empty():
+			seen[eid] = true
+			out.append(eid)
+	return out
+
+## Sets a multi-face selection group represented by `seed_id`.
+func set_selected_face_group(seed_id: int, all_face_ids: PackedInt32Array) -> void:
+	selected_face_groups.clear()
+	if seed_id >= 0 and not all_face_ids.is_empty():
+		selected_face_groups[seed_id] = all_face_ids.duplicate()
+
+## Clears any multi-face selection groups.
+func clear_selected_face_groups() -> void:
+	selected_face_groups.clear()
+
+## Records a mode-conversion group: `seed_id` represents every id in
+## `all_ids` (one conversion exists at a time — a mode switch converts the
+## whole selection).
+func set_conversion_group(seed_id: int, all_ids: PackedInt32Array) -> void:
+	selected_conversion.clear()
+	if seed_id >= 0 and all_ids.size() > 1:
+		selected_conversion[seed_id] = all_ids.duplicate()
+
+## Expands engine-selected ids through recorded conversion groups (stable
+## order, deduplicated). Ids without a conversion pass through unchanged.
+func expand_conversion_ids(ids: PackedInt32Array) -> PackedInt32Array:
+	if selected_conversion.is_empty() or ids.is_empty():
+		return ids
+	var out := PackedInt32Array()
+	var seen := {}
+	for id in ids:
+		var group: PackedInt32Array = selected_conversion.get(id, PackedInt32Array())
+		if group.is_empty():
+			if not seen.has(id):
+				seen[id] = true
+				out.append(id)
+		else:
+			for gid in group:
+				if not seen.has(gid):
+					seen[gid] = true
+					out.append(gid)
+	return out
+
+## The element id among `ids` whose origin is nearest the set's centroid —
+## the seed that carries a converted selection in the engine.
+func seed_id_nearest_centroid(mesh_data: PBMeshData, ids: PackedInt32Array) -> int:
+	if ids.is_empty():
+		return -1
+	if ids.size() == 1:
+		return ids[0]
+	var sum := Vector3.ZERO
+	var count: int = 0
+	for id in ids:
+		sum += element_origin(mesh_data, id)
+		count += 1
+	var centroid := sum / float(count) if count > 0 else Vector3.ZERO
+	var best := -1
+	var best_dist := INF
+	for id in ids:
+		var d: float = element_origin(mesh_data, id).distance_squared_to(centroid)
+		if d < best_dist:
+			best_dist = d
+			best = id
+	return best
+
+## Expands engine-selected face ids through recorded face groups (stable order, deduplicated).
+## Expands engine-selected face ids through recorded groups AND conversion
+## groups (stable order, deduplicated). Plain ids pass through unchanged.
+func expand_face_ids(mesh_data: PBMeshData, ids: PackedInt32Array) -> PackedInt32Array:
+	if ids.is_empty() or (selected_face_groups.is_empty() and selected_conversion.is_empty()):
+		return ids
+	var out := PackedInt32Array()
+	var seen := {}
+	for fid in ids:
+		for spread in [selected_face_groups.get(fid, PackedInt32Array()),
+				selected_conversion.get(fid, PackedInt32Array())]:
+			if spread.is_empty():
+				continue
+			for sid in spread:
+				if not seen.has(sid):
+					seen[sid] = true
+					out.append(sid)
+		if not seen.has(fid) \
+				and selected_face_groups.get(fid, PackedInt32Array()).is_empty() \
+				and selected_conversion.get(fid, PackedInt32Array()).is_empty():
+			seen[fid] = true
+			out.append(fid)
+	return out
+
+static func _edge_key(lookup: Dictionary, a: int, b: int) -> Vector2i:
+	var ca: int = lookup.get(a, a)
+	var cb: int = lookup.get(b, b)
+	return Vector2i(mini(ca, cb), maxi(ca, cb))
+
+const DOUBLE_CLICK_MS := 400
+
+# ==============================================================================
+# Subgizmo transforms (engine drag protocol)
+# ==============================================================================
+
+## Start transform for subgizmo `id` — what the engine sees on selection.
+## The ORIGIN is the pivot origin (element_pivot_origin): a conversion seed
+## reports its set's centroid, so the engine's transform gizmo lands on the
+## center of the converted selection and rotate/scale compose about it —
+## the same affine the engine applies to this transform is what the drag
+## replays onto positions (rel = target * start^-1), so no drag math
+## special-cases the pivot. Loops/UV groups keep their seed pivot.
+func get_subgizmo_transform(mesh_data: PBMeshData, node: PBMesh, id: int) -> Transform3D:
+	if mesh_data == null or node == null or id < 0:
+		return Transform3D.IDENTITY
+	return Transform3D(element_basis(mesh_data, node, id), element_pivot_origin(mesh_data, id))
+
+## The origin reported to the engine for subgizmo `id`. Plain elements and
+## loop/group seeds report their own element_origin; a mode-conversion seed
+## reports the centroid of the full converted set (ProBuilder pivots a
+## converted multi-selection on its center).
+func element_pivot_origin(mesh_data: PBMeshData, id: int) -> Vector3:
+	var group: PackedInt32Array = selected_conversion.get(id, PackedInt32Array())
+	if group.size() <= 1:
+		return element_origin(mesh_data, id)
+	var sum := Vector3.ZERO
+	var count: int = 0
+	for gid in group:
+		sum += element_origin(mesh_data, gid)
+		count += 1
+	return sum / float(count) if count > 0 else element_origin(mesh_data, id)
+
+## Handles one engine _set_subgizmo_transform delivery.
+## `ids` is the engine's current subgizmo selection (all elements the gizmo
+## moves); it is delivered fresh so the logic never holds a stale selection.
+func set_subgizmo_transform(node: PBMesh, ids: PackedInt32Array, id: int, transform: Transform3D) -> bool:
+	return set_subgizmo_transform_with_shift(node, ids, id, transform, shift_held())
+
+## Shift-aware entry point: the editor path passes live modifier state, the
+## gesture decision and every gesture path are testable headlessly by
+## injecting `shift` directly. Returns true if geometry was modified and rebuilt.
+func set_subgizmo_transform_with_shift(node: PBMesh, ids: PackedInt32Array, id: int,
+		transform: Transform3D, shift: bool) -> bool:
+	if node == null or not is_editing_node(node):
+		return false
+	var mesh_data: PBMeshData = node.pb_mesh_data
+	if mesh_data == null:
+		return false
+
+	if drag_active and _drag_mesh != node:
+		_reset_drag_state()
+
+	if not drag_active:
+		_begin_drag(node, ids, shift)
+		if logger != null:
+			logger.info("drag", "first delivery: id=%d target_origin=%s target_basis_z=%s shift=%s" % [
+				id, str(transform.origin), str(transform.basis.z), str(shift)])
+	_drag_pending[id] = transform
+	_drag_latest_id = id
+	return _apply_drag(node, mesh_data, ids)
+## Begins a drag gesture: decide the gesture from tool+shift, snapshot
+## positions and start transforms, then run any begin-time topology op
+## (extrude for shift+move, inset for shift+scale). `shift` is injected by
+## the caller (live modifier state in the editor; explicit in tests).
+func _begin_drag(node: PBMesh, ids: PackedInt32Array, shift: bool) -> void:
+	var mesh_data: PBMeshData = node.pb_mesh_data
+	if mesh_data == null:
+		return
+	drag_active = true
+	_drag_mesh = node
+	_drag_gesture = _decide_gesture(shift)
+	_drag_ids = ids.duplicate()
+	_drag_original_positions = mesh_data.positions.duplicate()
+	_drag_start_xf.clear()
+	_drag_pending.clear()
+	_drag_latest_id = -1
+	_drag_union_override = PackedInt32Array()
+	_drag_union = PackedInt32Array()
+	_drag_inset_bases = []
+	_drag_ring_bases = []
+	_last_inset_amount = 0.0
+	_center_factor = 1.0
+	_center_has_start = false
+	_drag_side_faces = []
+	_drag_side_tris = []
+	_drag_side_base_e1 = []
+	_drag_cap_faces = []
+	_drag_cap_face_ids = PackedInt32Array()
+	_drag_cap_tris = []
+	_drag_cap_flipped = false
+	_drag_extrude_region_center = Vector3.ZERO
+	_drag_side_flipped = PackedByteArray()
+	_drag_extrude_normal = Vector3.ZERO
+	_extrude_constrained = false
+	_drag_mouse_driven = false
+	drag_mouse_active = false
+	_last_rel = Transform3D()
+	_last_rel_valid = false
+	for id in ids:
+		_drag_start_xf[id] = get_subgizmo_transform(mesh_data, node, id)
+	if editor != null and editor.select_mode == PBEditor.SelectMode.TEXTURE:
+		_begin_texture_drag(node, ids)
+		return
+
+	# Topology-creating gestures undo via whole-mesh snapshots — capture the
+	# pre-op state before mutating.
+	if _drag_gesture == DragGesture.EXTRUDE_MOVE \
+			or _drag_gesture == DragGesture.INSET_SCALE:
+		_drag_before_op = PBCommand.copy_mesh_data(mesh_data)
+
+	match _drag_gesture:
+		DragGesture.EXTRUDE_MOVE:
+			_begin_extrude_move(mesh_data, ids)
+		DragGesture.INSET_SCALE:
+			_begin_inset(mesh_data, ids)
+
+	if not _drag_union_override.is_empty():
+		_drag_union = _drag_union_override
+	else:
+		_drag_union = PackedInt32Array()
+		var seen := {}
+		for id in ids:
+			for idx in element_indices(mesh_data, id):
+				if not seen.has(idx):
+					seen[idx] = true
+					_drag_union.append(idx)
+
+	if logger != null:
+		var start_summary := ""
+		for id in ids:
+			var xf: Transform3D = _drag_start_xf.get(id, Transform3D())
+			start_summary += "[%d] o=%s z=%s " % [id, str(xf.origin),
+				str(xf.basis.z)]
+		logger.info("drag", "BEGIN %s: mode=%s tool=%s space=%s ids=%d %s" % [
+			DragGesture.keys()[_drag_gesture],
+			PBEditor.SelectMode.keys()[editor.select_mode] if editor != null else "?",
+			PBEditor.ToolMode.keys()[editor.tool_mode] if editor != null else "?",
+			PBEditor.OrientationSpace.keys()[editor.orientation_space] if editor != null else "?",
+			ids.size(), start_summary])
+
+## Shift+move: extrude the selection at distance 0, then the drag translates
+## only the new caps/fins (their lifted corners), CONSTRAINED to the region
+## normal (ProBuilder semantics — screen motion projects onto the normal).
+## Undo covers the whole gesture via a full-mesh snapshot. Also records the
+## created SIDE faces (caps excluded) plus the pre-op region normal, so the
+## drag can flip their winding when the cap crosses back through the base
+## plane.
+func _begin_extrude_move(mesh_data: PBMeshData, ids: PackedInt32Array) -> void:
+	# The engine selection may be ONE seed carrying a converted/grouped set
+	# (mode-switch conversion, select coplanar/similar, loops): expand it or
+	# the op extrudes the seed alone while highlights/moves act on the whole
+	# set ("coplanar faces select together but extrude alone").
+	if editor.select_mode == PBEditor.SelectMode.EDGE:
+		ids = expand_edge_ids(mesh_data, ids)
+	else:
+		ids = expand_face_ids(mesh_data, ids)
+	# Region normal(s) over the PRE-op geometry (the extrude direction the
+	# side quads will be wound for). Must be captured BEFORE the op rewrites
+	# the faces array.
+	var normal_acc := Vector3.ZERO
+	var face_normals: Array[Vector3] = []
+	if editor.select_mode == PBEditor.SelectMode.EDGE:
+		# Faces adjacent to any selected edge (their average drives the fin
+		# direction in the op).
+		var common := mesh_data.get_common_edges()
+		var lookup := mesh_data.get_shared_vertex_lookup()
+		var wanted := {}
+		for eid in ids:
+			if eid >= 0 and eid < common.size():
+				wanted[_edge_key(lookup, common[eid].a, common[eid].b)] = true
+		for fi in range(mesh_data.faces.size()):
+			var face: PBFace = mesh_data.faces[fi]
+			if face == null:
+				continue
+			for fe in face.get_edges():
+				if wanted.has(_edge_key(lookup, fe.a, fe.b)):
+					face_normals.append(_face_area_normal(mesh_data, face))
+					break
+	else:
+		for fi in ids:
+			if fi >= 0 and fi < mesh_data.faces.size() and mesh_data.faces[fi] != null:
+				face_normals.append(_face_area_normal(mesh_data, mesh_data.faces[fi]))
+	for n in face_normals:
+		normal_acc += n
+	_drag_extrude_normal = normal_acc.normalized()
+
+	# Normal constraint: only when every extruded face shares (roughly) the
+	# same normal — a single region. Multi-normal regions keep the free drag.
+	_extrude_constrained = false
+	if _drag_extrude_normal.length_squared() > 0.5 and not face_normals.is_empty():
+		_extrude_constrained = true
+		for n in face_normals:
+			if n.normalized().dot(_drag_extrude_normal) < 0.98:
+				_extrude_constrained = false
+				break
+
+	var result: Dictionary
+	if editor.select_mode == PBEditor.SelectMode.EDGE:
+		result = PBMeshOps.extrude_edges(mesh_data, ids, 0.0, true)
+	else:
+		result = PBMeshOps.extrude_faces(mesh_data, ids, 0.0, true)
+	if not result.get("ok", false):
+		# Nothing extrudable under the gesture (degenerate normals) — the
+		# drag degrades to a plain move of the selection.
+		_drag_gesture = DragGesture.NORMAL
+		_drag_before_op = null
+		_drag_extrude_normal = Vector3.ZERO
+		if logger != null:
+			logger.warn("drag", "Extrude begin FAILED (%s) — degrading to plain move" %
+				str(result.get("error", "?")))
+		return
+
+	# _drag_original_positions was captured PRE-op above; the gesture replays
+	# from the POST-op geometry, so re-snapshot now.
+	_drag_original_positions = mesh_data.positions.duplicate()
+	_drag_union_override = result["drag_positions"]
+
+	# Region center at seed = the average seed position of the drag union
+	# (the cap is coincident with the original face at extrude distance 0).
+	var region_center := Vector3.ZERO
+	if not _drag_union_override.is_empty():
+		for idx in _drag_union_override:
+			region_center += mesh_data.positions[idx]
+		_drag_extrude_region_center = region_center / float(_drag_union_override.size())
+
+	# Side faces = the op's new faces minus the caps (fins extruded from
+	# edges ARE the caps — edge gestures get no flip treatment).
+	_drag_side_faces = []
+	_drag_side_tris = []
+	_drag_side_base_e1 = []
+	_drag_cap_faces = []
+	_drag_cap_face_ids = PackedInt32Array()
+	_drag_cap_tris = []
+	if editor.select_mode != PBEditor.SelectMode.EDGE:
+		var caps: PackedInt32Array = result["cap_face_ids"]
+		_drag_cap_face_ids = caps.duplicate()
+		var cap_set := {}
+		for fi in caps:
+			cap_set[fi] = true
+			if fi < mesh_data.faces.size() and mesh_data.faces[fi] != null:
+				_drag_cap_faces.append(mesh_data.faces[fi])
+				_drag_cap_tris.append(mesh_data.faces[fi].get_indexes().duplicate())
+		for fi in result["new_face_ids"]:
+			if not cap_set.has(fi) and fi < mesh_data.faces.size() \
+					and mesh_data.faces[fi] != null:
+				_drag_side_faces.append(mesh_data.faces[fi])
+				var tris := mesh_data.faces[fi].get_indexes()
+				_drag_side_tris.append(tris.duplicate())
+				# Base edge of the wall quad (qa -> qb): its first two
+				# corners; they never move during the drag.
+				_drag_side_base_e1.append(
+					mesh_data.positions[tris[1]] - mesh_data.positions[tris[0]])
+	_drag_side_flipped = PackedByteArray()
+	_drag_side_flipped.resize(_drag_side_faces.size())
+	_drag_cap_flipped = false
+
+	# Mouse-driven extrusion baseline: the cursor position at gesture begin,
+	# the cap pivot in world space, and the extrude normal in world space
+	# (rotated out of node space so the space setting cannot skew it).
+	_drag_mouse_driven = false
+	if mouse_has and mouse_camera != null and _drag_mesh != null \
+			and not _drag_union_override.is_empty():
+		_extrude_mouse_start = mouse_screen
+		_extrude_pivot_world = _drag_mesh.global_transform \
+			* mesh_data.positions[_drag_union_override[0]]
+		_extrude_normal_world = (_drag_mesh.global_transform.basis
+			* _drag_extrude_normal).normalized()
+		var d1: Vector2 = mouse_camera.unproject_position(_extrude_pivot_world)
+		var d2: Vector2 = mouse_camera.unproject_position(
+			_extrude_pivot_world + _extrude_normal_world * 1.0)
+		_extrude_px_per_world = (d2 - d1).length()
+
+	if logger != null:
+		logger.info("drag", "Extrude seed ok: normal(node)=%s normal(world)=%s constrained=%s caps=%d sides=%d union=%d px_per_world=%.1f" % [
+			str(_drag_extrude_normal), str(_extrude_normal_world),
+			str(_extrude_constrained),
+			result["cap_face_ids"].size(), _drag_side_faces.size(),
+			_drag_union_override.size(), _extrude_px_per_world])
+
+## Area-weighted normal of one face (pre-op geometry helper).
+static func _face_area_normal(mesh_data: PBMeshData, face: PBFace) -> Vector3:
+	var acc := Vector3.ZERO
+	var idxs := face.get_indexes()
+	var p := mesh_data.positions
+	for t in range(0, idxs.size() - 2, 3):
+		if idxs[t] >= p.size() or idxs[t + 1] >= p.size() or idxs[t + 2] >= p.size():
+			continue
+		acc += (p[idxs[t + 1]] - p[idxs[t]]).cross(p[idxs[t + 2]] - p[idxs[t]])
+	return acc
+
+## Center-handle inset (shift + center square on faces): seed a minimal
+## inset (topology: inner face + ring per face), then the drag lerps each
+## inner face's corners between the pre-op outline and its centroid. Uniform
+## amount — aspect ratio fixed. The inset op REMAPS position indexes
+## (replace + compact), so the per-face bases must bind the POST-op
+## inner-face indexes to the PRE-op corner positions — matched by per-face
+## order (duplicate_face preserves the index sequence).
+func _begin_inset(mesh_data: PBMeshData, ids: PackedInt32Array) -> void:
+	# Expand converted/grouped seeds first (see _begin_extrude_move).
+	ids = expand_face_ids(mesh_data, ids)
+	var pre := mesh_data.positions.duplicate()
+	var face_bases: Array = []
+	for id in ids:
+		if id < 0 or id >= mesh_data.faces.size() or mesh_data.faces[id] == null:
+			_drag_gesture = DragGesture.NORMAL
+			_drag_before_op = null
+			_drag_inset_bases = []
+			return
+		var loop := mesh_data.faces[id].get_distinct_indexes()
+		if loop.size() < 3:
+			_drag_gesture = DragGesture.NORMAL
+			_drag_before_op = null
+			_drag_inset_bases = []
+			return
+		var centroid := Vector3.ZERO
+		var corners := PackedVector3Array()
+		for idx in loop:
+			centroid += pre[idx]
+			corners.append(pre[idx])
+		centroid /= float(loop.size())
+		face_bases.append({"centroid": centroid, "pre": corners})
+
+	var result := PBMeshOps.inset_faces(mesh_data, ids, 0.01)
+	if not result.get("ok", false):
+		_drag_gesture = DragGesture.NORMAL
+		_drag_before_op = null
+		_drag_inset_bases = []
+		return
+	_drag_original_positions = mesh_data.positions.duplicate()
+
+	# Union = the inner faces' corners only (the rings stay put); the bases
+	# bind those (post-op) indexes to the (pre-op) outline + centroid.
+	var union := PackedInt32Array()
+	var cap_ids: PackedInt32Array = result["cap_face_ids"]
+	_drag_cap_face_ids = cap_ids.duplicate()
+	for i in range(cap_ids.size()):
+		var idxs := mesh_data.faces[cap_ids[i]].get_distinct_indexes()
+		for idx in idxs:
+			union.append(idx)
+		_drag_inset_bases.append({
+			"idxs": idxs,
+			"centroid": face_bases[i]["centroid"],
+			"pre": face_bases[i]["pre"],
+		})
+	_drag_union_override = union
+
+	# The ring faces' inner corners are SEPARATE duplicates of the pulled
+	# corners; they must follow the inner face's lerp exactly, or a hole
+	# opens between the ring and the shrinking inner face ("additional
+	# faces not visible"). Map each ring corner to the base/pre-corner it
+	# mirrors (match by seed position — the pulled coordinate).
+	var pulled: Array[Vector3] = []
+	var pull_ref: Array = []
+	for b_i in range(_drag_inset_bases.size()):
+		var base: Dictionary = _drag_inset_bases[b_i]
+		var pre_corners: PackedVector3Array = base["pre"]
+		var cen: Vector3 = base["centroid"]
+		for k in range(pre_corners.size()):
+			pulled.append(pre_corners[k].lerp(cen, 0.01))
+			pull_ref.append({"base": b_i, "k": k})
+	var ring_ids: PackedInt32Array = result["new_face_ids"]
+	var cap_set := {}
+	for ci in cap_ids:
+		cap_set[ci] = true
+	for fi in ring_ids:
+		if cap_set.has(fi) or fi >= mesh_data.faces.size() or mesh_data.faces[fi] == null:
+			continue
+		for cidx in mesh_data.faces[fi].get_distinct_indexes():
+			var p: Vector3 = mesh_data.positions[cidx]
+			for j in range(pulled.size()):
+				if p.distance_squared_to(pulled[j]) < 1e-8:
+					_drag_ring_bases.append({
+						"idx": cidx,
+						"base": pull_ref[j]["base"],
+						"k": pull_ref[j]["k"],
+					})
+					break
+
+
+## Begins a texture manipulation drag gesture in 3D viewport (Material Mode / Texture Tool).
+## Converts target faces to manual UV mode so coordinates are baked into textures0 with zero jump,
+## and snapshots original UV coordinates and face centroids.
+func _begin_texture_drag(node: PBMesh, ids: PackedInt32Array) -> void:
+	var mesh_data: PBMeshData = node.pb_mesh_data
+	if mesh_data == null:
+		return
+	_drag_before_op = PBCommand.copy_mesh_data(mesh_data)
+	_drag_texture_face_ids = expand_face_ids(mesh_data, ids)
+	if _drag_texture_face_ids.is_empty() and _drag_latest_id >= 0:
+		_drag_texture_face_ids = PackedInt32Array([_drag_latest_id])
+	PBUvOps._ensure_faces_manual(mesh_data, _drag_texture_face_ids)
+	_drag_texture_snapshot = mesh_data.textures0.duplicate()
+
+	# Compute UV center of selected faces
+	var uvs := mesh_data.textures0
+	var sum := Vector2.ZERO
+	var count: int = 0
+	for fid in _drag_texture_face_ids:
+		if fid >= 0 and fid < mesh_data.faces.size() and mesh_data.faces[fid] != null:
+			for vi in mesh_data.faces[fid].get_distinct_indexes():
+				if vi >= 0 and vi < uvs.size():
+					sum += uvs[vi]
+					count += 1
+	_drag_texture_uv_center = sum / float(count) if count > 0 else Vector2(0.5, 0.5)
+
+## Applies in-scene 3D texture translation, rotation, or scaling to target faces.
+func _apply_texture_drag(node: PBMesh, mesh_data: PBMeshData, ids: PackedInt32Array) -> bool:
+	var target_faces := _drag_texture_face_ids
+	if target_faces.is_empty():
+		target_faces = expand_face_ids(mesh_data, ids)
+	if target_faces.is_empty():
+		return false
+
+	var uvs := mesh_data.textures0.duplicate()
+
+	# Center-handle uniform scale
+	if _center_has_start and editor != null and editor.tool_mode == PBEditor.ToolMode.SCALE:
+		var s := _center_factor
+		for fid in target_faces:
+			if fid >= 0 and fid < mesh_data.faces.size() and mesh_data.faces[fid] != null:
+				for vi in mesh_data.faces[fid].get_distinct_indexes():
+					if vi >= 0 and vi < _drag_texture_snapshot.size() and vi < uvs.size():
+						var orig: Vector2 = _drag_texture_snapshot[vi]
+						var diff: Vector2 = orig - _drag_texture_uv_center
+						uvs[vi] = _drag_texture_uv_center + diff * s
+		mesh_data.textures0 = uvs
+		node.rebuild()
+		_emit_drag_update(true, Vector3.ZERO, Vector3.ZERO, Vector3(s, s, s))
+		return true
+
+	if _drag_latest_id == -1 or not _drag_start_xf.has(_drag_latest_id) or not _drag_pending.has(_drag_latest_id):
+		return false
+
+	var rel: Transform3D = _drag_pending[_drag_latest_id] * _drag_start_xf[_drag_latest_id].affine_inverse()
+	var face_basis: Basis = element_basis(mesh_data, node, _drag_latest_id)
+	var local_rel_origin: Vector3 = face_basis.inverse() * rel.origin
+	var local_rel_basis: Basis = face_basis.inverse() * rel.basis * face_basis
+
+	match editor.tool_mode:
+		PBEditor.ToolMode.MOVE:
+			var delta := Vector2(-local_rel_origin.x, -local_rel_origin.y)
+			if grid != null and grid.enabled:
+				var s: float = grid.step()
+				delta.x = roundf(delta.x / s) * s
+				delta.y = roundf(delta.y / s) * s
+
+			for fid in target_faces:
+				if fid >= 0 and fid < mesh_data.faces.size() and mesh_data.faces[fid] != null:
+					for vi in mesh_data.faces[fid].get_distinct_indexes():
+						if vi >= 0 and vi < _drag_texture_snapshot.size() and vi < uvs.size():
+							uvs[vi] = _drag_texture_snapshot[vi] + delta
+
+			mesh_data.textures0 = uvs
+			node.rebuild()
+			_emit_drag_update(true, Vector3(delta.x, delta.y, 0), Vector3.ZERO, Vector3.ONE)
+			return true
+
+		PBEditor.ToolMode.ROTATE:
+			var q := rel.basis.get_rotation_quaternion()
+			var total_angle := q.get_angle()
+			var angle := 0.0
+			if total_angle > 0.0001:
+				var q_vec := Vector3(q.x, q.y, q.z)
+				var normal_comp := q_vec.dot(face_basis.z)
+				if absf(normal_comp) > 0.01:
+					angle = 2.0 * atan2(normal_comp, q.w)
+				else:
+					var u_comp := q_vec.dot(face_basis.x)
+					var v_comp := q_vec.dot(face_basis.y)
+					var sign_dir := 1.0 if (u_comp + v_comp >= 0.0) else -1.0
+					angle = total_angle * sign_dir
+
+			if grid != null and grid.enabled and not Input.is_key_pressed(KEY_SHIFT):
+				var r_step := deg_to_rad(grid.rotate_step)
+				if r_step > 0.001:
+					angle = roundf(angle / r_step) * r_step
+
+			for fid in target_faces:
+				if fid >= 0 and fid < mesh_data.faces.size() and mesh_data.faces[fid] != null:
+					for vi in mesh_data.faces[fid].get_distinct_indexes():
+						if vi >= 0 and vi < _drag_texture_snapshot.size() and vi < uvs.size():
+							var orig: Vector2 = _drag_texture_snapshot[vi]
+							var diff: Vector2 = orig - _drag_texture_uv_center
+							uvs[vi] = _drag_texture_uv_center + diff.rotated(-angle)
+
+			mesh_data.textures0 = uvs
+			node.rebuild()
+			_emit_drag_update(true, Vector3.ZERO, Vector3(0, 0, rad_to_deg(angle)), Vector3.ONE)
+			return true
+
+		PBEditor.ToolMode.SCALE:
+			var sx: float = local_rel_basis.x.length()
+			var sy: float = local_rel_basis.y.length()
+			var sz: float = local_rel_basis.z.length()
+
+			# If user dragged the Z handle (normal axis) or a plane/center handle involving Z,
+			# map Z scale onto uniform scale so Z never locks or freezes the scale:
+			if absf(sz - 1.0) > 0.001:
+				if absf(sx - 1.0) < 0.001 and absf(sy - 1.0) < 0.001:
+					sx = sz
+					sy = sz
+				elif absf(sx - 1.0) > 0.001 and absf(sy - 1.0) < 0.001:
+					sy = sz
+				elif absf(sy - 1.0) > 0.001 and absf(sx - 1.0) < 0.001:
+					sx = sz
+				elif absf(sx - sy) < 0.001 and absf(sx - sz) < 0.001:
+					sx = sz
+					sy = sz
+
+			for fid in target_faces:
+				if fid >= 0 and fid < mesh_data.faces.size() and mesh_data.faces[fid] != null:
+					for vi in mesh_data.faces[fid].get_distinct_indexes():
+						if vi >= 0 and vi < _drag_texture_snapshot.size() and vi < uvs.size():
+							var orig: Vector2 = _drag_texture_snapshot[vi]
+							var diff: Vector2 = orig - _drag_texture_uv_center
+							uvs[vi] = _drag_texture_uv_center + Vector2(diff.x * sx, diff.y * sy)
+
+			mesh_data.textures0 = uvs
+			node.rebuild()
+			_emit_drag_update(true, Vector3.ZERO, Vector3.ZERO, Vector3(sx, sy, sz))
+			return true
+	return false
+## Applies the latest pending transform to ALL selected elements' vertices.
+## Deliberately recomputes the full result from the drag-start snapshot every
+## call: the engine calls set_subgizmo_transform once per selected id per
+## motion, and re-deriving from the snapshot makes repeated calls idempotent
+## (no compounding / "teleporting").
+func _apply_drag(node: PBMesh, mesh_data: PBMeshData, ids: PackedInt32Array) -> bool:
+	if not drag_active or _drag_start_xf.is_empty():
+		return false
+	if editor != null and editor.select_mode == PBEditor.SelectMode.TEXTURE:
+		return _apply_texture_drag(node, mesh_data, ids)
+
+	var union: PackedInt32Array = _drag_union
+	if union.is_empty():
+		if not _drag_union_override.is_empty():
+			union = _drag_union_override
+			_drag_union = union
+		else:
+			if ids.is_empty():
+				ids = _drag_ids
+			var seen := {}
+			for id in ids:
+				for idx in element_indices(mesh_data, id):
+					if not seen.has(idx):
+						seen[idx] = true
+						union.append(idx)
+			_drag_union = union
+	if union.is_empty():
+		return false
+
+	# rel = latest target * start^-1. The engine composes the same motion into
+	# every selected subgizmo's transform, so any id's rel is the gesture's
+	# node-space delta (translation / rotate-about-pivot / scale-about-pivot).
+	# Center-handle drags have no engine deliveries — they carry their own
+	# factor and skip this entirely. Repeated identical rels (multi-id
+	# selections redeliver the same motion) skip the full recompute.
+	var rel: Transform3D = _last_rel
+	if _drag_gesture == DragGesture.NORMAL or _drag_gesture == DragGesture.EXTRUDE_MOVE \
+			or _drag_gesture == DragGesture.INSET_SCALE:
+		if _drag_latest_id == -1 or not _drag_start_xf.has(_drag_latest_id) \
+				or not _drag_pending.has(_drag_latest_id):
+			return false
+		rel = _drag_pending[_drag_latest_id] * _drag_start_xf[_drag_latest_id].affine_inverse()
+		if _last_rel_valid and rel.is_equal_approx(_last_rel):
+			return false
+		_last_rel = rel
+		_last_rel_valid = true
+	var new_positions := _drag_original_positions.duplicate()
+	var pos_count: int = new_positions.size()
+	var applied_motion := Vector3.ZERO
+
+	match _drag_gesture:
+		DragGesture.CENTER_INSET:
+			var amount := clampf(1.0 - _center_factor, -1.0, 0.95)
+			_last_inset_amount = amount
+			for base in _drag_inset_bases:
+				var idxs: PackedInt32Array = base["idxs"]
+				var centroid: Vector3 = base["centroid"]
+				var pre: PackedVector3Array = base["pre"]
+				for i in range(idxs.size()):
+					var idx: int = idxs[i]
+					if idx >= 0 and idx < pos_count:
+						new_positions[idx] = pre[i].lerp(centroid, amount)
+			_apply_ring_lerp(new_positions, pos_count, amount)
+			_emit_drag_update(true, Vector3(amount, 0, 0), Vector3.ZERO, Vector3.ONE)
+		DragGesture.INSET_SCALE:
+			# The engine delivers a per-axis scale about the subgizmo origin;
+			# the inset amount is the dominant scale deviation from 1.
+			var s := _dominant_scale_factor(rel.basis)
+			var amount := clampf(1.0 - s, -1.0, 0.95)
+			_last_inset_amount = amount
+			for base in _drag_inset_bases:
+				var idxs: PackedInt32Array = base["idxs"]
+				var centroid: Vector3 = base["centroid"]
+				var pre: PackedVector3Array = base["pre"]
+				for i in range(idxs.size()):
+					var idx: int = idxs[i]
+					if idx >= 0 and idx < pos_count:
+						new_positions[idx] = pre[i].lerp(centroid, amount)
+			_apply_ring_lerp(new_positions, pos_count, amount)
+			_emit_drag_update(true, Vector3(amount, 0, 0), Vector3.ZERO, Vector3.ONE)
+		DragGesture.CENTER_SCALE:
+			var pivot := _center_pivot
+			if logger != null and PBLogger.verbose:
+				logger.debug("drag", "CENTER_SCALE apply: factor=%.3f union=%d pivot=%s" % [
+					_center_factor, union.size(), str(pivot)])
+			for idx in union:
+				if idx >= 0 and idx < pos_count:
+					new_positions[idx] = pivot + (_drag_original_positions[idx] - pivot) * _center_factor
+			_emit_drag_update(true, pivot - pivot * _center_factor, Vector3.ZERO, Vector3.ONE * _center_factor)
+		_:
+			# Move gestures are PURE TRANSLATIONS: apply the origin only.
+			# The engine composes axis/view-plane drags as translations, so
+			# the basis must be identity — if it is not, the engine's
+			# delivered composition does not match our start snapshot, and
+			# applying the full rel would shear/rotate the mesh ("twisted
+			# geometry"). Log loudly: that mismatch is exactly what the
+			# debug log is for. ROTATE/SCALE still apply the full rel.
+			var origin_only: bool = _drag_gesture == DragGesture.EXTRUDE_MOVE \
+				or (_drag_gesture == DragGesture.NORMAL \
+					and editor != null and editor.tool_mode == PBEditor.ToolMode.MOVE)
+			var motion := rel.origin
+			if origin_only:
+				if not rel.basis.is_equal_approx(Basis()) and logger != null:
+					logger.warn("drag", "REL BASIS NOT IDENTITY on a %s gesture — engine composition mismatch? origin=%s (positions use the origin only)" % [
+						DragGesture.keys()[_drag_gesture], str(rel.origin)])
+				# EXTRUDE_MOVE verification against the live cursor: the
+				# engine rel SHOULD track the mouse along the extrude
+				# normal's screen axis. When it visibly disagrees (sign or
+				# scale error along the normal — the reported "extrudes
+				# backwards, doesn't follow the mouse"), take the distance
+				# from the cursor instead. A lateral engine motion is a
+				# legitimate move of the extruded cap and is NOT overridden.
+				if _drag_gesture == DragGesture.EXTRUDE_MOVE and drag_mouse_active \
+						and mouse_has and mouse_camera != null \
+						and _extrude_px_per_world > 2.0:
+					var axis_screen: Vector2 = (
+						mouse_camera.unproject_position(
+							_extrude_pivot_world + _extrude_normal_world)
+						- mouse_camera.unproject_position(_extrude_pivot_world)
+					).normalized()
+					var mouse_world_dist: float = (mouse_screen - _extrude_mouse_start) \
+						.dot(axis_screen) / _extrude_px_per_world
+					var rel_normal_dist: float = rel.origin.dot(_drag_extrude_normal)
+					var dist_error: float = absf(rel_normal_dist - mouse_world_dist)
+					var dist_tolerance: float = maxf(0.1, 0.35 * absf(mouse_world_dist))
+					if dist_error > dist_tolerance:
+						motion = _drag_extrude_normal * mouse_world_dist
+						if not _drag_mouse_driven and logger != null:
+							logger.warn("drag", "EXTRUDE MISMATCH — engine rel along normal=%.3f but cursor says %.3f (px_per_world=%.1f); driving the cap from the cursor" % [rel_normal_dist, mouse_world_dist, _extrude_px_per_world])
+						_drag_mouse_driven = true
+				# Grid / Vertex snapping:
+				# plain MOVE snaps active axes to absolute world grid lines or scene vertices;
+				# the EXTRUDE cap snaps its world-space distance ALONG the extrude normal.
+				if is_vertex_snap_active() or (grid != null and grid.enabled):
+					if _drag_gesture == DragGesture.EXTRUDE_MOVE:
+						motion = _snap_extrude_motion(node, motion)
+					else:
+						motion = _snap_move_motion(node, motion)
+				# Spec (VertexManipulationTool.cs): shift+move extrudes at
+				# begin, then ApplyTranslation pulls the new faces along the
+				# translation delta — the cap follows the cursor.
+				applied_motion = motion
+				for idx in union:
+					if idx >= 0 and idx < pos_count:
+						new_positions[idx] = _drag_original_positions[idx] + motion
+				if proportional_enabled and proportional_radius > 0.001 and _drag_start_xf.has(_drag_latest_id):
+					var pivot_pos: Vector3 = _drag_start_xf[_drag_latest_id].origin
+					var union_set: Dictionary = {}
+					for idx in union:
+						union_set[idx] = true
+					for i in range(pos_count):
+						if not union_set.has(i):
+							var d: float = pivot_pos.distance_to(_drag_original_positions[i])
+							if d <= proportional_radius:
+								var w := calculate_proportional_weight(d, proportional_radius, proportional_falloff)
+								if w > 0.0:
+									new_positions[i] = _drag_original_positions[i] + motion * w
+				if logger != null and PBLogger.verbose:
+					logger.debug("drag", "apply %s: rel_origin=%s motion=%s union=%d mouse_driven=%s" % [
+						DragGesture.keys()[_drag_gesture], str(rel.origin), str(motion),
+						union.size(), str(_drag_mouse_driven)])
+				_emit_drag_update(true, motion, Vector3.ZERO, Vector3.ONE)
+			else:
+				# Grid snapping: rotation drags quantize the delivered angle
+				# to the rotate step (SCALE stays free — ProBuilder parity).
+				# The engine delivers rotation-about-center as
+				# rel = (R, c − R·c) — with local coords on c is the element
+				# origin, off it's the shared gizmo center. With the basis
+				# snapped to R' the origin MUST be rebuilt with the SAME
+				# center, recovered from the unsnapped rel, or the selection
+				# drifts ("rotate snaps and slides").
+				var applied_rel := rel
+				if grid != null and grid.enabled and _drag_gesture == DragGesture.NORMAL \
+						and editor != null and editor.tool_mode == PBEditor.ToolMode.ROTATE:
+					var snapped_basis := grid.snap_rotation(rel.basis)
+					if not snapped_basis.is_equal_approx(rel.basis) and _drag_start_xf.has(_drag_latest_id):
+						var center := _rotation_center(rel, _drag_start_xf[_drag_latest_id].origin)
+						applied_rel = Transform3D(snapped_basis, center - snapped_basis * center)
+				for idx in union:
+					if idx >= 0 and idx < pos_count:
+						new_positions[idx] = applied_rel * _drag_original_positions[idx]
+				_emit_drag_update(true, applied_rel.origin, _rel_rotation_deg(applied_rel), applied_rel.basis.get_scale())
+				if proportional_enabled and proportional_radius > 0.001 and _drag_start_xf.has(_drag_latest_id):
+					var pivot_pos: Vector3 = _drag_start_xf[_drag_latest_id].origin
+					var union_set: Dictionary = {}
+					for idx in union:
+						union_set[idx] = true
+					for i in range(pos_count):
+						if not union_set.has(i):
+							var d: float = pivot_pos.distance_to(_drag_original_positions[i])
+							if d <= proportional_radius:
+								var w := calculate_proportional_weight(d, proportional_radius, proportional_falloff)
+								if w > 0.0:
+									var orig := _drag_original_positions[i]
+									var target := applied_rel * orig
+									new_positions[i] = orig.lerp(target, w)
+
+	mesh_data.positions = new_positions
+
+	# EXTRUDE_MOVE: the CAP flips when the sweep reverses against the extrude
+	# normal (the cap leads the sweep — its outward follows the sweep
+	# direction); each SIDE wall flips independently when its winding points
+	# into the swept solid (checked against the translated region center).
+	# Both rewrites come from the drag-start snapshot (idempotent).
+	# Position edits never change the common-edge list or weld groups
+	# (index pairs/groups), and only the drag union's normals change —
+	# incremental updates keep the per-motion cost flat instead of
+	# rebuilding every normal on each mouse move.
+	if proportional_enabled:
+		mesh_data.calculate_normals()
+	else:
+		mesh_data.update_normals_for(union)
+	node.rebuild_positions()
+	return true
+
+## Recovers the rotation center of an engine rotation delivery
+## rel = Transform3D(R, c − R·c): c = ½·o⊥ + ½·cot(θ/2)·(axis × o⊥), with
+## the axis-line component anchored on the element origin (any point along
+## the axis line is the same rotation).
+static func _rotation_center(rel: Transform3D, axis_anchor: Vector3) -> Vector3:
+	var q := rel.basis.get_rotation_quaternion()
+	var axis := q.get_axis()
+	var angle := q.get_angle()
+	if axis.length_squared() < 0.25 or absf(angle) < 0.000001:
+		return axis_anchor
+	axis = axis.normalized()
+	var o_perp: Vector3 = rel.origin - axis * axis.dot(rel.origin)
+	var center := 0.5 * o_perp + axis.cross(o_perp) * (0.5 / tan(angle * 0.5))
+	return center + axis * axis.dot(axis_anchor)
+
+# ==============================================================================
+# Vertex snapping (V-Snap / hold-V) — pair-magnet model
+# ==============================================================================
+# A snap is a (dragged corner s, scene vertex v) PAIR. The selection
+# translates rigidly by a world delta W that the drag constraint confines to
+# an axis, a gizmo plane, or free space. A pair CATCHES when some W' on the
+# constraint lands s within the magnet radius of v; the catch output is that
+# exact W' (constraint-pure, corner-on-vertex). No pair catching → the raw
+# drag delta passes through (grid snapping gets its turn next).
+#
+# This replaces the projection-only solver: it accepted any vertex whose
+# displacement ALONG the drag axis matched the drag distance regardless of
+# lateral distance, so vertices meters away yanked the selection to heights
+# nothing visible justified; a 35px screen-space cursor override additionally
+# teleported the selection to whatever vertex sat under the mouse. Both are
+# gone — only geometry the dragged corners can actually REACH can catch,
+# which makes face/edge drags snap at their real corners (a single dragged
+# vertex degenerates to one source: snapping off that one point).
+
+## Magnet radius from a grid state (static so the creation tools share it):
+## half a snap step, clamped to a sane band; 0.2 m when the grid is off.
+static func vertex_snap_radius(grid: PBGrid) -> float:
+	if grid != null and grid.step() > 0.001:
+		return clampf(grid.step() * 0.5, 0.1, 0.5)
+	return 0.2
+
+func _vertex_snap_radius() -> float:
+	return vertex_snap_radius(grid)
+
+static func _unit_axis(i: int) -> Vector3:
+	var v := Vector3.ZERO
+	v[i] = 1.0
+	return v
+
+## Snaps an EXTRUDE motion: vertex snap when active (normal-dominant sweeps
+## solve along the extrude normal; tangential sweeps solve free), else the
+## grid quantizes the cap distance along the normal.
+func _snap_extrude_motion(node: PBMesh, motion: Vector3) -> Vector3:
+	if is_vertex_snap_active():
+		var v_res := _snap_vertex_extrude_motion(node, motion)
+		if v_res.get("caught", false):
+			return v_res["motion"]
+
+	if grid == null or not grid.enabled or node == null:
+		return motion
+	var basis := node.global_transform.basis
+	var world := basis * motion
+	var world_normal := _extrude_normal_world.normalized()
+	if world_normal.length_squared() < 0.5:
+		return grid.snap_local_delta(basis, motion)  # fallback: plain delta snap
+	var dist := world.dot(world_normal)
+	var snapped := grid.snap_val(dist)
+	# Normal-directed extrude: constrain strictly to normal, stripping tangential drift on sloped faces
+	if absf(dist) >= world.length() * 0.5:
+		return basis.inverse() * (world_normal * snapped)
+	# Sideways / tangential cap sweep: snap local delta preserving tangential motion
+	return grid.snap_local_delta(basis, motion)
+
+## Vertex snap for an EXTRUDE cap drag. Sources are the cap corners at drag
+## start; a catch locks the cap distance so a corner lands on a scene vertex.
+func _snap_vertex_extrude_motion(node: PBMesh, motion: Vector3) -> Dictionary:
+	var result := { "caught": false, "motion": motion }
+	if node == null or node.pb_mesh_data == null:
+		return result
+	var world_normal := _extrude_normal_world
+	if world_normal.length_squared() < 0.5:
+		return result
+	world_normal = world_normal.normalized()
+	var sources := _get_source_vertices(node)
+	if sources.is_empty():
+		return result
+	var candidates := _get_candidate_vertices(node)
+	if candidates.is_empty():
+		return result
+	var basis := _node_world_xf(node).basis
+	var world := basis * motion
+	var radius := _vertex_snap_radius()
+
+	if absf(world.dot(world_normal)) >= world.length() * 0.5:
+		# Normal-dominant sweep: the cap distance catches along the normal.
+		var res := snap_axis_delta(sources, candidates, world_normal,
+			world.dot(world_normal), radius)
+		if res["caught"]:
+			result["caught"] = true
+			result["motion"] = basis.inverse() * (world_normal * float(res["d"]))
+	else:
+		# Tangential sweep (multi-normal region, unconstrained): free solve.
+		var res := snap_free_delta(sources, candidates, world, radius)
+		if res["caught"]:
+			result["caught"] = true
+			result["motion"] = basis.inverse() * (res["world"] as Vector3)
+	return result
+
+## Vertex snap for a plain MOVE drag: solve the active constraint, fall
+## through to grid snapping when nothing caught.
+func _snap_move_motion(node: PBMesh, motion: Vector3) -> Vector3:
+	if is_vertex_snap_active():
+		var v_res := _snap_vertex_move_motion(node, motion)
+		if v_res.get("caught", false):
+			return v_res["motion"]
+
+	return _snap_grid_move_motion(node, motion)
+
+## Classifies the MOVE drag's constraint from the active orientation space and
+## solves it. `motion` is the engine's node-space translation delta; gizmo
+## axis i maps to node space by g (ELEMENT: the element basis, OBJECT:
+## identity, WORLD: the node basis), and the delivered component along that
+## axis is the constrained degree of freedom.
+func _snap_vertex_move_motion(node: PBMesh, motion: Vector3) -> Dictionary:
+	var result := { "caught": false, "motion": motion }
+	if node == null or node.pb_mesh_data == null:
+		return result
+	var sources := _get_source_vertices(node)
+	if sources.is_empty():
+		return result
+	var candidates := _get_candidate_vertices(node)
+	if candidates.is_empty():
+		return result
+	var radius := _vertex_snap_radius()
+	var basis := _node_world_xf(node).basis
+
+	var g := Basis.IDENTITY
+	var space: int = PBEditor.OrientationSpace.WORLD
+	if editor != null:
+		space = editor.orientation_space
+	match space:
+		PBEditor.OrientationSpace.ELEMENT:
+			g = element_basis(node.pb_mesh_data, node, _drag_latest_id)
+		PBEditor.OrientationSpace.OBJECT:
+			g = Basis.IDENTITY
+		_:
+			g = basis.orthonormalized()  # WORLD: gizmo space == world space
+
+	# local[i] = delivered displacement along gizmo axis i.
+	var local := g.inverse() * motion
+	var axes: Array[int] = []
+	for i in range(3):
+		if absf(local[i]) > 0.0001:
+			axes.append(i)
+	if axes.is_empty():
+		return result
+
+	if axes.size() == 1:
+		# Single-axis drag: motion stays EXACTLY on the axis; a catch only
+		# rescales the signed distance so a corner lands on a vertex.
+		var i: int = axes[0]
+		var axis_node := _unit_axis(i)
+		var world_axis := (basis * (g * axis_node)).normalized()
+		var res := snap_axis_delta(sources, candidates, world_axis, local[i], radius)
+		if res["caught"]:
+			result["caught"] = true
+			result["motion"] = g * (axis_node * float(res["d"]))
+		return result
+
+	var world := basis * motion
+	if axes.size() == 2:
+		# Plane drag: the in-plane delta snaps so a corner lands on a vertex
+		# whose out-of-plane offset from the drag plane is within the radius.
+		var a1 := (basis * (g * _unit_axis(axes[0]))).normalized()
+		var a2 := (basis * (g * _unit_axis(axes[1]))).normalized()
+		var plane_normal := a1.cross(a2).normalized()
+		var res := snap_plane_delta(sources, candidates, world, plane_normal, radius)
+		if res["caught"]:
+			var node_delta := basis.inverse() * (res["world"] as Vector3)
+			# Purity guard: kill the inactive gizmo component (float noise
+			# on skewed node transforms).
+			var lc := g.inverse() * node_delta
+			for i in range(3):
+				if not axes.has(i):
+					lc[i] = 0.0
+			result["caught"] = true
+			result["motion"] = g * lc
+		return result
+
+	# Free (view-plane) drag: a corner snaps onto a vertex in 3D.
+	var res := snap_free_delta(sources, candidates, world, radius)
+	if res["caught"]:
+		result["caught"] = true
+		result["motion"] = basis.inverse() * (res["world"] as Vector3)
+	return result
+
+## Axis-constrained solve: catches the (source, candidate) pair whose required
+## signed displacement `t` along `axis` is nearest the dragged distance `d`
+## among pairs whose source passes within `radius` of the candidate — i.e.
+## the perpendicular offset of (v − s) from the axis line through s must be
+## inside the radius, so only REACHABLE geometry catches. Pairs with t ≈ 0
+## never catch (that would pin the drag at its start position).
+static func snap_axis_delta(sources: PackedVector3Array, candidates: PackedVector3Array,
+		axis: Vector3, d: float, radius: float) -> Dictionary:
+	var result := { "caught": false, "d": d }
+	if sources.is_empty() or candidates.is_empty() or radius <= 0.0:
+		return result
+	var a := axis.normalized()
+	if a.length_squared() < 0.5:
+		return result
+	var best_diff := radius
+	for v in candidates:
+		for s in sources:
+			var disp := v - s
+			var t := disp.dot(a)
+			if absf(t) < 0.001:
+				continue
+			var perp := disp - a * t
+			if perp.length_squared() > radius * radius:
+				continue
+			var diff := absf(t - d)
+			if diff <= best_diff:
+				best_diff = diff
+				result["caught"] = true
+				result["d"] = t
+	return result
+
+## Plane-constrained solve: catches the pair whose in-plane displacement t is
+## nearest the dragged in-plane delta; the candidate must sit within `radius`
+## of the drag plane (its out-of-plane offset along `plane_normal` ≤ radius).
+## Candidates coincident with a source in-plane (t ≈ 0) never catch.
+static func snap_plane_delta(sources: PackedVector3Array, candidates: PackedVector3Array,
+		world_delta: Vector3, plane_normal: Vector3, radius: float) -> Dictionary:
+	var result := { "caught": false, "world": world_delta }
+	if sources.is_empty() or candidates.is_empty() or radius <= 0.0:
+		return result
+	var n := plane_normal.normalized()
+	if n.length_squared() < 0.5:
+		return result
+	var best_diff := radius
+	for v in candidates:
+		for s in sources:
+			var disp := v - s
+			var off := disp.dot(n)
+			if absf(off) > radius:
+				continue
+			var t := disp - n * off
+			if t.length_squared() < 0.000001:
+				continue
+			var diff := (world_delta - t).length()
+			if diff <= best_diff:
+				best_diff = diff
+				result["caught"] = true
+				result["world"] = t
+	return result
+
+## Free (view-plane) solve: catches the pair whose full 3D displacement is
+## nearest the dragged delta — the corner lands exactly on the vertex.
+static func snap_free_delta(sources: PackedVector3Array, candidates: PackedVector3Array,
+		world_delta: Vector3, radius: float) -> Dictionary:
+	var result := { "caught": false, "world": world_delta }
+	if sources.is_empty() or candidates.is_empty() or radius <= 0.0:
+		return result
+	var best_diff := radius
+	for v in candidates:
+		for s in sources:
+			var t := v - s
+			if t.length_squared() < 0.000001:
+				continue
+			var diff := (world_delta - t).length()
+			if diff <= best_diff:
+				best_diff = diff
+				result["caught"] = true
+				result["world"] = t
+	return result
+## Snaps element translation to absolute world grid lines along active axes.
+## Even if an element starts with an off-grid position (fractional dimensions or
+## centered geometry), dragging it snaps the landing position directly onto the grid ticks.
+func _snap_grid_move_motion(node: PBMesh, motion: Vector3) -> Vector3:
+	if grid == null or not grid.enabled or node == null:
+		return motion
+	var xf := node.global_transform if node.is_inside_tree() else node.transform
+	if not _drag_start_xf.has(_drag_latest_id):
+		return grid.snap_local_delta(xf.basis, motion)
+
+	var basis := xf.basis
+	var world_motion := basis * motion
+	var start_pivot_world: Vector3 = xf * _drag_start_xf[_drag_latest_id].origin
+
+	# If in ELEMENT space: snap along the element's local gizmo axes (face normal, tangent, bitangent)
+	if editor != null and editor.orientation_space == PBEditor.OrientationSpace.ELEMENT:
+		var elem_b := element_basis(node.pb_mesh_data, node, _drag_latest_id)
+		var local_motion: Vector3 = elem_b.inverse() * motion
+		var d_x: float = local_motion.x
+		var d_y: float = local_motion.y
+		var d_z: float = local_motion.z
+		var world_x := (basis * (elem_b * Vector3.RIGHT)).normalized()
+		var world_y := (basis * (elem_b * Vector3.UP)).normalized()
+		var world_z := (basis * (elem_b * Vector3.BACK)).normalized()
+
+		var applied_local := Vector3.ZERO
+		if absf(d_x) > 0.0001:
+			var target_pt := start_pivot_world + world_x * d_x
+			var snapped_pt := grid.snap_point(target_pt)
+			applied_local.x = (snapped_pt - start_pivot_world).dot(world_x)
+
+		if absf(d_y) > 0.0001:
+			var target_pt := start_pivot_world + world_y * d_y
+			var snapped_pt := grid.snap_point(target_pt)
+			applied_local.y = (snapped_pt - start_pivot_world).dot(world_y)
+
+		if absf(d_z) > 0.0001:
+			var target_pt := start_pivot_world + world_z * d_z
+			var snapped_pt := grid.snap_point(target_pt)
+			applied_local.z = (snapped_pt - start_pivot_world).dot(world_z)
+
+		return elem_b * applied_local
+
+	elif editor != null and editor.orientation_space == PBEditor.OrientationSpace.OBJECT:
+		var applied_local := Vector3.ZERO
+		for i in range(3):
+			var local_axis := Vector3.ZERO
+			local_axis[i] = 1.0
+			var world_axis := (basis * local_axis).normalized()
+			var val: float = motion[i]
+			if absf(val) > 0.0001:
+				if PBGrid.is_cardinal(world_axis):
+					var target_pt := start_pivot_world + world_axis * val
+					var snapped_pt := grid.snap_point(target_pt)
+					applied_local[i] = (snapped_pt - start_pivot_world).dot(world_axis)
+				else:
+					applied_local[i] = grid.snap_val(val)
+		return applied_local
+
+	# Default WORLD space: absolute world grid snapping
+	var target_pivot_world := start_pivot_world + world_motion
+	var snapped_target := grid.snap_point(target_pivot_world)
+
+	var applied_world := Vector3.ZERO
+	if absf(world_motion.x) > 0.0001:
+		applied_world.x = snapped_target.x - start_pivot_world.x
+	if absf(world_motion.y) > 0.0001:
+		applied_world.y = snapped_target.y - start_pivot_world.y
+	if absf(world_motion.z) > 0.0001:
+		applied_world.z = snapped_target.z - start_pivot_world.z
+
+	return basis.inverse() * applied_world
+# ==============================================================================
+# Center scale handle (uniform scale + inset, ProBuilder-style)
+# ==============================================================================
+
+## True while the gizmo plugin is driving a center-handle drag.
+func center_drag_active() -> bool:
+	return drag_active and (_drag_gesture == DragGesture.CENTER_SCALE \
+		or _drag_gesture == DragGesture.CENTER_INSET)
+
+## The average origin of `ids`' elements (node-local) — the pivot for the
+## center scale handle.
+func center_pivot(mesh_data: PBMeshData, ids: PackedInt32Array) -> Vector3:
+	if mesh_data == null or ids.is_empty():
+		return Vector3.ZERO
+	var acc := Vector3.ZERO
+	var count := 0
+	for id in ids:
+		# Pivot origins (not raw origins): a conversion seed's pivot is its
+		# set's centroid, matching where the engine gizmo sits.
+		acc += element_pivot_origin(mesh_data, id)
+		count += 1
+	return acc / float(count) if count > 0 else Vector3.ZERO
+
+## Begins a center-handle drag. `inset`: shift+handle on a face selection —
+## seeds a real inset(0.01) and the drag lerps each inner face toward its
+## pre-op centroid (aspect fixed). Otherwise the drag scales the selection's
+## positions uniformly about `pivot` (node-local).
+func begin_center_drag(node: PBMesh, ids: PackedInt32Array, inset: bool,
+		pivot: Vector3, start_screen: Vector2) -> bool:
+	if node == null or node.pb_mesh_data == null or ids.is_empty() or drag_active:
+		return false
+	var mesh_data: PBMeshData = node.pb_mesh_data
+	drag_active = true
+	_drag_mesh = node
+	_drag_ids = ids.duplicate()
+	_drag_original_positions = mesh_data.positions.duplicate()
+	_drag_start_xf.clear()
+	_drag_pending.clear()
+	_drag_latest_id = -1
+	_drag_union_override = PackedInt32Array()
+	_drag_before_op = null
+	_drag_inset_bases = []
+	_last_inset_amount = 0.0
+	for id in ids:
+		_drag_start_xf[id] = get_subgizmo_transform(mesh_data, node, id)
+	_center_pivot = pivot
+	_center_start_screen = start_screen
+	_center_has_start = true
+	if editor != null and editor.select_mode == PBEditor.SelectMode.TEXTURE:
+		_begin_texture_drag(node, ids)
+		return true
+
+	if inset:
+		_drag_gesture = DragGesture.CENTER_INSET
+		_drag_before_op = PBCommand.copy_mesh_data(mesh_data)
+		_begin_inset(mesh_data, ids)
+		if _drag_gesture != DragGesture.CENTER_INSET:
+			# Faces were not inset-able — degrade to uniform scale.
+			_drag_before_op = null
+			_drag_gesture = DragGesture.CENTER_SCALE
+	else:
+		_drag_gesture = DragGesture.CENTER_SCALE
+
+	if not _drag_union_override.is_empty():
+		_drag_union = _drag_union_override
+	else:
+		_drag_union = PackedInt32Array()
+		var seen := {}
+		for id in ids:
+			for idx in element_indices(mesh_data, id):
+				if not seen.has(idx):
+					seen[idx] = true
+					_drag_union.append(idx)
+	if logger != null:
+		logger.info("drag", "CENTER drag begun: %s, %d element(s), pivot=%s start_screen=%s inset=%s" % [
+			DragGesture.keys()[_drag_gesture], ids.size(), str(pivot),
+			str(start_screen), str(inset)])
+	return true
+
+## Applies the drag from the current screen point: the HORIZONTAL screen
+## delta from the drag start drives uniform scale or inset (ProBuilder-style
+## center handle: drag right = smaller, drag left = bigger, 1% per pixel).
+## A pure screen delta (no radius ratio about the pivot) can never explode:
+## the old radius ratio divided by a near-zero start radius when the handle
+## was grabbed dead-on, jumping the factor to its clamp.
+func apply_center_drag(node: PBMesh, camera: Camera3D, screen_pos: Vector2) -> void:
+	if not center_drag_active() or node == null or camera == null:
+		return
+	if not _center_has_start:
+		return
+	_center_factor = clampf(1.0 - (screen_pos.x - _center_start_screen.x) * 0.01, 0.01, 10.0)
+	if logger != null and PBLogger.verbose:
+		logger.debug("drag", "center apply: screen_dx=%.1f factor=%.3f" % [
+			screen_pos.x - _center_start_screen.x, _center_factor])
+	_apply_drag(node, node.pb_mesh_data, PackedInt32Array())
+
+## Commits (or cancels) a center-handle drag through the shared commit
+## machinery (undo payloads, topology snapshots, signals).
+func commit_center_drag(node: PBMesh, ids: PackedInt32Array, cancel: bool) -> bool:
+	if not center_drag_active():
+		return false
+	return commit_subgizmos(node, ids, cancel)
+
+## Commit (drag released) or cancel (Escape) — called by the editor adapter.
+## `restores` are the start transforms the engine snapshotted; on cancel the
+## engine does NOT revert anything itself, so restoring is our job.
+## Returns true if a mutation was committed to undo (not on cancel/no-op).
+func commit_subgizmos(node: PBMesh, ids: PackedInt32Array, cancel: bool) -> bool:
+	if node == null or node.pb_mesh_data == null:
+		_reset_drag_state()
+		_emit_drag_update(false, Vector3.ZERO, Vector3.ZERO, Vector3.ONE)
+		return false
+	var mesh_data: PBMeshData = node.pb_mesh_data
+	if editor != null and editor.select_mode == PBEditor.SelectMode.TEXTURE:
+		if cancel:
+			if _drag_before_op != null:
+				PBCommand.restore_mesh_data(mesh_data, _drag_before_op)
+				mesh_data.invalidate_caches()
+				node.rebuild()
+			_reset_drag_state()
+			_emit_drag_update(false, Vector3.ZERO, Vector3.ZERO, Vector3.ONE)
+			return false
+		if _drag_before_op != null:
+			var after := PBCommand.copy_mesh_data(mesh_data)
+			var before := _drag_before_op
+			mesh_data.shape_edited = true
+			_reset_drag_state()
+			_emit_drag_update(false, Vector3.ZERO, Vector3.ZERO, Vector3.ONE)
+			if undo != null:
+				if undo is UndoRedo:
+					undo.create_action("Transform Texture UVs", UndoRedo.MERGE_DISABLE)
+					undo.add_do_method(Callable(self, "_restore_full_mesh").bind(node.get_instance_id(), after))
+					undo.add_undo_method(Callable(self, "_restore_full_mesh").bind(node.get_instance_id(), before))
+				else:
+					undo.create_action("Transform Texture UVs", UndoRedo.MERGE_DISABLE, node)
+					undo.add_do_method(self, "_restore_full_mesh", node.get_instance_id(), after)
+					undo.add_undo_method(self, "_restore_full_mesh", node.get_instance_id(), before)
+				undo.commit_action()
+			node.update_gizmos()
+			return true
+		_reset_drag_state()
+		_emit_drag_update(false, Vector3.ZERO, Vector3.ZERO, Vector3.ONE)
+		return false
+
+	if cancel:
+		if drag_active:
+			if _drag_before_op != null:
+				# The gesture rewrote topology — restore the whole snapshot.
+				PBCommand.restore_mesh_data(mesh_data, _drag_before_op)
+				mesh_data.invalidate_caches()
+				node.rebuild()
+			else:
+				mesh_data.positions = _drag_original_positions.duplicate()
+				mesh_data.invalidate_caches()
+				node.rebuild()
+		_reset_drag_state()
+		_emit_drag_update(false, Vector3.ZERO, Vector3.ZERO, Vector3.ONE)
+		return false
+
+	if not drag_active:
+		return false
+
+	var action_name := TRANSFORM_ACTION_NAME
+	match _drag_gesture:
+		DragGesture.EXTRUDE_MOVE:
+			action_name = "Extrude (Shift+Move)"
+		DragGesture.CENTER_INSET, DragGesture.INSET_SCALE:
+			action_name = "Inset (Shift+Scale)"
+		DragGesture.CENTER_SCALE:
+			action_name = "Scale Elements (Uniform)"
+
+	if _drag_before_op != null:
+		# Topology gesture: undo/redo swap whole-mesh snapshots (face ids
+		# shifted, per-position payloads don't correspond).
+		# The drag separated positions that the seed-time weld groups still
+		# tie together (a zero-distance seed merges every coincident corner
+		# into one group; the drag moves only the cap/lifted dups). Rebuild
+		# from post-drag coincidence BEFORE snapshotting, or the next grab's
+		# union carries the unmoved bases ("moving the extruded face moves
+		# the whole extruded part" / "one vert left behind" tears) and the
+		# group-pair dedup drops the cap's edges from the edge list.
+		mesh_data.rebuild_welds()
+		var after := PBCommand.copy_mesh_data(mesh_data)
+		var before := _drag_before_op
+		var op_output := _drag_cap_face_ids.duplicate()
+		mesh_data.shape_edited = true
+		_log_face_orientation_audit(mesh_data)
+		_reset_drag_state()
+		_emit_drag_update(false, Vector3.ZERO, Vector3.ZERO, Vector3.ONE)
+		if undo != null:
+			if undo is UndoRedo:
+				undo.create_action(action_name, UndoRedo.MERGE_DISABLE)
+				undo.add_do_method(Callable(self, "_restore_full_mesh").bind(node.get_instance_id(), after))
+				undo.add_undo_method(Callable(self, "_restore_full_mesh").bind(node.get_instance_id(), before))
+			else:
+				undo.create_action(action_name, UndoRedo.MERGE_DISABLE, node)
+				undo.add_do_method(self, "_restore_full_mesh", node.get_instance_id(), after)
+				undo.add_undo_method(self, "_restore_full_mesh", node.get_instance_id(), before)
+			undo.commit_action()
+			if logger != null:
+				logger.info("undo", "%s committed (topology)" % action_name)
+		drag_topology_committed.emit(node, op_output)
+		return true
+
+	# Undo payload: only the affected (coincident-expanded) positions.
+	var union := PackedInt32Array()
+	var seen := {}
+	for id in ids:
+		for idx in element_indices(mesh_data, id):
+			if not seen.has(idx):
+				seen[idx] = true
+				union.append(idx)
+
+	for idx in range(mesh_data.positions.size()):
+		if not seen.has(idx) and not mesh_data.positions[idx].is_equal_approx(_drag_original_positions[idx]):
+			seen[idx] = true
+			union.append(idx)
+	var before := PackedVector3Array()
+	var after := PackedVector3Array()
+	for idx in union:
+		before.append(_drag_original_positions[idx])
+		after.append(mesh_data.positions[idx])
+
+	var changed: bool = before.size() > 0 and not _arrays_equal(before, after)
+	_reset_drag_state()
+	_emit_drag_update(false, Vector3.ZERO, Vector3.ZERO, Vector3.ONE)
+
+	if not changed:
+		return false
+
+	# Any committed geometry edit invalidates "Edit Params" regeneration.
+	mesh_data.shape_edited = true
+
+	if undo != null:
+		if undo is UndoRedo:
+			undo.create_action(action_name, UndoRedo.MERGE_DISABLE)
+			undo.add_do_method(Callable(self, "_apply_positions").bind(node.get_instance_id(), union.duplicate(), after))
+			undo.add_undo_method(Callable(self, "_apply_positions").bind(node.get_instance_id(), union.duplicate(), before))
+		else:
+			undo.create_action(action_name, UndoRedo.MERGE_DISABLE, node)
+			undo.add_do_method(self, "_apply_positions", node.get_instance_id(), union.duplicate(), after)
+			undo.add_undo_method(self, "_apply_positions", node.get_instance_id(), union.duplicate(), before)
+		undo.commit_action()
+		if logger != null:
+			logger.info("undo", "%s committed: %d vertices" % [action_name, union.size()])
+	else:
+		node.rebuild()
+	return true
+
+## Undo/redo payload for topology gestures: swap a node's whole data from a
+## snapshot (node looked up by instance id, skipped silently when freed).
+## Commit-time audit for topology gestures: signed volume + per-face
+## outwardness (face normal vs direction from the mesh centroid). A
+## negative dot means the face is wound INWARD - the concrete "which faces
+## are inverted" answer when the render shows missing faces.
+func _log_face_orientation_audit(mesh_data: PBMeshData) -> void:
+	if logger == null or not PBLogger.verbose or mesh_data.positions.is_empty():
+		return
+	var p := mesh_data.positions
+	var cen := Vector3.ZERO
+	for pos in p:
+		cen += pos
+	cen /= float(p.size())
+	var vol := 0.0
+	var inverted: Array[int] = []
+	for fi in range(mesh_data.faces.size()):
+		var face: PBFace = mesh_data.faces[fi]
+		if face == null:
+			continue
+		var idxs := face.get_indexes()
+		var fvol := 0.0
+		var fnorm := Vector3.ZERO
+		for t in range(0, idxs.size() - 2, 3):
+			if idxs[t] >= p.size() or idxs[t + 1] >= p.size() or idxs[t + 2] >= p.size():
+				continue
+			fvol += p[idxs[t]].dot(p[idxs[t + 1]].cross(p[idxs[t + 2]]))
+			fnorm += (p[idxs[t + 1]] - p[idxs[t]]).cross(p[idxs[t + 2]] - p[idxs[t]])
+		vol += fvol
+		var fcen := Vector3.ZERO
+		var n := 0
+		for idx in face.get_distinct_indexes():
+			if idx < p.size():
+				fcen += p[idx]
+				n += 1
+		if n > 0:
+			fcen /= float(n)
+		if fnorm.length_squared() > 0.000000001 and fnorm.normalized().dot((fcen - cen).normalized()) < -0.05:
+			inverted.append(fi)
+	logger.info("audit", "face orientation: F=%d V=%d signed_volume=%.3f (tetra sum /6) inward_wound_faces=%s" % [mesh_data.faces.size(), p.size(), vol / 6.0, str(inverted)])
+
+
+## Compiles what the GPU actually draws: reads the node's ArrayMesh
+## surfaces, counts triangles, and flags any whose RENDERED winding points
+## inward. The data-side audit can pass while the compiled mesh disagrees -
+## this split locates a "missing faces" report definitively.
+func _render_triangle_audit(mesh_node: PBMesh) -> void:
+	if logger == null or not PBLogger.verbose \
+			or mesh_node.mesh == null or mesh_node.pb_mesh_data == null:
+		return
+	var p := mesh_node.pb_mesh_data.positions
+	var cen := Vector3.ZERO
+	for pos in p:
+		cen += pos
+	cen /= float(p.size())
+	var rendered_tris := 0
+	var inverted: Array[int] = []
+	for s in range(mesh_node.mesh.get_surface_count()):
+		var arrays: Array = mesh_node.mesh.surface_get_arrays(s)
+		if arrays.is_empty() or arrays[Mesh.ARRAY_INDEX] == null:
+			continue
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		if verts.is_empty():
+			verts = p
+		var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		for t in range(0, idx.size() - 2, 3):
+			var a: Vector3 = verts[idx[t]]
+			var b: Vector3 = verts[idx[t + 1]]
+			var c: Vector3 = verts[idx[t + 2]]
+			rendered_tris += 1
+			var n := (b - a).cross(c - a)
+			var tc := (a + b + c) / 3.0
+			# Godot renders CW front faces: after to_array_mesh's reversal a
+			# CORRECT triangle's geometric normal points INTO the mesh. A
+			# rendered normal pointing OUTWARD = inside-out (culled) face.
+			if n.length_squared() > 0.000000001 and n.normalized().dot((tc - cen).normalized()) > 0.05:
+				inverted.append(rendered_tris - 1)
+	var data_tris: int = mesh_node.pb_mesh_data.index_count() / 3
+	logger.info("audit", "render triangles=%d data_triangles=%d rendered_inward=%s" % [rendered_tris, data_tris, str(inverted)])
+func _restore_full_mesh(target: Variant, snapshot: PBMeshData) -> void:
+	var mesh_node: PBMesh = null
+	if target is PBMesh:
+		mesh_node = target as PBMesh
+	elif target is int:
+		mesh_node = instance_from_id(target) as PBMesh
+	if mesh_node == null or not is_instance_valid(mesh_node) or mesh_node.pb_mesh_data == null:
+		if logger != null:
+			logger.warn("undo", "_restore_full_mesh skipped (node missing or dataless)")
+		return
+	PBCommand.restore_mesh_data(mesh_node.pb_mesh_data, snapshot)
+	mesh_node.pb_mesh_data.invalidate_caches()
+	mesh_node.rebuild()
+	mesh_node.update_gizmos()
+	if logger != null:
+		logger.info("undo", "_restore_full_mesh applied on %s: V=%d F=%d (render rebuilt + gizmo refreshed)" % [
+			mesh_node.name, mesh_node.pb_mesh_data.positions.size(),
+			mesh_node.pb_mesh_data.faces.size()])
+		_render_triangle_audit(mesh_node)
+
+## Reapplies a position subset by node instance id (undo/redo payload).
+## Instance id survives history replay; missing nodes are skipped silently.
+func _apply_positions(target: Variant, indices: PackedInt32Array, positions_subset: PackedVector3Array) -> void:
+	var mesh_node: PBMesh = null
+	if target is PBMesh:
+		mesh_node = target as PBMesh
+	elif target is int:
+		mesh_node = instance_from_id(target) as PBMesh
+	if mesh_node == null or not is_instance_valid(mesh_node) or mesh_node.pb_mesh_data == null:
+		if logger != null:
+			logger.warn("undo", "_apply_positions skipped (node missing or dataless)")
+		return
+	var positions: PackedVector3Array = mesh_node.pb_mesh_data.positions
+	var count: int = mini(indices.size(), positions_subset.size())
+	for i in range(count):
+		var idx: int = indices[i]
+		if idx >= 0 and idx < positions.size():
+			positions[idx] = positions_subset[i]
+	mesh_node.pb_mesh_data.positions = positions
+	mesh_node.pb_mesh_data.invalidate_caches()
+	mesh_node.rebuild()
+	mesh_node.update_gizmos()
+
+func _reset_drag_state() -> void:
+	drag_active = false
+	_drag_mesh = null
+	_drag_original_positions = PackedVector3Array()
+	_drag_start_xf.clear()
+	_drag_pending.clear()
+	_drag_latest_id = -1
+	_drag_gesture = DragGesture.NORMAL
+	_drag_union_override = PackedInt32Array()
+	_drag_union = PackedInt32Array()
+	_drag_before_op = null
+	_drag_inset_bases = []
+	_drag_ring_bases = []
+	_last_inset_amount = 0.0
+	_center_factor = 1.0
+	_center_has_start = false
+	_center_pivot = Vector3.ZERO
+	_drag_ids = PackedInt32Array()
+	_drag_side_faces = []
+	_drag_side_tris = []
+	_drag_side_base_e1 = []
+	_drag_cap_faces = []
+	_drag_cap_face_ids = PackedInt32Array()
+	_drag_cap_tris = []
+	_drag_cap_flipped = false
+	_drag_extrude_region_center = Vector3.ZERO
+	_drag_side_flipped = PackedByteArray()
+	_drag_extrude_normal = Vector3.ZERO
+	_extrude_constrained = false
+	_drag_mouse_driven = false
+	drag_mouse_active = false
+	_last_rel = Transform3D()
+	_last_rel_valid = false
+	_drag_texture_snapshot = PackedVector2Array()
+	_drag_texture_uv_center = Vector2.ZERO
+	_drag_texture_face_ids = PackedInt32Array()
+
+const TRANSFORM_ACTION_NAME := "Transform Elements"
+
+static func _arrays_equal(a: PackedVector3Array, b: PackedVector3Array) -> bool:
+	if a.size() != b.size():
+		return false
+	for i in range(a.size()):
+		if not a[i].is_equal_approx(b[i]):
+			return false
+	return true
+
+# ==============================================================================
+# Selection mirroring (engine subgizmo selection → PBSelection)
+# ==============================================================================
+
+## Mirrors the engine's subgizmo selection into PBSelection so the dock,
+## toolbar, and commands agree with what the transform gizmo will move.
+## The engine selection is authoritative — it is what the editor drags.
+## Returns true if PBSelection was modified.
+func mirror_engine_selection(selection: PBSelection, mesh_data: PBMeshData,
+		engine_ids: PackedInt32Array) -> bool:
+	if selection == null or mesh_data == null:
+		return false
+	if drag_active:
+		return false
+	# A toolbar/overlay click leaves the viewport; the engine then reports
+	# an empty subgizmo selection. Wiping here made Bevel/Loop Cut no-ops
+	# on any multi-edge selection. Click-off of the node still clears via
+	# set_active_mesh.
+	if engine_ids.is_empty():
+		return false
+
+	var differs: bool = false
+	# Conversion/loop/group expansions die with their seed leaving the
+	# engine selection (a marquee or plain click that drops the seed falls
+	# back to exactly the engine's ids).
+	for seed in selected_conversion.keys():
+		if not engine_ids.has(seed):
+			selected_conversion.erase(seed)
+	match editor.select_mode:
+		PBEditor.SelectMode.FACE, PBEditor.SelectMode.TEXTURE:
+			for seed in selected_face_groups.keys():
+				if not engine_ids.has(seed):
+					selected_face_groups.erase(seed)
+			var expanded := expand_face_ids(mesh_data, engine_ids)
+			differs = not _int_arrays_equal(selection.selected_faces, expanded)
+		PBEditor.SelectMode.VERTEX:
+			var expanded := expand_conversion_ids(engine_ids)
+			differs = not _int_arrays_equal(selection.selected_vertices, expanded)
+		PBEditor.SelectMode.EDGE:
+			# Loops whose seed left the engine selection die with it.
+			for seed in selected_loops.keys():
+				if not engine_ids.has(seed):
+					selected_loops.erase(seed)
+			var expanded := expand_edge_ids(mesh_data, engine_ids)
+			differs = selection.selected_edges.size() != expanded.size()
+			if not differs:
+				var edges := mesh_data.get_common_edges()
+				for i in range(expanded.size()):
+					var eid: int = expanded[i]
+					if eid < 0 or eid >= edges.size() or not selection.is_edge_selected(edges[eid]):
+						differs = true
+						break
+		_:
+			return false
+
+	if not differs:
+		return false
+
+	match editor.select_mode:
+		PBEditor.SelectMode.FACE, PBEditor.SelectMode.TEXTURE:
+			selection.set_faces(expand_face_ids(mesh_data, engine_ids))
+		PBEditor.SelectMode.VERTEX:
+			selection.set_vertices(expand_conversion_ids(engine_ids))
+		PBEditor.SelectMode.EDGE:
+			var edges := mesh_data.get_common_edges()
+			var selected: Array[PBEdge] = []
+			for eid in expand_edge_ids(mesh_data, engine_ids):
+				if eid >= 0 and eid < edges.size():
+					selected.append(edges[eid])
+			selection.set_edges(selected)
+	return true
+
+static func _int_arrays_equal(a: PackedInt32Array, b: PackedInt32Array) -> bool:
+	if a.size() != b.size():
+		return false
+	for i in range(a.size()):
+		if a[i] != b[i]:
+			return false
+	return true
+
+# ==============================================================================
+# Rendering helpers (runtime-safe so they are testable)
+# ==============================================================================
+
+const FACE_FILL_DEPTH_OFFSET: float = 0.004
+
+## Builds the selected-face highlight as an n-gon centroid fan, offset slightly
+## along the face's average normal. The offset lets the fill be DEPTH-TESTED
+## (no z-fighting) so it can never poke through the mesh on non-planar faces
+## — the old depth-test-off fill drew its triangle boundary through the
+## surface, reading as a "diagonal edge where there is no edge".
+static func build_face_fill_mesh(mesh_data: PBMeshData, face_index: int,
+		offset: float = FACE_FILL_DEPTH_OFFSET) -> ArrayMesh:
+	if mesh_data == null or face_index < 0 or face_index >= mesh_data.faces.size():
+		return null
+	var face: PBFace = mesh_data.faces[face_index]
+	if face == null:
+		return null
+
+	var positions := mesh_data.positions
+	var indexes := face.get_indexes()
+	if indexes.size() < 3:
+		return null
+
+	var normal := PBMath.normal_from_positions(positions, indexes)
+	var shift := normal * offset
+
+	# The fill uses the face's OWN triangulation — re-fanning the perimeter
+	# spills triangles outside concave/n-gon faces (the welded door sides).
+	var tris := PackedVector3Array()
+	for i in range(0, indexes.size() - 2, 3):
+		var a: int = indexes[i]
+		var b: int = indexes[i + 1]
+		var c: int = indexes[i + 2]
+		if a >= positions.size() or b >= positions.size() or c >= positions.size():
+			return null
+		tris.append(positions[a] + shift)
+		tris.append(positions[b] + shift)
+		tris.append(positions[c] + shift)
+
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = tris
+	var fill_mesh := ArrayMesh.new()
+	fill_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return fill_mesh
+
+## Builds a single combined ArrayMesh highlighting multiple selected faces.
+## Combines all triangles into one draw surface to minimize draw calls and mesh allocations.
+static func build_face_fill_mesh_multi(mesh_data: PBMeshData, face_indices: PackedInt32Array,
+		offset: float = FACE_FILL_DEPTH_OFFSET) -> ArrayMesh:
+	if mesh_data == null or face_indices.is_empty():
+		return null
+	var positions := mesh_data.positions
+	var pos_count: int = positions.size()
+	var tris := PackedVector3Array()
+
+	for fi in face_indices:
+		if fi < 0 or fi >= mesh_data.faces.size():
+			continue
+		var face: PBFace = mesh_data.faces[fi]
+		if face == null:
+			continue
+		var indexes := face.get_indexes()
+		if indexes.size() < 3:
+			continue
+		var normal := PBMath.normal_from_positions(positions, indexes)
+		var shift := normal * offset
+		for i in range(0, indexes.size() - 2, 3):
+			var a: int = indexes[i]
+			var b: int = indexes[i + 1]
+			var c: int = indexes[i + 2]
+			if a >= pos_count or b >= pos_count or c >= pos_count:
+				continue
+			tris.append(positions[a] + shift)
+			tris.append(positions[b] + shift)
+			tris.append(positions[c] + shift)
+
+	if tris.is_empty():
+		return null
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = tris
+	var fill_mesh := ArrayMesh.new()
+	fill_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return fill_mesh
+
+# ==============================================================================
+# Drag readout (for the Tool Properties dock)
+# ==============================================================================
+
+## Stores the latest drag values and notifies listeners.
+func _emit_drag_update(active: bool, translation: Vector3, rotation_deg: Vector3, scale: Vector3) -> void:
+	_last_drag_active = active
+	_last_drag_translation = translation
+	_last_drag_rotation_deg = rotation_deg
+	_last_drag_scale = scale
+	element_drag_updated.emit(active, translation, rotation_deg, scale)
+
+## Human-readable live drag readout for the overlay panel.
+func drag_readout() -> String:
+	if not _last_drag_active:
+		return "—"
+	if _drag_gesture == DragGesture.CENTER_INSET and drag_active:
+		return "Inset: %.2f" % _last_inset_amount
+	if not _last_drag_rotation_deg.is_equal_approx(Vector3.ZERO):
+		return "Rotation: %s deg" % _fmt_vec(_last_drag_rotation_deg)
+	if not _last_drag_scale.is_equal_approx(Vector3.ONE):
+		return "Scale: %s" % _fmt_vec(_last_drag_scale)
+	return "Delta: %s" % _fmt_vec(_last_drag_translation)
+
+## Writes a face's triangle winding, flipped or as originally captured.
+func _set_face_winding(face: PBFace, tris: PackedInt32Array, flipped: bool) -> void:
+	if flipped:
+		var out := PackedInt32Array()
+		out.resize(tris.size())
+		for t in range(0, tris.size() - 2, 3):
+			out[t] = tris[t + 2]
+			out[t + 1] = tris[t + 1]
+			out[t + 2] = tris[t]
+		face.set_indexes(out)
+	else:
+		face.set_indexes(tris.duplicate())
+
+## Lerps the ring faces' inner corners with the SAME amount as the inner
+## faces (they are duplicates of the pulled corners) — keeps the ring
+## welded to the shrinking inner face (no hole).
+func _apply_ring_lerp(new_positions: PackedVector3Array, pos_count: int,
+		amount: float) -> void:
+	for rc in _drag_ring_bases:
+		var idx: int = rc["idx"]
+		if idx < 0 or idx >= pos_count:
+			continue
+		var base: Dictionary = _drag_inset_bases[rc["base"]]
+		var pre: PackedVector3Array = base["pre"]
+		var centroid: Vector3 = base["centroid"]
+		new_positions[idx] = pre[rc["k"]].lerp(centroid, amount)
+
+## The basis scale component furthest from 1 — the axis the user is
+## dragging on a scale-handle gesture.
+static func _dominant_scale_factor(b: Basis) -> float:
+	var sc := b.get_scale()
+	var best: float = sc.x
+	if absf(sc.y - 1.0) > absf(best - 1.0):
+		best = sc.y
+	if absf(sc.z - 1.0) > absf(best - 1.0):
+		best = sc.z
+	return best
+
+static func _rel_rotation_deg(rel: Transform3D) -> Vector3:
+	var euler: Vector3 = rel.basis.get_euler()
+	return Vector3(rad_to_deg(euler.x), rad_to_deg(euler.y), rad_to_deg(euler.z))
+
+static func _fmt_vec(v: Vector3) -> String:
+	var x: float = 0.0 if is_zero_approx(v.x) else v.x
+	var y: float = 0.0 if is_zero_approx(v.y) else v.y
+	var z: float = 0.0 if is_zero_approx(v.z) else v.z
+	var rounded := Vector3(
+		round(x * 1000.0) / 1000.0,
+		round(y * 1000.0) / 1000.0,
+		round(z * 1000.0) / 1000.0
+	)
+	return str(rounded)

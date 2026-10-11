@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Objects &amp; CSG — PoiBuilder 0.9.167</title>
+<meta name="description" content="Merge, mirror, pivots, freeze. Poibuilderize turns any MeshInstance3D or CSG into an editable mesh. Booleans pick the target first and the cutter last.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Objects</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Objects &amp; CSG</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html" class="current">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Objects &amp; CSG</h1><p class="lead">Merge, mirror, pivots, freeze. Poibuilderize turns any MeshInstance3D or CSG into an editable mesh. Booleans pick the target first and the cutter last.</p><p>Row 4 of the toolbar (Extended Tools).</p>
+<h2 id="object-ops">Object ops</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 4 · Object Tools</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn tl-target" title="Merge Objs"><img src="assets/icons/icon_merge_objects.svg" width="16" height="16" alt="Merge Objs" title="Merge Objs"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Mirror"><img src="assets/icons/icon_mirror.svg" width="16" height="16" alt="Mirror" title="Mirror"></span><span class="tl-btn" title="Center Pivot"><img src="assets/icons/icon_center_pivot.svg" width="16" height="16" alt="Center Pivot" title="Center Pivot"></span><span class="tl-btn" title="Freeze Xform"><img src="assets/icons/icon_freeze_transform.svg" width="16" height="16" alt="Freeze Xform" title="Freeze Xform"></span><span class="tl-btn" title="Poibuilderize"><img src="assets/icons/icon_poibuilderize.svg" width="16" height="16" alt="Poibuilderize" title="Poibuilderize"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-merge_objects" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 24 24, 24 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-merge_objects)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_merge_objects.svg" width="38" height="38" alt="Merge Objs">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Merge Objs</strong>
+        <kbd class="tl-key">Unbound (rebindable)</kbd>
+      </div>
+      <p class="tl-card-desc">Combines multiple selected PBMesh nodes into one, baking relative transforms.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ 2+ selected PBMeshes</span>
+        <span class="tl-badge tl-badge-row">Row 4</span>
+      </div>
+    </div>
+  </div>
+</div>
+<table><thead><tr><th>Button</th><th>Effect</th></tr></thead><tbody><tr><td>Merge Objs</td><td>Selected <code>PBMesh</code> nodes become one</td></tr><tr><td>Mirror</td><td>Geometry across X</td></tr><tr><td>Center Pivot</td><td>Pivot to bounding-box center</td></tr><tr><td>Freeze Xform</td><td>Bake the transform into vertex positions, reset the node transform</td></tr><tr><td>Poibuilderize</td><td>Convert selected MeshInstance3D or CSGShape3D (including CSGCombiner3D) into a <code>PBMesh</code></td></tr></tbody></table>
+<h2 id="object-state-lit-cast-shadows">Object state — Lit &amp; Cast Shadows</h2>
+<p>Row 3 (Extended Tools) carries two toggles that apply to the whole scene selection — any <code>PBMesh</code>, <code>MeshInstance3D</code> or CSG node:</p>
+<ul><li><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_lit.svg" width="13" height="13" alt="">Lit<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Lit"><img src="assets/icons/icon_lit.svg" width="16" height="16" alt="Lit" title="Lit"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Cast Shadows"><img src="assets/icons/icon_shadow.svg" width="16" height="16" alt="Cast Shadows" title="Cast Shadows"></span></span><span class="br-row">Row 3 · Object State</span><span class="br-head"><img src="assets/icons/icon_lit.svg" width="26" height="26" alt=""><span class="br-title">Lit</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Shading on/off for every selected object. Mixed selections render unchecked; checking synchronizes all of them.</span><span class="br-req">Needs: Selected objects</span></span></span> — shading on/off. Unlit objects render at full brightness and ignore scene lights.</li><li><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_shadow.svg" width="13" height="13" alt="">Cast Shadows<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Lit"><img src="assets/icons/icon_lit.svg" width="16" height="16" alt="Lit" title="Lit"></span><span class="tl-btn tl-target" title="Cast Shadows"><img src="assets/icons/icon_shadow.svg" width="16" height="16" alt="Cast Shadows" title="Cast Shadows"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 3 · Object State</span><span class="br-head"><img src="assets/icons/icon_shadow.svg" width="26" height="26" alt=""><span class="br-title">Cast Shadows</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Shadow casting on/off for every selected object. Same mixed-checkbox semantics as Lit.</span><span class="br-req">Needs: Selected objects</span></span></span> — shadow casting on/off.</li></ul>
+<p>Both follow mixed-checkbox semantics: all selected objects on = checked, all off (or mixed) = unchecked, and checking it synchronizes every selected object. They are rebindable in Editor Settings (<em>Object: Toggle Lit / Cast Shadows</em>).</p>
+<p>Typical use: unshadow a scrolling water plane before a retro export, or unlight a glow strip so it reads emissive.</p>
+<h2 id="poibuilderize">Poibuilderize</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 4 · Object Tools</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="Merge Objs"><img src="assets/icons/icon_merge_objects.svg" width="16" height="16" alt="Merge Objs" title="Merge Objs"></span><span class="tl-btn" title="Mirror"><img src="assets/icons/icon_mirror.svg" width="16" height="16" alt="Mirror" title="Mirror"></span><span class="tl-btn" title="Center Pivot"><img src="assets/icons/icon_center_pivot.svg" width="16" height="16" alt="Center Pivot" title="Center Pivot"></span><span class="tl-btn" title="Freeze Xform"><img src="assets/icons/icon_freeze_transform.svg" width="16" height="16" alt="Freeze Xform" title="Freeze Xform"></span><span class="tl-btn tl-target" title="Poibuilderize"><img src="assets/icons/icon_poibuilderize.svg" width="16" height="16" alt="Poibuilderize" title="Poibuilderize"><span class="tl-target-ring"></span></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-poibuilderize" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 148 24, 148 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-poibuilderize)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_poibuilderize.svg" width="38" height="38" alt="Poibuilderize">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Poibuilderize</strong>
+        <kbd class="tl-key">Unbound (rebindable)</kbd>
+      </div>
+      <p class="tl-card-desc">Converts any standard MeshInstance3D or CSG node into an editable native PBMesh.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ A MeshInstance3D or CSG node</span>
+        <span class="tl-badge tl-badge-row">Row 4</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p>Imported GLBs and Godot primitives are not editable as faces until you convert them.</p>
+<ol class="steps"><li>Instance the GLB. Make the instance local / editable children.</li><li>Select the <code>MeshInstance3D</code> (or a CSG node).</li><li><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_poibuilderize.svg" width="13" height="13" alt="">Poibuilderize<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Merge Objs"><img src="assets/icons/icon_merge_objects.svg" width="16" height="16" alt="Merge Objs" title="Merge Objs"></span><span class="tl-btn" title="Mirror"><img src="assets/icons/icon_mirror.svg" width="16" height="16" alt="Mirror" title="Mirror"></span><span class="tl-btn" title="Center Pivot"><img src="assets/icons/icon_center_pivot.svg" width="16" height="16" alt="Center Pivot" title="Center Pivot"></span><span class="tl-btn" title="Freeze Xform"><img src="assets/icons/icon_freeze_transform.svg" width="16" height="16" alt="Freeze Xform" title="Freeze Xform"></span><span class="tl-btn tl-target" title="Poibuilderize"><img src="assets/icons/icon_poibuilderize.svg" width="16" height="16" alt="Poibuilderize" title="Poibuilderize"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 4 · Object Tools</span><span class="br-head"><img src="assets/icons/icon_poibuilderize.svg" width="26" height="26" alt=""><span class="br-title">Poibuilderize</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Converts any MeshInstance3D or CSG shape (including CSGCombiner3D) into an editable PBMesh.</span><span class="br-req">Needs: A MeshInstance3D or CSG node</span></span></span>. A new <code>PBMesh</code> appears with per-triangle corners, welds rebuilt, materials copied.</li><li>Pull a face. It is a PoiBuilder mesh now.</li></ol>
+<figure><img class="shot" src="poibuilderize.png" alt="Import any GLB, convert with one click, and edit its faces natively."><figcaption>Import any GLB, convert with one click, and edit its faces natively.</figcaption></figure>
+<p>Heavy meshes stay heavy — every triangle is a face. Collapsing and merging after convert is the usual cleanup.</p>
+<p>A MeshInstance3D you <strong>do not</strong> convert still <strong>exports</strong> to retro <code>.pbm</code>. Textures are sanitized (power-of-two, clamped to max size) on the way out. Convert only if you need to edit faces.</p>
+<h2 id="csg-booleans">CSG booleans</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 4 · CSG Booleans</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="CSG Union"><img src="assets/icons/icon_csg_union.svg" width="16" height="16" alt="CSG Union" title="CSG Union"></span><span class="tl-btn tl-target" title="CSG Subtract"><img src="assets/icons/icon_csg_subtract.svg" width="16" height="16" alt="CSG Subtract" title="CSG Subtract"><span class="tl-target-ring"></span></span><span class="tl-btn" title="CSG Intersect"><img src="assets/icons/icon_csg_intersect.svg" width="16" height="16" alt="CSG Intersect" title="CSG Intersect"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-csg_subtract" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 55 24, 55 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-csg_subtract)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_csg_subtract.svg" width="38" height="38" alt="CSG Subtract">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">CSG Subtract</strong>
+        <kbd class="tl-key">Unbound (rebindable)</kbd>
+      </div>
+      <p class="tl-card-desc">Subtracts the cutter mesh from the target mesh with full scene Undo/Redo.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Target + cutter selected</span>
+        <span class="tl-badge tl-badge-row">Row 4</span>
+      </div>
+    </div>
+  </div>
+</div>
+<table><thead><tr><th>Button</th><th>Tooltip rule</th></tr></thead><tbody><tr><td>Union</td><td>Solid union. Select target first, cutter last</td></tr><tr><td>Subtract</td><td>Subtract the <strong>last-selected</strong> from the <strong>first-selected</strong></td></tr><tr><td>Intersect</td><td>Solid intersection. Target first, cutter last</td></tr></tbody></table>
+<p>Works across PoiBuilder meshes, ordinary MeshInstance3D, and CSG nodes. Operands must be <strong>watertight</strong>; a failure names the open-boundary count in the Output log.</p>
+<p>Undo puts the cutter back in the tree (the node was removed on do, referenced on undo).</p>
+<figure><img class="shot" src="csg-booleans.png" alt="CSG boolean subtraction with real undo — non-destructive and reversible."><figcaption>CSG boolean subtraction with real undo — non-destructive and reversible.</figcaption></figure>
+<h3 id="use-case-a-round-window">Use case — a round window</h3>
+<ol class="steps"><li>Wall cube (target). Cylinder through it (cutter).</li><li>Select the wall, Shift-select the cylinder.</li><li><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_csg_subtract.svg" width="13" height="13" alt="">CSG Subtract<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="CSG Union"><img src="assets/icons/icon_csg_union.svg" width="16" height="16" alt="CSG Union" title="CSG Union"></span><span class="tl-btn tl-target" title="CSG Subtract"><img src="assets/icons/icon_csg_subtract.svg" width="16" height="16" alt="CSG Subtract" title="CSG Subtract"><span class="tl-target-ring"></span></span><span class="tl-btn" title="CSG Intersect"><img src="assets/icons/icon_csg_intersect.svg" width="16" height="16" alt="CSG Intersect" title="CSG Intersect"></span></span><span class="br-row">Row 4 · CSG Booleans</span><span class="br-head"><img src="assets/icons/icon_csg_subtract.svg" width="26" height="26" alt=""><span class="br-title">CSG Subtract</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Subtracts the LAST-selected mesh from the FIRST-selected mesh.</span><span class="br-req">Needs: Target + cutter selected</span></span></span>. Hole. Ctrl+Z — the cylinder returns.</li></ol>
+<blockquote class="gotcha">CSG did nothing? Read the Output log. Open boundaries abort the op. Fill Hole / weld the mesh, or Poibuilderize a CSG primitive that is already closed.</blockquote>
+<blockquote class="gotcha">&quot;My GLB has no gizmo&quot; — it is not a <code>PBMesh</code> yet. Poibuilderize it. Clicks on a MeshInstance3D go to Godot&#x27;s object gizmo, not face picking.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="paint.html"><span class="dir">← Previous</span><strong class="pager-title">Paint &amp; stamps</strong></a><a class="pager-card pager-next" href="walkthrough-modern.html"><span class="dir">Next →</span><strong class="pager-title">Build a map (modern)</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

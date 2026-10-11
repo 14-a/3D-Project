@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Selecting — PoiBuilder 0.9.167</title>
+<meta name="description" content="Five modes. Cyan hover, yellow selection. Switching modes converts the selection. Advanced ops grow, shrink, and walk loops.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Edit</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Selecting</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html" class="current">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Selecting</h1><p class="lead">Five modes. Cyan hover, yellow selection. Switching modes converts the selection. Advanced ops grow, shrink, and walk loops.</p><h2 id="modes">Modes</h2>
+<table><thead><tr><th>Mode</th><th>Default key</th><th>What you pick</th></tr></thead><tbody><tr><td><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_object.svg" width="13" height="13" alt="">Object<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Object"><img src="assets/icons/icon_object.svg" width="16" height="16" alt="Object" title="Object"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Vertex"><img src="assets/icons/icon_vertex.svg" width="16" height="16" alt="Vertex" title="Vertex"></span><span class="tl-btn" title="Edge"><img src="assets/icons/icon_edge.svg" width="16" height="16" alt="Edge" title="Edge"></span><span class="tl-btn" title="Face"><img src="assets/icons/icon_face.svg" width="16" height="16" alt="Face" title="Face"></span><span class="tl-btn" title="Texture"><img src="assets/icons/icon_texture_mode.svg" width="16" height="16" alt="Texture" title="Texture"></span></span><span class="br-row">Row 2 · Selection Modes</span><span class="br-head"><img src="assets/icons/icon_object.svg" width="26" height="26" alt=""><span class="br-title">Object</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Object mode: whole-object transforms; clicking selects other nodes natively.</span><span class="br-req">Needs: Nothing</span></span></span></td><td>toolbar (unbound)</td><td>Whole <code>PBMesh</code> nodes</td></tr><tr><td>Vertex</td><td><kbd>H</kbd></td><td>Shared vertices (welded corners move together)</td></tr><tr><td>Edge</td><td><kbd>J</kbd></td><td>Common edges</td></tr><tr><td>Face</td><td><kbd>K</kbd></td><td>Faces, including n-gons</td></tr><tr><td>Texture</td><td><kbd>6</kbd></td><td>Faces, but the gizmo transforms UVs</td></tr></tbody></table>
+<figure><img class="shot" src="select-modes.png" alt="Face, edge and vertex modes on the same cube."><figcaption>Face, edge and vertex modes on the same cube.</figcaption></figure>
+<p>Hover is <strong>cyan</strong>. Selection is <strong>yellow</strong>.</p>
+<h2 id="click-language">Click language</h2>
+<ul><li>Click replaces the selection (the engine&#x27;s subgizmo API holds one seed id; the plugin expands it).</li><li><kbd>Shift</kbd>+click adds.</li><li>Drag a rubber-band in empty space.</li><li>Edge loop: <kbd>Alt</kbd>+click or double-click. Shift+Alt+click / Shift+double-click is the <strong>ring</strong> (the edges a loop cut consumes).</li></ul>
+<h2 id="mode-switch-conversion">Mode-switch conversion</h2>
+<p>Select a face, press <kbd>J</kbd>. You now have that face&#x27;s edges. This is ProBuilder parity. Ops that create faces select their output.</p>
+<p>Object mode moves several meshes. Entering an element mode <strong>narrows editing to the last-clicked mesh</strong>.</p>
+<h2 id="texture-mode-move-uvs-in-the-3d-view">Texture mode — move UVs in the 3D view</h2>
+<p>Texture mode (<kbd>6</kbd>) picks faces like face mode, but the move/rotate/scale gizmo transforms the selected faces&#x27; <strong>UVs</strong>, not their geometry: slide a texture along a wall, spin a floor&#x27;s grain, scale a repeating tile — without opening any panel. Face-mode gestures like Shift+move extrude do not fire here; every drag is a pure UV transform, and the whole drag undoes as one step.</p>
+<p>Details worth knowing:</p>
+<ul><li>The gizmo acts around the selection&#x27;s UV centre, so rotate/scale pivot on what you selected.</li><li>A face you have texture-moved becomes <strong>manual</strong>: auto-UV stops re-anchoring it, so your placement survives edits and resizes. Geometry changes still carry the UVs along.</li><li>Texture mode is the quick 3D-side tool. For island-level work — projections, seam sewing, texel density — use the <a href="uv.html">2D UV editor</a>.</li></ul>
+<figure><img class="shot" src="select-texture.png" alt="Texture mode: the gizmo slides the brick texture across the selected wall faces."><figcaption>Texture mode: the gizmo slides the brick texture across the selected wall faces.</figcaption></figure>
+<h2 id="advanced-suite-row-3">Advanced suite (row 3)</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 3 · Selection Suite</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="All"><img src="assets/icons/icon_select_all.svg" width="16" height="16" alt="All" title="All"></span><span class="tl-btn" title="Invert"><img src="assets/icons/icon_invert_selection.svg" width="16" height="16" alt="Invert" title="Invert"></span><span class="tl-btn tl-target" title="Grow"><img src="assets/icons/icon_grow_selection.svg" width="16" height="16" alt="Grow" title="Grow"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Shrink"><img src="assets/icons/icon_shrink_selection.svg" width="16" height="16" alt="Shrink" title="Shrink"></span><span class="tl-btn" title="Coplanar"><img src="assets/icons/icon_select_coplanar.svg" width="16" height="16" alt="Coplanar" title="Coplanar"></span><span class="tl-btn" title="Similar"><img src="assets/icons/icon_select_similar.svg" width="16" height="16" alt="Similar" title="Similar"></span><span class="tl-btn" title="Boundary"><img src="assets/icons/icon_select_boundary.svg" width="16" height="16" alt="Boundary" title="Boundary"></span><span class="tl-btn" title="Loop"><img src="assets/icons/icon_face_loop.svg" width="16" height="16" alt="Loop" title="Loop"></span><span class="tl-btn" title="Ring"><img src="assets/icons/icon_face_ring.svg" width="16" height="16" alt="Ring" title="Ring"></span><span class="tl-btn" title="Auto Smooth"><img src="assets/icons/icon_auto_smooth.svg" width="16" height="16" alt="Auto Smooth" title="Auto Smooth"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-grow_selection" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 86 24, 86 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-grow_selection)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_grow_selection.svg" width="38" height="38" alt="Grow">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Grow</strong>
+        <kbd class="tl-key">Alt + G</kbd>
+      </div>
+      <p class="tl-card-desc">Expands the active selection outward by one ring of adjacent elements.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ A selection</span>
+        <span class="tl-badge tl-badge-row">Row 3</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 3 · Selection Suite</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="All"><img src="assets/icons/icon_select_all.svg" width="16" height="16" alt="All" title="All"></span><span class="tl-btn" title="Invert"><img src="assets/icons/icon_invert_selection.svg" width="16" height="16" alt="Invert" title="Invert"></span><span class="tl-btn" title="Grow"><img src="assets/icons/icon_grow_selection.svg" width="16" height="16" alt="Grow" title="Grow"></span><span class="tl-btn" title="Shrink"><img src="assets/icons/icon_shrink_selection.svg" width="16" height="16" alt="Shrink" title="Shrink"></span><span class="tl-btn tl-target" title="Coplanar"><img src="assets/icons/icon_select_coplanar.svg" width="16" height="16" alt="Coplanar" title="Coplanar"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Similar"><img src="assets/icons/icon_select_similar.svg" width="16" height="16" alt="Similar" title="Similar"></span><span class="tl-btn" title="Boundary"><img src="assets/icons/icon_select_boundary.svg" width="16" height="16" alt="Boundary" title="Boundary"></span><span class="tl-btn" title="Loop"><img src="assets/icons/icon_face_loop.svg" width="16" height="16" alt="Loop" title="Loop"></span><span class="tl-btn" title="Ring"><img src="assets/icons/icon_face_ring.svg" width="16" height="16" alt="Ring" title="Ring"></span><span class="tl-btn" title="Auto Smooth"><img src="assets/icons/icon_auto_smooth.svg" width="16" height="16" alt="Auto Smooth" title="Auto Smooth"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-select_coplanar" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 148 24, 148 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-select_coplanar)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_select_coplanar.svg" width="38" height="38" alt="Coplanar">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Coplanar</strong>
+        <kbd class="tl-key">Alt + C</kbd>
+      </div>
+      <p class="tl-card-desc">Flood-selects all adjacent coplanar faces sharing the same geometric plane.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Face selection</span>
+        <span class="tl-badge tl-badge-row">Row 3</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 3 · Selection Suite</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="All"><img src="assets/icons/icon_select_all.svg" width="16" height="16" alt="All" title="All"></span><span class="tl-btn" title="Invert"><img src="assets/icons/icon_invert_selection.svg" width="16" height="16" alt="Invert" title="Invert"></span><span class="tl-btn" title="Grow"><img src="assets/icons/icon_grow_selection.svg" width="16" height="16" alt="Grow" title="Grow"></span><span class="tl-btn" title="Shrink"><img src="assets/icons/icon_shrink_selection.svg" width="16" height="16" alt="Shrink" title="Shrink"></span><span class="tl-btn" title="Coplanar"><img src="assets/icons/icon_select_coplanar.svg" width="16" height="16" alt="Coplanar" title="Coplanar"></span><span class="tl-btn" title="Similar"><img src="assets/icons/icon_select_similar.svg" width="16" height="16" alt="Similar" title="Similar"></span><span class="tl-btn" title="Boundary"><img src="assets/icons/icon_select_boundary.svg" width="16" height="16" alt="Boundary" title="Boundary"></span><span class="tl-btn tl-target" title="Loop"><img src="assets/icons/icon_face_loop.svg" width="16" height="16" alt="Loop" title="Loop"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Ring"><img src="assets/icons/icon_face_ring.svg" width="16" height="16" alt="Ring" title="Ring"></span><span class="tl-btn" title="Auto Smooth"><img src="assets/icons/icon_auto_smooth.svg" width="16" height="16" alt="Auto Smooth" title="Auto Smooth"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-face_loop" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 241 24, 241 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-face_loop)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_face_loop.svg" width="38" height="38" alt="Loop">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Loop</strong>
+        <kbd class="tl-key">Alt + L</kbd>
+      </div>
+      <p class="tl-card-desc">Selects the full quad-strip face loop passing through the selected face.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Face selection</span>
+        <span class="tl-badge tl-badge-row">Row 3</span>
+      </div>
+    </div>
+  </div>
+</div>
+<table><thead><tr><th>Button</th><th>Default key</th><th>Effect</th></tr></thead><tbody><tr><td>All</td><td>—</td><td>Every element of the current mode</td></tr><tr><td>Invert</td><td><kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>Invert</td></tr><tr><td>Grow</td><td><kbd>Alt</kbd>+<kbd>G</kbd></td><td>Expand one ring</td></tr><tr><td>Shrink</td><td><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>G</kbd></td><td>Contract by the boundary</td></tr><tr><td>Coplanar</td><td><kbd>Alt</kbd>+<kbd>C</kbd></td><td>Adjacent coplanar faces</td></tr><tr><td>Similar</td><td>—</td><td>Faces sharing the material</td></tr><tr><td>Boundary</td><td>—</td><td>Open boundary edges</td></tr><tr><td>Loop</td><td><kbd>Alt</kbd>+<kbd>L</kbd></td><td>Face loop along a quad strip</td></tr><tr><td>Ring</td><td><kbd>Alt</kbd>+<kbd>R</kbd></td><td>Perpendicular face ring</td></tr></tbody></table>
+<figure><img class="shot" src="select-smart.png" alt="Smart selection helpers: face loops, grow, shrink, coplanar, and invert."><figcaption>Smart selection helpers: face loops, grow, shrink, coplanar, and invert.</figcaption></figure>
+<h2 id="use-cases">Use cases</h2>
+<h3 id="retexture-one-wall">Retexture one wall</h3>
+<p>Face mode. Click one wall face. <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_select_coplanar.svg" width="13" height="13" alt="">Coplanar<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="All"><img src="assets/icons/icon_select_all.svg" width="16" height="16" alt="All" title="All"></span><span class="tl-btn" title="Invert"><img src="assets/icons/icon_invert_selection.svg" width="16" height="16" alt="Invert" title="Invert"></span><span class="tl-btn" title="Grow"><img src="assets/icons/icon_grow_selection.svg" width="16" height="16" alt="Grow" title="Grow"></span><span class="tl-btn" title="Shrink"><img src="assets/icons/icon_shrink_selection.svg" width="16" height="16" alt="Shrink" title="Shrink"></span><span class="tl-btn tl-target" title="Coplanar"><img src="assets/icons/icon_select_coplanar.svg" width="16" height="16" alt="Coplanar" title="Coplanar"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Similar"><img src="assets/icons/icon_select_similar.svg" width="16" height="16" alt="Similar" title="Similar"></span><span class="tl-btn" title="Boundary"><img src="assets/icons/icon_select_boundary.svg" width="16" height="16" alt="Boundary" title="Boundary"></span><span class="tl-btn" title="Loop"><img src="assets/icons/icon_face_loop.svg" width="16" height="16" alt="Loop" title="Loop"></span><span class="tl-btn" title="Ring"><img src="assets/icons/icon_face_ring.svg" width="16" height="16" alt="Ring" title="Ring"></span><span class="tl-btn" title="Auto Smooth"><img src="assets/icons/icon_auto_smooth.svg" width="16" height="16" alt="Auto Smooth" title="Auto Smooth"></span></span><span class="br-row">Row 3 · Selection Suite</span><span class="br-head"><img src="assets/icons/icon_select_coplanar.svg" width="26" height="26" alt=""><span class="br-title">Coplanar</span><kbd class="br-key">Alt + C</kbd></span><span class="br-desc">Selects all adjacent coplanar faces.</span><span class="br-req">Needs: Face selection</span></span></span>. The whole plane selects, even if it is several quads. Assign a material from the dock.</p>
+<h3 id="find-a-leak-in-a-floor">Find a leak in a floor</h3>
+<p>Select a floor face. <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_grow_selection.svg" width="13" height="13" alt="">Grow<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="All"><img src="assets/icons/icon_select_all.svg" width="16" height="16" alt="All" title="All"></span><span class="tl-btn" title="Invert"><img src="assets/icons/icon_invert_selection.svg" width="16" height="16" alt="Invert" title="Invert"></span><span class="tl-btn tl-target" title="Grow"><img src="assets/icons/icon_grow_selection.svg" width="16" height="16" alt="Grow" title="Grow"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Shrink"><img src="assets/icons/icon_shrink_selection.svg" width="16" height="16" alt="Shrink" title="Shrink"></span><span class="tl-btn" title="Coplanar"><img src="assets/icons/icon_select_coplanar.svg" width="16" height="16" alt="Coplanar" title="Coplanar"></span><span class="tl-btn" title="Similar"><img src="assets/icons/icon_select_similar.svg" width="16" height="16" alt="Similar" title="Similar"></span><span class="tl-btn" title="Boundary"><img src="assets/icons/icon_select_boundary.svg" width="16" height="16" alt="Boundary" title="Boundary"></span><span class="tl-btn" title="Loop"><img src="assets/icons/icon_face_loop.svg" width="16" height="16" alt="Loop" title="Loop"></span><span class="tl-btn" title="Ring"><img src="assets/icons/icon_face_ring.svg" width="16" height="16" alt="Ring" title="Ring"></span><span class="tl-btn" title="Auto Smooth"><img src="assets/icons/icon_auto_smooth.svg" width="16" height="16" alt="Auto Smooth" title="Auto Smooth"></span></span><span class="br-row">Row 3 · Selection Suite</span><span class="br-head"><img src="assets/icons/icon_grow_selection.svg" width="26" height="26" alt=""><span class="br-title">Grow</span><kbd class="br-key">Alt + G</kbd></span><span class="br-desc">Grows the selection by one ring of adjacent elements.</span><span class="br-req">Needs: A selection</span></span></span> repeatedly. If the selection crawls up a wall, that edge is connected — a hole or a T-junction you did not mean.</p>
+<h3 id="fill-a-hole">Fill a hole</h3>
+<p><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_select_boundary.svg" width="13" height="13" alt="">Boundary<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="All"><img src="assets/icons/icon_select_all.svg" width="16" height="16" alt="All" title="All"></span><span class="tl-btn" title="Invert"><img src="assets/icons/icon_invert_selection.svg" width="16" height="16" alt="Invert" title="Invert"></span><span class="tl-btn" title="Grow"><img src="assets/icons/icon_grow_selection.svg" width="16" height="16" alt="Grow" title="Grow"></span><span class="tl-btn" title="Shrink"><img src="assets/icons/icon_shrink_selection.svg" width="16" height="16" alt="Shrink" title="Shrink"></span><span class="tl-btn" title="Coplanar"><img src="assets/icons/icon_select_coplanar.svg" width="16" height="16" alt="Coplanar" title="Coplanar"></span><span class="tl-btn" title="Similar"><img src="assets/icons/icon_select_similar.svg" width="16" height="16" alt="Similar" title="Similar"></span><span class="tl-btn tl-target" title="Boundary"><img src="assets/icons/icon_select_boundary.svg" width="16" height="16" alt="Boundary" title="Boundary"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Loop"><img src="assets/icons/icon_face_loop.svg" width="16" height="16" alt="Loop" title="Loop"></span><span class="tl-btn" title="Ring"><img src="assets/icons/icon_face_ring.svg" width="16" height="16" alt="Ring" title="Ring"></span><span class="tl-btn" title="Auto Smooth"><img src="assets/icons/icon_auto_smooth.svg" width="16" height="16" alt="Auto Smooth" title="Auto Smooth"></span></span><span class="br-row">Row 3 · Selection Suite</span><span class="br-head"><img src="assets/icons/icon_select_boundary.svg" width="26" height="26" alt=""><span class="br-title">Boundary</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Selects the open boundary edges.</span><span class="br-req">Needs: A PBMesh</span></span></span> in edge mode, or select the open loop, then <a href="ops-joins.html">Fill Hole</a>.</p>
+<blockquote class="gotcha">After multi-selecting objects, an element-mode click edits the last-clicked mesh only. Switch to Object if you meant to move both.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="trims.html"><span class="dir">← Previous</span><strong class="pager-title">Trims</strong></a><a class="pager-card pager-next" href="transform.html"><span class="dir">Next →</span><strong class="pager-title">Moving</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

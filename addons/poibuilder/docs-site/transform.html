@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moving — PoiBuilder 0.9.167</title>
+<meta name="description" content="The element gizmo is Godot&#x27;s own manipulator, aimed at the selection. Shift+Move extrudes. Shift+Scale insets. Snap and proportional editing are toggles.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Edit</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Moving</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html" class="current">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Moving</h1><p class="lead">The element gizmo is Godot&#x27;s own manipulator, aimed at the selection. Shift+Move extrudes. Shift+Scale insets. Snap and proportional editing are toggles.</p><h2 id="tools">Tools</h2>
+<p><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_move.svg" width="13" height="13" alt="">Move<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Move"><img src="assets/icons/icon_move.svg" width="16" height="16" alt="Move" title="Move"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Rotate"><img src="assets/icons/icon_rotate.svg" width="16" height="16" alt="Rotate" title="Rotate"></span><span class="tl-btn" title="Scale"><img src="assets/icons/icon_scale.svg" width="16" height="16" alt="Scale" title="Scale"></span></span><span class="br-row">Row 1 · Tools</span><span class="br-head"><img src="assets/icons/icon_move.svg" width="26" height="26" alt=""><span class="br-title">Move</span><kbd class="br-key">W</kbd></span><span class="br-desc">The plugin&#x27;s own move tool: drag elements or the whole object on the gizmo axes.</span><span class="br-req">Needs: A selection</span></span></span> / <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_rotate.svg" width="13" height="13" alt="">Rotate<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Move"><img src="assets/icons/icon_move.svg" width="16" height="16" alt="Move" title="Move"></span><span class="tl-btn tl-target" title="Rotate"><img src="assets/icons/icon_rotate.svg" width="16" height="16" alt="Rotate" title="Rotate"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Scale"><img src="assets/icons/icon_scale.svg" width="16" height="16" alt="Scale" title="Scale"></span></span><span class="br-row">Row 1 · Tools</span><span class="br-head"><img src="assets/icons/icon_rotate.svg" width="26" height="26" alt=""><span class="br-title">Rotate</span><kbd class="br-key">E</kbd></span><span class="br-desc">Rotate the selection around the gizmo rings; orientation space follows the Space button.</span><span class="br-req">Needs: A selection</span></span></span> / <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_scale.svg" width="13" height="13" alt="">Scale<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Move"><img src="assets/icons/icon_move.svg" width="16" height="16" alt="Move" title="Move"></span><span class="tl-btn" title="Rotate"><img src="assets/icons/icon_rotate.svg" width="16" height="16" alt="Rotate" title="Rotate"></span><span class="tl-btn tl-target" title="Scale"><img src="assets/icons/icon_scale.svg" width="16" height="16" alt="Scale" title="Scale"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 1 · Tools</span><span class="br-head"><img src="assets/icons/icon_scale.svg" width="26" height="26" alt=""><span class="br-title">Scale</span><kbd class="br-key">R</kbd></span><span class="br-desc">Axis handles scale freely; the CENTER square scales all axes together (Shift + center on faces insets).</span><span class="br-req">Needs: A selection</span></span></span> on the toolbar, or <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd>. These are the plugin&#x27;s tools. While a <code>PBMesh</code> is being edited the engine&#x27;s Transform (Q) and Select (V) buttons are disabled so they cannot fight.</p>
+<h2 id="orientation-space-kbd-x">Orientation space — <kbd>X</kbd></h2>
+<table><thead><tr><th>Space</th><th>Gizmo follows</th></tr></thead><tbody><tr><td>Element</td><td>The selected face/edge/vert&#x27;s own basis</td></tr><tr><td>Object</td><td>The mesh node&#x27;s axes</td></tr><tr><td>World</td><td>World axes</td></tr></tbody></table>
+<p>The Space button cycles the same three.</p>
+<h2 id="gestures">Gestures</h2>
+<ul><li><strong>Center square</strong> on Scale = uniform scale.</li><li><strong>Shift + center</strong> on faces = uniform inset.</li><li><strong>Shift + Move</strong> on faces/edges = live extrude (topology at drag begin).</li><li><strong>Shift + Scale</strong> on faces = live inset.</li></ul>
+<figure><img class="shot" src="edit-move.png" alt="Move a side quad, then the whole arched face."><figcaption>Move a side quad, then the whole arched face.</figcaption></figure>
+<h2 id="snapping">Snapping</h2>
+<table><thead><tr><th>Control</th><th>Default</th><th>Effect</th></tr></thead><tbody><tr><td>Snap toggle</td><td><kbd>Y</kbd></td><td>Snap element drags to the PoiBuilder grid</td></tr><tr><td><span class="btnref" tabindex="0">V-Snap<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="V-Snap"><span class="tl-btn-text">V-Snap</span><span class="tl-target-ring"></span></span><span class="tl-btn" title="Soft"><span class="tl-btn-text">Soft</span></span></span><span class="br-row">Row 4 · Snapping</span><span class="br-head"><span class="br-title">V-Snap</span><kbd class="br-key">Hold V (toggle available)</kbd></span><span class="br-desc">Snaps dragged elements to the nearest mesh vertex (or hold V during a drag).</span><span class="br-req">Needs: A drag</span></span></span></td><td>toolbar (row 4)</td><td>Snap the drag pivot to the nearest vertex, including other meshes</td></tr><tr><td><span class="btnref" tabindex="0">Soft<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="V-Snap"><span class="tl-btn-text">V-Snap</span></span><span class="tl-btn tl-target" title="Soft"><span class="tl-btn-text">Soft</span><span class="tl-target-ring"></span></span></span><span class="br-row">Row 4 · Snapping</span><span class="br-head"><span class="br-title">Soft</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Proportional editing: a move also drags nearby unselected vertices with a smooth falloff (radius beside the toggle).</span><span class="br-req">Needs: A selection</span></span></span></td><td>toolbar</td><td>Proportional editing — unselected vertices within the radius follow with falloff</td></tr><tr><td>r: spinner</td><td>2.0 m</td><td>Influence radius</td></tr></tbody></table>
+<p>V-Snap is a <strong>toggle</strong>, not a hold. (The engine&#x27;s Select tool is V, and is disabled while editing.)</p>
+<h2 id="grid-keys">Grid keys</h2>
+<p>These work with nothing selected.</p>
+<table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><kbd>[</kbd> / <kbd>]</kbd></td><td>Lower / raise grid elevation</td></tr><tr><td><kbd>-</kbd> / <kbd>=</kbd></td><td>Coarser / finer subdivisions</td></tr><tr><td><kbd>Shift</kbd>+<kbd>-</kbd> / <kbd>Shift</kbd>+<kbd>=</kbd></td><td>Halve / double the grid unit</td></tr><tr><td><kbd>\</kbd></td><td>Reset elevation</td></tr></tbody></table>
+<p>Full grid behaviour: <a href="grid.html">Grid</a>.</p>
+<h2 id="use-cases">Use cases</h2>
+<h3 id="doorway-to-exact-height">Doorway to exact height</h3>
+<p>Vertex mode. Turn <strong>V-Snap</strong> on. Drag the head of the opening until it sticks to the neighbouring slab&#x27;s vertex.</p>
+<h3 id="soft-raise-a-terrain-patch">Soft-raise a terrain patch</h3>
+<p>Face or vertex mode. Turn <strong>Soft</strong> on, set r: to cover the mound. Move the center vertex up. Neighbours follow the falloff.</p>
+<blockquote class="gotcha">Shift+Move is extrude, not &quot;constrained move&quot;. If you wanted a planar slide, release Shift.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="select.html"><span class="dir">← Previous</span><strong class="pager-title">Selecting</strong></a><a class="pager-card pager-next" href="ops.html"><span class="dir">Next →</span><strong class="pager-title">Mesh operations</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

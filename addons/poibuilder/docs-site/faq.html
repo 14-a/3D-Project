@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ — PoiBuilder 0.9.167</title>
+<meta name="description" content="The questions that cost a support round. Read the tooltip before assuming a button is broken.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Reference</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">FAQ</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html" class="current">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>FAQ</h1><p class="lead">The questions that cost a support round. Read the tooltip before assuming a button is broken.</p><h2 id="a-button-is-greyed-out">A button is greyed out</h2>
+<p>Wrong selection context. Extrude wants faces or edges. Bridge wants two <strong>open</strong> edges. CSG wants two objects. The tooltip names the requirement.</p>
+<h2 id="my-click-selected-the-wrong-mesh">My click selected the wrong mesh</h2>
+<p>Element modes edit the <strong>last-clicked</strong> mesh. Object mode moves several. Click the mesh you want, then pick faces.</p>
+<h2 id="csg-did-nothing">CSG did nothing</h2>
+<p>Output log. The watertight pre-flight names the open-boundary count. Fill Hole / weld, or start from a closed primitive.</p>
+<h2 id="my-glb-has-no-face-gizmo">My GLB has no face gizmo</h2>
+<p>It is still a MeshInstance3D. <a href="objects.html">Poibuilderize</a> it. You can export it without converting; you cannot face-edit it.</p>
+<h2 id="undo-removed-my-csg-cutter">Undo removed my CSG cutter</h2>
+<p>It comes back. CSG undo restores the cutter node. If it renders but does not pick, that was a historical &quot;undo ghost&quot; — current builds restore <code>owner</code> and gizmos.</p>
+<h2 id="the-overlay-disappeared">The overlay disappeared</h2>
+<p><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_panel.svg" width="13" height="13" alt="">Panel<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Material &amp; UV"><img src="assets/icons/icon_materials.svg" width="16" height="16" alt="Material &amp; UV" title="Material &amp; UV"></span><span class="tl-btn" title="UV"><img src="assets/icons/icon_uv_unwrap.svg" width="16" height="16" alt="UV" title="UV"></span><span class="tl-btn tl-target" title="Panel"><img src="assets/icons/icon_panel.svg" width="16" height="16" alt="Panel" title="Panel"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Reset Panel"><img src="assets/icons/icon_panel_reset.svg" width="16" height="16" alt="Reset Panel" title="Reset Panel"></span><span class="tl-btn" title="Settings"><img src="assets/icons/icon_settings.svg" width="16" height="16" alt="Settings" title="Settings"></span></span><span class="br-row">Row 2 · Docks</span><span class="br-head"><img src="assets/icons/icon_panel.svg" width="26" height="26" alt=""><span class="br-title">Panel</span></span><span class="br-desc">Pins the floating overlay panel on (it otherwise auto-hides when nothing is selected).</span><span class="br-req">Needs: Nothing</span></span></span> toggle pins it. <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_panel_reset.svg" width="13" height="13" alt="">Reset Panel<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Material &amp; UV"><img src="assets/icons/icon_materials.svg" width="16" height="16" alt="Material &amp; UV" title="Material &amp; UV"></span><span class="tl-btn" title="UV"><img src="assets/icons/icon_uv_unwrap.svg" width="16" height="16" alt="UV" title="UV"></span><span class="tl-btn" title="Panel"><img src="assets/icons/icon_panel.svg" width="16" height="16" alt="Panel" title="Panel"></span><span class="tl-btn tl-target" title="Reset Panel"><img src="assets/icons/icon_panel_reset.svg" width="16" height="16" alt="Reset Panel" title="Reset Panel"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Settings"><img src="assets/icons/icon_settings.svg" width="16" height="16" alt="Settings" title="Settings"></span></span><span class="br-row">Row 2 · Docks</span><span class="br-head"><img src="assets/icons/icon_panel_reset.svg" width="26" height="26" alt=""><span class="br-title">Reset Panel</span></span><span class="br-desc">Recovers the overlay panel and dock to the bottom-left corner if they were dragged away.</span><span class="br-req">Needs: Nothing</span></span></span> docks it to the bottom-left. It auto-hides when nothing is selected and it is not pinned.</p>
+<h2 id="textures-stretch">Textures stretch</h2>
+<p>Auto-UV keeps 1 m repeat on axis-aligned faces. Ramps and merged creases need the <a href="uv.html">UV editor</a> (planar / box projection).</p>
+<h2 id="trim-walls-at-top-does-something-weird-around-my-door">Trim Walls at Top does something weird around my door</h2>
+<blockquote class="limit">Known limitation. Top-swap of a loop with openings does not produce a contiguous cornice at the top edge. Use Bottom placement for those loops, or move only the simple faces to Top. Details on <a href="trims.html">Trims</a>.</blockquote>
+<h2 id="the-version-in-the-overlay-does-not-match-these-docs">The version in the overlay does not match these docs</h2>
+<p>You are running a different build. The overlay title is <code>PoiBuilder vX.Y.Z</code>. Enable the plugin from the same <code>addons/poibuilder/</code> these docs were built with.</p>
+<h2 id="is-the-psp-engine-how-i-run-my-map">Is the PSP engine how I run my map?</h2>
+<p>No. The PSP engine in the repository is a <strong>proof of concept and a performance sanity check</strong> — it exists to validate the <code>.pbm</code> format and measure it on real hardware. The format is the contract: implement a loader in your own engine from <a href="pbm-format.html">The PBM format specification</a>, using the demo engine&#x27;s loader as a reference. Details on <a href="export.html">Export &amp; retro</a>.</p>
+<h2 id="my-map-chugs-when-i-play-the-poibuilder-scene">My map chugs when I play the PoiBuilder scene</h2>
+<p>That is expected — the editable scene is the <em>authoring</em> format, not the shipping one. It renders the live splat shader, live decal layers and every realtime light, which measured ~4× the retro bake&#x27;s frame cost on the <a href="performance.html">benchmark baseline</a>. Run <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_export.svg" width="13" height="13" alt="">Export...<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Export..."><img src="assets/icons/icon_export.svg" width="16" height="16" alt="Export..." title="Export..."><span class="tl-target-ring"></span></span><span class="tl-btn" title="Docs"><img src="assets/icons/icon_docs.svg" width="16" height="16" alt="Docs" title="Docs"></span></span><span class="br-row">Row 2 · Export</span><span class="br-head"><img src="assets/icons/icon_export.svg" width="26" height="26" alt=""><span class="br-title">Export...</span></span><span class="br-desc">Opens the export dialog: PBM (the retro .pbm map, default) or GLB — modern bake (lightmap-ready) or retro baked (vertex-lit) — with the bake options.</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> and play the baked result instead: a <strong>modern GLB</strong> for the modern pipeline (paint baked into textures, your own lights/LightmapGI on top) or <strong>PBM</strong> for retro targets. Keep the PoiBuilder scene for building, testing and iterating; details on <a href="export.html">Export &amp; retro</a>.</p>
+<h2 id="export-looks-fine-in-ppsspp-and-chugs-on-the-psp">Export looks fine in PPSSPP and chugs on the PSP</h2>
+<p>Desktop emulators like PPSSPP rasterise on your host GPU with gigabytes of VRAM and a massive cache, masking real hardware limits. The real PSP Graphics Engine (GE) has an <strong>~8 KB texture cache</strong>. When a surface&#x27;s sampled mip level fits within the ~8 KB cache, it draws at ~480 Mfrag/s (~2 ns per fragment); when the sampled footprint exceeds the cache, every fragment pays a main-memory bus penalty, dropping fill rate to ~25 Mfrag/s (a <strong>19x performance cliff</strong>).</p>
+<p>Keep texture sizes power-of-two (≤ 512, clamped automatically on export) and check that close-up surfaces don&#x27;t force large mip levels into the cache. Detailed architecture constraints, measured costs, and profiling tools are documented in the <a href="https://github.com/Francesco149/poibuilder/blob/master/retro_engine/psp/OPTIMIZATION.md">PSP Optimization Guide</a> and demonstrated in our native <a href="https://github.com/Francesco149/poibuilder/tree/master/retro_engine">PSP demo engine</a>.</p>
+<h2 id="where-did-my-export-go">Where did my export go?</h2>
+<p><code>project/exports/</code>, gitignored on purpose. Regenerated by the export dialog whenever you need it.</p>
+<h2 id="something-looks-wrong-and-it-is-not-the-tooltip-s-fault">Something looks wrong and it is not the tooltip&#x27;s fault</h2>
+<p>Check <a href="known-issues.html">Known issues</a> — the confirmed alpha rough edges (PSP billboards rendering unlit, unexpected PSP shadows on transparent scrolling planes, stamps not spanning two objects, paint lag and dotted strokes, mangled retro UVs after Poibuilderize) are documented there with workarounds.</p>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="known-issues.html"><span class="dir">← Previous</span><strong class="pager-title">Known issues</strong></a><div class="pager-spacer"></div></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

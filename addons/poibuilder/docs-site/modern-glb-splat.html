@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Splatting in a modern .glb — PoiBuilder 0.9.167</title>
+<meta name="description" content="How the modern export carries paint — baked into textures, or as documented sidecar data your engine (or Godot) re-blends at runtime.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Reference</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Splatting in a modern .glb</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html" class="current">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Splatting in a modern .glb</h1><p class="lead">How the modern export carries paint — baked into textures, or as documented sidecar data your engine (or Godot) re-blends at runtime.</p><h1 id="splatting-in-a-modern-glb-export">Splatting in a modern <code>.glb</code> export</h1>
+<p>PoiBuilder&#x27;s splat/decals are a custom shader plus per-face mask images, which glTF cannot express as a material. The modern export therefore offers two routes (Export dialog → <strong>Modern paint</strong>):</p>
+<table><thead><tr><th>Option</th><th>What lands in the file</th><th>When to use</th></tr></thead><tbody><tr><td><strong>Bake into textures</strong> (default)</td><td>Every painted face is composited into <strong>its own texture</strong>, its UV1 is rewritten into mask space, and the material is a plain <code>StandardMaterial3D</code>.</td><td>Any consumer, no custom code. What you see is what ships.</td></tr><tr><td><strong>Include splat data</strong></td><td>Geometry keeps its mask coordinates (as <code>TEXCOORD_2</code>), each painted face&#x27;s material carries a <code>poi_splat</code> record in its glTF <code>extras</code>, and the masks / layer textures / decal channel are written as PNGs next to the <code>.glb</code> under <code>&lt;mapname&gt;.splat/</code>.</td><td>Engines that run the blend themselves (dynamic re-tinting, runtime mask edits), or a round trip back into Godot (see below).</td></tr></tbody></table>
+<p>Both routes keep <strong>uniform texel density</strong>: the mask (and therefore the baked texture) is sized from the face&#x27;s world size at 256 texels/m, clamped to 256..2048 px. A large floor is never blurrier than a small cube, and the export matches what the editor showed.</p>
+<p>Only <em>painted</em> faces pay anything. An unpainted face keeps its base material and its authored UVs in both modes.</p>
+<h2 id="bake-mode">BAKE mode</h2>
+<p>For each painted face the exporter writes one texture in <strong>mask space</strong> — the face-planar <code>[0,1]</code> rectangle the masks live in — and remaps that face&#x27;s UV1 to the same rectangle. Composition order matches the live shader:</p>
+<ol class="steps"><li>base texture sampled through the face&#x27;s <em>original</em> UV1 (so tiling is baked in), multiplied by the base color;</li><li>each blend layer, sampled through the original UV1 and blended by <code>smoothstep(0.5 - e, 0.5 + e, mask.r) * layer_color.a</code>, where <code>e</code> is the anti-aliasing edge width (<code>#8</code> below);</li><li>the decal layer on top, <code>mix(color, decal.rgb, decal.a)</code>.</li></ol>
+<p>Non-opaque materials (a cutout or a soft blend) are <strong>not</strong> baked — a composited texture would lose the alpha semantics; those faces keep their base material.</p>
+<h2 id="include-mode">INCLUDE mode</h2>
+<p>The <code>.glb</code> is accompanied by a sidecar folder:</p>
+<pre><code class="lang-">map.glb
+map.splat/
+  f12_layer1_tex.png    # layer 1&#x27;s tiling texture
+  f12_layer1_mask.png   # layer 1&#x27;s weight mask, single channel
+  f12_decal.png         # the face&#x27;s decal layer (RGBA)
+  ...</code></pre>
+<p><code>f12</code> is the face index inside the exporter&#x27;s view of the mesh. Each painted face&#x27;s material carries:</p>
+<pre><code class="lang-json">&quot;extras&quot;: {
+  &quot;poi_splat&quot;: [
+    {
+      &quot;version&quot;: 1,
+      &quot;face&quot;: 12,
+      &quot;mask_uv&quot;: &quot;TEXCOORD_2&quot;,
+      &quot;layers&quot;: [
+        { &quot;slot&quot;: 1,
+          &quot;texture&quot;: &quot;map.splat/f12_layer1_tex.png&quot;,
+          &quot;mask&quot;:    &quot;map.splat/f12_layer1_mask.png&quot;,
+          &quot;color&quot;: [1.0, 1.0, 1.0, 1.0],
+          &quot;roughness&quot;: 0.8 }
+      ],
+      &quot;decal&quot;: &quot;map.splat/f12_decal.png&quot;
+    }
+  ]
+}</code></pre>
+<p>Geometry contract:</p>
+<ul><li><code>TEXCOORD_0</code> — the base texture tiling UV (unchanged).</li><li><code>TEXCOORD_2</code> — the <strong>mask coordinate</strong> (<code>vec2</code>): where the face sits inside its masks, <code>[0,1]</code> over the face&#x27;s planar rect, values outside <code>[0,1]</code> mean &quot;outside the painted area&quot;. (Written as a Godot custom vertex attribute; the engine&#x27;s glTF writer maps custom channel 0 to <code>TEXCOORD_2</code>.) Godot restores it as <code>ARRAY_CUSTOM0</code> on import, which is why the round trip below works.</li><li><code>TEXCOORD_1</code> is untouched and stays whatever you authored (a lightmap unwrap, usually).</li></ul>
+<h3 id="reproducing-the-blend-outside-godot">Reproducing the blend outside Godot</h3>
+<p>Per fragment, per layer <code>i</code> (0-based in the order they appear in <code>layers</code>):</p>
+<pre><code class="lang-glsl">// inputs: uv (TEXCOORD_0), mask_uv (TEXCOORD_2)
+vec4 base = texture(baseColorTexture, uv) * baseColorFactor;
+vec3 albedo = base.rgb;
+float roughness = baseRoughness;
+
+for each layer:
+    vec4  tex  = texture(layer.texture, uv) * layer.color;      // U = REPEAT
+    float w    = texture(layer.mask, mask_uv).r;                // U/V = CLAMP
+    float e    = max(fwidth(w) * 2.0, 0.02);                    // edge width
+    float k    = smoothstep(0.5 - e, 0.5 + e, w);
+    albedo     = mix(albedo, tex.rgb, k * tex.a);
+    roughness  = mix(roughness, layer.roughness, k * tex.a);
+
+if (decal present):
+    vec4 d = texture(decal, mask_uv);                           // U/V = CLAMP
+    albedo = mix(albedo, d.rgb, d.a);</code></pre>
+<p>The mask sample is skipped when <code>mask_uv</code> leaves <code>[0,1]</code> (the painted rect is a fixed object-space area: resizing geometry never stretches it, it just clips).</p>
+<h3 id="round-trip-into-godot">Round trip into Godot</h3>
+<p><code>PBSplatImport.rebuild_from_extras(scene)</code> walks an imported scene, reads each material&#x27;s <code>poi_splat</code> extras, loads the sidecar PNGs and installs live splat <code>ShaderMaterial</code>s — so an exported map comes back paint-editable:</p>
+<pre><code class="lang-gdscript">var root: Node = load(&quot;res://maps/level.glb&quot;).instantiate()
+add_child(root)
+PBSplatImport.rebuild_from_extras(root)
+# If the scene was moved away from its .glb, pass the export path instead:
+# PBSplatImport.rebuild_from_extras(root, &quot;res://maps/level.glb&quot;)</code></pre>
+<p>Note the sidecar files are <strong>not</strong> packed into the <code>.glb</code>: delete them and the splat record is inert (the geometry still renders with its base material).</p>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="keys.html"><span class="dir">← Previous</span><strong class="pager-title">Keys</strong></a><a class="pager-card pager-next" href="known-issues.html"><span class="dir">Next →</span><strong class="pager-title">Known issues</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

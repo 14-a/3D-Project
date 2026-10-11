@@ -1,0 +1,1338 @@
+## PBGizmoPlugin — Native editor integration via EditorNode3DGizmoPlugin subgizmos.
+##
+## This is THE integration layer between PoiBuilder and the Godot 3D editor.
+## Instead of hand-rolling viewport input (which fights the editor's own
+## selection, transform gizmo, and rubber-band handling), this plugin exposes
+## each mesh element (vertex group / edge / face) as a native editor SUBGIZMO:
+##
+## - Click picking, shift-toggle, and rubber-band multi-select are handled by
+##   the editor itself (it calls _subgizmos_intersect_ray/_frustum).
+## - The editor's own transform gizmo (Q/W/E/R toolbar modes, snapping) is
+##   repositioned onto the selected elements and drives _set_subgizmo_transform
+##   during drags.
+## - On release the editor calls _commit_subgizmos; undo goes through
+##   EditorUndoRedoManager so Ctrl+Z behaves like any native editor action.
+##
+## Pattern reference: engine-internal Path3D / Skeleton3D /
+## NavigationObstacle3D gizmo plugins (all use exactly this mechanism).
+##
+## All element math, drag state, and undo payload logic lives in
+## PBElementEditor (runtime-safe, headless-testable). This class only adapts
+## between the editor's gizmo API and that logic, plus does the rendering.
+##
+## NOTE: gizmo parameters are intentionally UNTYPED (duck-typed): the editor
+## passes real EditorNode3DGizmo instances; tests pass stand-ins, and typing
+## them would break headless testing of the whole behavior suite.
+@tool
+class_name PBGizmoPlugin
+extends EditorNode3DGizmoPlugin
+
+# ==============================================================================
+# Constants
+# ==============================================================================
+
+const WIREFRAME_COLOR := Color(0.28, 0.28, 0.28, 0.7)
+## EDGE-mode base wireframe: cyan, drawn slightly thinner than hover/select
+## strokes (half offset, one stack pair instead of two).
+const EDGE_MODE_WIREFRAME_COLOR := Color(0.2, 0.9, 1.0, 0.7)
+## Selection is YELLOW (thick strokes for edges / solid-ish fills for faces).
+const SELECTED_COLOR := Color(1.0, 0.9, 0.2, 0.25)
+const FACE_FILL_COLOR := Color(1.0, 0.9, 0.2, 0.25)
+## Hover highlight: CYAN — the same language ProBuilder uses to say "this is
+## under your cursor, not selected". Selected stays yellow.
+const HOVER_COLOR := Color(0.2, 0.9, 1.0, 0.25)
+const HOVER_FACE_FILL_COLOR := Color(0.2, 0.9, 1.0, 0.25)
+const VERTEX_COLOR := Color(0.05, 0.05, 0.05, 1.0)
+const VERTEX_DOT_SIZE: float = 7.0
+const VERTEX_DOT_SELECTED_SIZE: float = 11.0
+const VERTEX_DOT_HOVER_SIZE: float = 9.0
+
+## World-space offset between the sub-lines of a "thick" edge. Godot lines are
+## always 1px; stacking parallel lines fakes ProBuilder-style thickness.
+## Scaled by camera distance each redraw (STROKE_SCREEN_SCALE) so a stroke
+## reads the same size at any zoom instead of towering over a close-up mesh.
+const THICK_LINE_OFFSET: float = 0.006
+## Stroke thickness as a fraction of camera distance (0.006 at ~3 m).
+const STROKE_SCREEN_SCALE: float = 0.002
+## Face-fill depth offset as a fraction of camera distance (0.004 at ~3 m):
+## the fill hugs the geometry up close instead of floating visibly off it.
+const FILL_SCREEN_SCALE: float = 0.00133
+
+## Shape-creation language: cyan everywhere (same cyan as hover — creation
+## highlights and hovers share the "cursor preview" meaning), orange for the
+## facing arrow. Bounds/arrow draw ON TOP (show through the object); the
+## hovered face fill is depth-tested at the selection opacity.
+const CREATION_COLOR := Color(0.2, 0.9, 1.0, 1.0)
+const CREATION_FILL_COLOR := Color(0.2, 0.9, 1.0, 0.32)
+const CREATION_ARROW_COLOR := Color(1.0, 0.55, 0.1, 1.0)
+
+# ==============================================================================
+# Wiring (set by PoiBuilderPlugin on registration)
+# ==============================================================================
+
+## Shared editor state (active mesh, select mode, orientation space, selection).
+var editor: PBEditor = null
+
+## Runtime-safe element logic (drag state, math, undo payload).
+var element_editor: PBElementEditor = PBElementEditor.new()
+
+## Shape-creation session (ARMED/BASE/HEIGHT/PARAMS) — while active, the
+## plugin pauses element interaction and this plugin draws the creation
+## overlays instead. May be null (creation never started).
+var shape_creator: PBShapeCreator = null
+## Interactive N-gon drawing session (Knife tool / N-Gon shape extrusion)
+var ngon_drawer: PBNgonDrawer = null
+
+
+## The face currently hovered during shape creation (cyan highlight).
+var creation_hover_node: PBMesh = null
+var creation_hover_face: int = -1
+
+# Trim Walls session: teal hover face + amber chosen faces (the plugin
+# mirrors PBTrimWallsTool state into these each change).
+var trim_walls_session: bool = false
+var trim_walls_hover_node: PBMesh = null
+var trim_walls_hover_face: int = -1
+var trim_walls_chosen: Array[Dictionary] = []
+
+## The surface point under the cursor during creation (for the ARMED-stage
+## vertex square under the mouse).
+var creation_hover_point: Vector3 = Vector3.ZERO
+
+## Verification counter (GUI harness): how many times the creation BASE
+## outline branch actually drew lines.
+var creation_outline_draws: int = 0
+
+## Verification counter (GUI harness): subgizmo ray-cast invocations.
+var intersect_ray_calls: int = 0
+
+## Direct overlay materials for the creation outlines/arrow. The plugin-API
+## create_material() variants are NOT usable here: get_material() picks the
+## variant by the NODE's selected state, and the unselected variant draws at
+## 30% alpha with depth test ON — the outline came out faint and hidden
+## behind geometry. These are unshaded, full-alpha, depth-test-off, high
+## render priority: thicker-than-geometry overlays visible through anything.
+var _creation_edge_material: StandardMaterial3D
+var _creation_arrow_material: StandardMaterial3D
+## Yellow square vertex gizmos for the creation drag corners (points render
+## as squares — same language as the element-mode vertex dots).
+var _creation_vert_material: StandardMaterial3D
+
+## Logger for diagnostics.
+var logger: PBLogger = null:
+	set = set_logger
+
+# Point materials for vertex dots (need point size; plugin-created materials
+# cannot express it).
+var _vertex_dot_material: StandardMaterial3D
+var _vertex_dot_selected_material: StandardMaterial3D
+var _vertex_dot_hover_material: StandardMaterial3D
+
+## Cached depth-tested face fill materials (built lazily).
+var _face_fill_material: StandardMaterial3D
+var _face_hover_fill_material: StandardMaterial3D
+var _creation_fill_material: StandardMaterial3D
+
+## Live overlay sizes, recomputed at the top of _redraw from the camera
+## distance (see STROKE_SCREEN_SCALE). Helpers read these instead of the
+## constants so every stroke/fill normalizes with zoom.
+var _live_stroke_offset: float = THICK_LINE_OFFSET
+var _live_fill_offset: float = 0.004
+
+## Display opacities (multipliers from Settings panel).
+var wireframe_opacity: float = 0.7
+var selection_opacity: float = 0.25
+var hover_opacity: float = 0.25
+
+func apply_display_opacities(p_wireframe: float, p_selection: float, p_hover: float) -> void:
+	wireframe_opacity = p_wireframe
+	selection_opacity = p_selection
+	hover_opacity = p_hover
+	if _face_fill_material != null:
+		_face_fill_material.albedo_color = Color(FACE_FILL_COLOR.r, FACE_FILL_COLOR.g, FACE_FILL_COLOR.b, FACE_FILL_COLOR.a * selection_opacity)
+	if _face_hover_fill_material != null:
+		_face_hover_fill_material.albedo_color = Color(HOVER_FACE_FILL_COLOR.r, HOVER_FACE_FILL_COLOR.g, HOVER_FACE_FILL_COLOR.b, HOVER_FACE_FILL_COLOR.a * hover_opacity)
+	if _creation_fill_material != null:
+		_creation_fill_material.albedo_color = Color(HOVER_FACE_FILL_COLOR.r, HOVER_FACE_FILL_COLOR.g, HOVER_FACE_FILL_COLOR.b, hover_opacity)
+	if _creation_edge_material != null:
+		_creation_edge_material.albedo_color = Color(HOVER_COLOR.r, HOVER_COLOR.g, HOVER_COLOR.b, hover_opacity)
+# ==============================================================================
+# Lifecycle
+# ==============================================================================
+
+func _init() -> void:
+	create_material("pb_wireframe", WIREFRAME_COLOR, false, false)
+	create_material("pb_wireframe_edge", EDGE_MODE_WIREFRAME_COLOR, false, false)
+	create_material("pb_selected_edge", SELECTED_COLOR, false, true)
+	create_material("pb_hover_edge", HOVER_COLOR, false, true)
+	create_handle_material("pb_center_handle")
+	create_material("pb_collider_debug", Color(0.1, 1.0, 0.4, 0.95), false, true, true)
+	create_material("pb_proportional_gizmo", Color(1.0, 0.75, 0.15, 0.75), false, false)
+	_vertex_dot_material = _make_point_material(VERTEX_COLOR, VERTEX_DOT_SIZE)
+	_vertex_dot_selected_material = _make_point_material(SELECTED_COLOR, VERTEX_DOT_SELECTED_SIZE)
+	_vertex_dot_hover_material = _make_point_material(HOVER_COLOR, VERTEX_DOT_HOVER_SIZE)
+	_face_fill_material = _make_face_fill_material(Color(FACE_FILL_COLOR.r, FACE_FILL_COLOR.g, FACE_FILL_COLOR.b, 0.25))
+	_face_hover_fill_material = _make_face_fill_material(Color(HOVER_FACE_FILL_COLOR.r, HOVER_FACE_FILL_COLOR.g, HOVER_FACE_FILL_COLOR.b, 0.25))
+
+func set_logger(value: PBLogger) -> void:
+	logger = value
+	element_editor.logger = value
+
+static func _make_point_material(color: Color, point_size: float) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = color
+	# Translucent variants (hover) need alpha transparency; opaque colors are
+	# unaffected by enabling it.
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.no_depth_test = false
+	mat.use_point_size = true
+	mat.point_size = point_size
+	return mat
+
+## On-top overlay line material: unshaded, full alpha, depth test disabled.
+static func _make_overlay_material(color: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = color
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.no_depth_test = true
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.render_priority = RenderingServer.MATERIAL_RENDER_PRIORITY_MAX
+	return mat
+
+func _make_face_fill_material(color: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = color
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.no_depth_test = false
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return mat
+
+var _height_plane_mesh: PlaneMesh = null
+var _height_plane_material: StandardMaterial3D = null
+
+func _get_height_plane_mesh() -> PlaneMesh:
+	if _height_plane_mesh == null:
+		_height_plane_mesh = PlaneMesh.new()
+		_height_plane_mesh.size = Vector2(4000.0, 4000.0)
+	return _height_plane_mesh
+
+func _get_height_plane_material() -> StandardMaterial3D:
+	if _height_plane_material == null:
+		_height_plane_material = StandardMaterial3D.new()
+		_height_plane_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_height_plane_material.albedo_color = Color(1.0, 1.0, 1.0, 0.25)
+		_height_plane_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_height_plane_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_height_plane_material.no_depth_test = false
+	return _height_plane_material
+
+# ==============================================================================
+# GizmoPlugin identity
+# ==============================================================================
+
+func _has_gizmo(for_node_3d: Node3D) -> bool:
+	return for_node_3d is PBMesh
+
+func _get_gizmo_name() -> String:
+	return "PoiBuilderMesh"
+
+func _get_priority() -> int:
+	return 1
+
+func _can_be_hidden() -> bool:
+	return true
+
+func _is_selectable_when_hidden() -> bool:
+	return false
+
+# ==============================================================================
+# State queries
+# ==============================================================================
+
+## Returns this plugin's gizmo instance attached to `node`, if any.
+func gizmo_for_node(node: Node3D) -> EditorNode3DGizmo:
+	for g in node.get_gizmos():
+		if g.get_plugin() == self:
+			return g
+	return null
+
+## True when the gizmo's node is the active mesh in an element mode.
+## All element picking/dragging is gated on this so native object-level
+## behavior takes over otherwise.
+func is_editing_node(node: PBMesh) -> bool:
+	return element_editor.is_editing_node(node)
+
+## The PoiBuilder grid overlay. Drawn onto THIS gizmo when its node is the
+## active mesh (single grid source, no duplicates); the plugin's per-frame
+## driver pokes update_gizmos() whenever the grid rebuilds.
+var grid_view: PBGridView = null
+
+## Returns mesh data for a gizmo's node, or null when not editable.
+func _mesh_data_of(gizmo) -> PBMeshData:
+	var node := gizmo.get_node_3d() as PBMesh
+	if node == null:
+		return null
+	return node.pb_mesh_data
+
+# ==============================================================================
+# Subgizmo picking (called by the editor's own click / rubber-band handling)
+# ==============================================================================
+
+func _subgizmos_intersect_ray(gizmo, camera: Camera3D, screen_pos: Vector2) -> int:
+	intersect_ray_calls += 1
+	var node := gizmo.get_node_3d() as PBMesh
+	if node == null or camera == null or not is_editing_node(node):
+		return -1
+	var id := element_editor.pick_ray(node.pb_mesh_data, node.global_transform, camera, screen_pos)
+	# SHIFT+press on an ALREADY-SELECTED element must not reach the engine's
+	# toggle (it would erase the selection and kill the shift+drag extrude
+	# gesture). Returning -1 keeps the selection; the following drag then
+	# translates/extrudes it, exactly like ProBuilder's shift+face-drag.
+	if id >= 0 and Input.is_key_pressed(KEY_SHIFT) and gizmo.is_subgizmo_selected(id):
+		if logger != null:
+			logger.info("pick", "shift-press on selected %s id=%d suppressed (kept selection for the drag; toggle-off is disabled)" % [
+				PBEditor.SelectMode.keys()[editor.select_mode], id])
+		return -1
+	# Alt+click / double-click on an edge selects its whole LOOP; shift+alt+click
+	# (or shift+double-click) selects its RING (the engine selection stays the
+	# single seed id; dragging/highlighting expand it).
+	if id >= 0 and editor != null and editor.select_mode == PBEditor.SelectMode.EDGE:
+		element_editor.record_edge_click(node.pb_mesh_data, id,
+			Input.is_key_pressed(KEY_ALT), Input.is_key_pressed(KEY_SHIFT))
+	return id
+
+func _subgizmos_intersect_frustum(gizmo, camera: Camera3D, frustum_planes: Array) -> PackedInt32Array:
+	var node := gizmo.get_node_3d() as PBMesh
+	if node == null or camera == null or not is_editing_node(node):
+		return PackedInt32Array()
+	return element_editor.pick_frustum(node.pb_mesh_data, node.global_transform, frustum_planes, camera)
+
+# ==============================================================================
+# Subgizmo transforms (called by the editor during native gizmo drags)
+# ==============================================================================
+
+func _get_subgizmo_transform(gizmo, subgizmo_id: int) -> Transform3D:
+	var node := gizmo.get_node_3d() as PBMesh
+	var mesh_data: PBMeshData = _mesh_data_of(gizmo)
+	if node == null or mesh_data == null or subgizmo_id < 0:
+		return Transform3D.IDENTITY
+	return element_editor.get_subgizmo_transform(mesh_data, node, subgizmo_id)
+
+func _set_subgizmo_transform(gizmo, subgizmo_id: int, transform: Transform3D) -> void:
+	var node := gizmo.get_node_3d() as PBMesh
+	if node == null:
+		return
+	if element_editor.set_subgizmo_transform(node, gizmo.get_subgizmo_selection(), subgizmo_id, transform):
+		node.update_gizmos()
+## Commit (drag released) or cancel (Escape) — called by the editor.
+## `restores` are the start transforms the engine snapshotted (informational
+## here; PBElementEditor keeps its own snapshot). On cancel the engine does
+## NOT revert anything itself, so restoring is our job.
+func _commit_subgizmos(gizmo, ids: PackedInt32Array, _restores: Array, cancel: bool) -> void:
+	var node := gizmo.get_node_3d() as PBMesh
+	if node == null:
+		return
+	element_editor.commit_subgizmos(node, ids, cancel)
+	node.update_gizmos()
+
+# ==============================================================================
+# Rendering
+# ==============================================================================
+
+## The camera the overlays size against. An edited node's own viewport is
+## the editor's root window, which has no attached camera — the real camera
+## lives in the 3D editor screen's SubViewport (EditorInterface), the same
+## route the grid/tool bridges use.
+static func _overlay_camera(node: Node3D) -> Camera3D:
+	var vp := node.get_viewport()
+	if vp != null:
+		var cam := vp.get_camera_3d()
+		if cam != null:
+			return cam
+	if Engine.is_editor_hint() and ClassDB.class_exists("EditorInterface"):
+		for i in range(2):
+			var vp3: Viewport = EditorInterface.get_editor_viewport_3d(i)
+			if vp3 != null:
+				var cam3 := vp3.get_camera_3d()
+				if cam3 != null:
+					return cam3
+	return null
+
+
+func _redraw(gizmo) -> void:
+	gizmo.clear()
+	_center_handle_drawn = false
+	var node := gizmo.get_node_3d() as PBMesh
+	if node == null:
+		return
+	# Overlay sizing: strokes and fills scale with CAMERA DISTANCE so they
+	# read identically at any zoom — a fixed world-space stroke towers over
+	# the mesh up close, and a fixed fill offset floats visibly off it.
+	_live_stroke_offset = THICK_LINE_OFFSET
+	_live_fill_offset = PBElementEditor.FACE_FILL_DEPTH_OFFSET
+	var cam := _overlay_camera(node)
+	if cam != null:
+		# Measure to the mesh's world AABB (not the origin): zooming into a
+		# corner of a large mesh must shrink the overlays like the geometry.
+		var aabb: AABB = node.global_transform * node.get_aabb()
+		var target: Vector3 = cam.global_position.clamp(aabb.position, aabb.end)
+		var cam_dist: float = target.distance_to(cam.global_position)
+		_live_stroke_offset = clampf(cam_dist * STROKE_SCREEN_SCALE, 0.0015, 0.014)
+		_live_fill_offset = clampf(cam_dist * FILL_SCREEN_SCALE, 0.0008, 0.006)
+	# N-gon drawing session (Knife tool or N-Gon shape extrusion)
+	# Checked FIRST: preview_node draws its overlay without requiring mesh_data!
+	if ngon_drawer != null and ngon_drawer.is_active():
+		if ngon_drawer.preview_node == node:
+			if ngon_drawer.state == PBNgonDrawer.State.HEIGHT:
+				_draw_ngon_height_preview(gizmo, node.pb_mesh_data, ngon_drawer)
+			else:
+				_draw_ngon_drawer_overlay(gizmo, node.pb_mesh_data, ngon_drawer)
+			return
+
+	var mesh_data: PBMeshData = node.pb_mesh_data
+	if mesh_data == null or mesh_data.positions.is_empty():
+		return
+
+	# The engine's viewport click/rubber-band picking runs through GIZMO
+	# collision meshes only (_select_ray has no mesh raycast fallback), and
+	# the stock MeshInstance3D gizmo's triangles go stale because PBMesh
+	# never emits property-change notifications for its rebuilt ArrayMesh.
+	# Without this, every PBMesh except the initially-selected one is
+	# unpickable by clicking. Skipped mid-drag: picking is irrelevant there
+	# and the rebuild cost would land on every motion event. The TriangleMesh
+	# is cached per mesh instance (hover redraws must not rebuild it).
+	if not element_editor.drag_active and node.mesh != null:
+		var mesh_id: int = node.mesh.get_instance_id()
+		if int(node.get_meta("_pb_pick_mesh_id", -1)) != mesh_id:
+			node.set_meta("_pb_pick_mesh_id", mesh_id)
+			var pick_tmesh: TriangleMesh = node.mesh.generate_triangle_mesh()
+			node.set_meta("_pb_pick_tmesh", pick_tmesh)
+			# Feeding a 943k-triangle sculpt into the gizmo's click picking on
+			# every redraw stalls the editor; cap it like the hover picker.
+			node.set_meta("_pb_pick_tris", pick_tmesh.get_faces().size() / 3)
+		if int(node.get_meta("_pb_pick_tris", 0)) <= PBPicking.PLAIN_MESH_PICK_TRI_BUDGET:
+			gizmo.add_collision_triangles(node.get_meta("_pb_pick_tmesh"))
+
+	# Shape-creation overlays: the live preview's cyan bounds + facing arrow,
+	# and the cyan hover highlight on the surface under the cursor. Checked
+	# BEFORE the selected-node early-out (preview/hover nodes are usually not
+	# in the editor selection at all).
+	if shape_creator != null and shape_creator.is_active():
+		if shape_creator.preview_node == node:
+			# During an active drag the preview is the only gizmo host.
+			_draw_creation_preview(gizmo, mesh_data, shape_creator)
+			return
+		if creation_hover_node == node:
+			_draw_creation_hover(gizmo, mesh_data, creation_hover_face)
+			return
+
+	# Trim Walls session: teal hover + amber chosen on the picked walls.
+	if trim_walls_session:
+		var drew := _draw_trim_walls_highlights(gizmo, mesh_data, node)
+		if drew:
+			return
+
+	if not _node_selected(node):
+		if node.show_collider and node.collider_type != PBMesh.ColliderType.OFF:
+			_draw_collider_debug(gizmo, node)
+		return
+
+	if node.show_collider and node.collider_type != PBMesh.ColliderType.OFF:
+		_draw_collider_debug(gizmo, node)
+
+
+	_mirror_engine_selection(gizmo, node, mesh_data)
+
+	# Wireframe (depth-tested). In EDGE mode ProBuilder renders edges as bold
+	# black strokes — thicker via stacked parallel lines — with the selection
+	# highlighted on top; VERTEX mode uses bolder dark dots; FACE mode keeps
+	# the subtle gray wireframe under the translucent face fill.
+	var edge_indices := mesh_data.get_common_edge_indices()
+	var n_indices: int = edge_indices.size()
+	var positions := mesh_data.positions
+	var pos_size: int = positions.size()
+	var wire_points := PackedVector3Array()
+	wire_points.resize(n_indices)
+	var write_idx: int = 0
+	for i in range(0, n_indices, 2):
+		var a: int = edge_indices[i]
+		var b: int = edge_indices[i + 1]
+		if a >= 0 and a < pos_size and b >= 0 and b < pos_size:
+			wire_points[write_idx] = positions[a]
+			wire_points[write_idx + 1] = positions[b]
+			write_idx += 2
+	if write_idx < n_indices:
+		wire_points.resize(write_idx)
+	if wire_points.size() >= 2:
+		if editor != null and editor.select_mode == PBEditor.SelectMode.EDGE \
+				and is_editing_node(node):
+			# EDGE mode base wireframe: slightly thinner cyan (hover/select
+			# strokes drawn on top stay full-thick).
+			_add_thick_lines(gizmo, wire_points, get_material("pb_wireframe_edge", gizmo),
+				_live_stroke_offset * 0.5, 1)
+		else:
+			gizmo.add_lines(wire_points, get_material("pb_wireframe", gizmo))
+
+	if not is_editing_node(node):
+		return
+
+	match editor.select_mode:
+		PBEditor.SelectMode.FACE, PBEditor.SelectMode.TEXTURE:
+			_draw_selected_faces(gizmo, mesh_data)
+			_draw_hover_face(gizmo, mesh_data)
+		PBEditor.SelectMode.EDGE:
+			_draw_selected_edges(gizmo, mesh_data)
+			_draw_hover_edge(gizmo, mesh_data)
+		PBEditor.SelectMode.VERTEX:
+			_draw_vertex_dots(gizmo, mesh_data)
+
+	_draw_center_scale_handle(gizmo, mesh_data)
+	_draw_proportional_radius_gizmo(gizmo, mesh_data)
+
+## Draws the ProBuilder-style CENTER square handle while the scale tool is
+## active over a selection: dragging it scales all axes together; with Shift
+## on a face selection it insets uniformly (aspect fixed). Godot's own scale
+## gizmo has no uniform center — this is ours.
+func _draw_center_scale_handle(gizmo, mesh_data: PBMeshData) -> void:
+	if editor == null or editor.tool_mode != PBEditor.ToolMode.SCALE:
+		return
+	if not is_editing_node(gizmo.get_node_3d()):
+		return
+	var selected: PackedInt32Array = gizmo.get_subgizmo_selection()
+	if selected.is_empty():
+		return
+	# Pivot = the average origin of the selected elements (node-local).
+	var acc := Vector3.ZERO
+	var count := 0
+	for id in selected:
+		acc += element_editor.element_origin(mesh_data, id)
+		count += 1
+	if count == 0:
+		return
+	var pivot := acc / float(count)
+	# billboard=false is REQUIRED: with the billboard flag the engine rotates
+	# the handle's LOCAL offset around the NODE ORIGIN toward the camera
+	# (both the drawn point and the hit test), which displaces the handle
+	# away from the true element pivot whenever the node origin is not the
+	# pivot itself (a face/edge/vertex on a moved or created mesh). A plain
+	# transform puts the grab point exactly on the gizmo center.
+	gizmo.add_handles(PackedVector3Array([pivot]),
+		get_material("pb_center_handle", gizmo), PackedInt32Array([0]), false)
+	# Track for the GUI harness + debug logging (did the handle exist, where).
+	var node := gizmo.get_node_3d() as Node3D
+	var world: Vector3 = node.global_transform * pivot if node != null else pivot
+	if logger != null and PBLogger.verbose and node != null:
+		logger.debug("handle", "center handle pivot world=%s (node origin %s)" % [
+			str(world), str(node.global_position)])
+	if not _center_handle_drawn or _center_handle_world.distance_to(world) > 0.001:
+		if logger != null and PBLogger.verbose:
+			logger.debug("handle", "center handle drawn at world %s (tool=%s selection=%d)"
+				% [str(world), PBEditor.ToolMode.keys()[editor.tool_mode], selected.size()])
+	_center_handle_drawn = true
+	_center_handle_world = world
+
+
+## Draws a 3D wireframe sphere (3 orthogonal circles) around the selection pivot
+## representing the proportional editing influence radius.
+func _draw_proportional_radius_gizmo(gizmo, mesh_data: PBMeshData) -> void:
+	if element_editor == null or not element_editor.proportional_enabled:
+		return
+	var node := gizmo.get_node_3d() as Node3D
+	if node == null or not is_editing_node(node):
+		return
+	var selected: PackedInt32Array = gizmo.get_subgizmo_selection()
+	if selected.is_empty():
+		return
+
+	var pivot: Vector3 = element_editor.center_pivot(mesh_data, selected)
+	var radius: float = element_editor.proportional_radius
+	if radius <= 0.001:
+		return
+
+	var segments := 32
+	var lines := PackedVector3Array()
+
+	# 3 orthogonal circles: XZ (horizontal), XY (vertical frontal), YZ (vertical sagittal)
+	for i in range(segments):
+		var t1: float = (float(i) / float(segments)) * TAU
+		var t2: float = (float(i + 1) / float(segments)) * TAU
+
+		# XZ circle
+		lines.append(pivot + Vector3(cos(t1) * radius, 0.0, sin(t1) * radius))
+		lines.append(pivot + Vector3(cos(t2) * radius, 0.0, sin(t2) * radius))
+
+		# XY circle
+		lines.append(pivot + Vector3(cos(t1) * radius, sin(t1) * radius, 0.0))
+		lines.append(pivot + Vector3(cos(t2) * radius, sin(t2) * radius, 0.0))
+
+		# YZ circle
+		lines.append(pivot + Vector3(0.0, sin(t1) * radius, cos(t1) * radius))
+		lines.append(pivot + Vector3(0.0, sin(t2) * radius, cos(t2) * radius))
+
+	gizmo.add_lines(lines, get_material("pb_proportional_gizmo", gizmo))
+## Whether the center scale handle was drawn in the last _redraw, and where.
+var _center_handle_drawn: bool = false
+var _center_handle_world: Vector3 = Vector3.ZERO
+
+## The center handle's id in our gizmo (single handle, id 0).
+const CENTER_HANDLE_ID := 0
+
+func _get_handle_name(gizmo, handle_id: int, secondary: bool) -> String:
+	if handle_id == CENTER_HANDLE_ID and editor != null \
+			and editor.tool_mode == PBEditor.ToolMode.SCALE:
+		return "Uniform Scale (Shift: Inset faces)"
+	return ""
+
+func _get_handle_value(gizmo, handle_id: int, secondary: bool):
+	var node := gizmo.get_node_3d() as PBMesh
+	if node == null or node.pb_mesh_data == null:
+		return null
+	return {"pivot": element_editor.center_pivot(node.pb_mesh_data,
+		gizmo.get_subgizmo_selection()), "factor": 1.0}
+
+func _set_handle(gizmo, handle_id: int, secondary: bool, camera: Camera3D,
+		screen_pos: Vector2) -> void:
+	if handle_id != CENTER_HANDLE_ID or camera == null:
+		return
+	var node := gizmo.get_node_3d() as PBMesh
+	if node == null or editor == null or not is_editing_node(node):
+		return
+	var selected: PackedInt32Array = gizmo.get_subgizmo_selection()
+	if selected.is_empty():
+		return
+	if logger != null and not element_editor.center_drag_active():
+		logger.info("handle", "center handle GRABbed at screen %s shift=%s mode=%s" % [
+			str(screen_pos), str(Input.is_key_pressed(KEY_SHIFT)),
+			PBEditor.SelectMode.keys()[editor.select_mode]])
+
+	if not element_editor.center_drag_active():
+		# First motion of the gesture: decide uniform scale vs inset.
+		var inset: bool = Input.is_key_pressed(KEY_SHIFT) \
+			and editor.select_mode == PBEditor.SelectMode.FACE
+		var pivot := element_editor.center_pivot(node.pb_mesh_data, selected)
+		if not element_editor.begin_center_drag(node, selected, inset, pivot, screen_pos):
+			return
+
+	element_editor.apply_center_drag(node, camera, screen_pos)
+	node.update_gizmos()
+
+func _commit_handle(gizmo, handle_id: int, secondary: bool, restore: Variant,
+		cancel: bool) -> void:
+	if handle_id != CENTER_HANDLE_ID:
+		return
+	var node := gizmo.get_node_3d() as PBMesh
+	if node == null:
+		return
+	var selected: PackedInt32Array = gizmo.get_subgizmo_selection()
+	if logger != null:
+		logger.info("handle", "center handle %s (factor was %.3f)" % [
+			"CANCELLED" if cancel else "COMMITTED", element_editor._center_factor])
+	element_editor.commit_center_drag(node, selected, cancel)
+	node.update_gizmos()
+
+## Draws each input line (a pair of points) as a crisp, solid 3D stroke using
+## filled cross-quads (plus a center line for guaranteed subpixel visibility at
+## distance). This eliminates the fuzzy, multi-line "wire comb" artifact when
+## zoomed in, maintaining a solid, clean beam at any zoom level.
+func _add_thick_lines(gizmo, pairs: PackedVector3Array, material: Material,
+		offset: float = THICK_LINE_OFFSET, stacks: int = 2) -> void:
+	var n: int = pairs.size()
+	if n < 2:
+		return
+	# Bias the solid quads TOWARD the camera: a symmetric volume straddles
+	# the edge, its outward half depth-tests away and the visible half
+	# floats off the surface (the "overlays offset up close" reports).
+	var bias := offset * 0.75
+	var cam := _overlay_camera(gizmo.get_node_3d() as Node3D)
+	var cam_pos: Vector3 = cam.global_position if cam != null else Vector3.ZERO
+
+	# 1. Center hardware lines: guaranteed min 1px visibility at any distance
+	gizmo.add_lines(pairs, material)
+
+	# 2. Solid crossed quads: fills the stroke volume with unshaded triangles
+	# so it stays completely solid and never splits into fuzzy parallel wires when zoomed in.
+	var o := offset
+	var quads_per_seg: int = 2 if stacks >= 2 else 1
+	var num_segs: int = n / 2
+	var verts := PackedVector3Array()
+	var indices := PackedInt32Array()
+	verts.resize(num_segs * quads_per_seg * 4)
+	indices.resize(num_segs * quads_per_seg * 6)
+
+	var v_idx: int = 0
+	var i_idx: int = 0
+	var i: int = 0
+	while i + 1 < n:
+		var a: Vector3 = pairs[i]
+		var b: Vector3 = pairs[i + 1]
+		var dir := b - a
+		if dir.length_squared() > 0.000000001:
+			dir = dir.normalized()
+			var toward := Vector3.ZERO
+			if cam != null:
+				toward = (cam_pos - (a + b) * 0.5).normalized() * bias
+			var perp1 := dir.cross(Vector3.UP)
+			if perp1.length_squared() < 0.25:
+				perp1 = dir.cross(Vector3.RIGHT)
+			perp1 = perp1.normalized() * o
+
+			# Quad 1 (along perp1)
+			var base_v := v_idx
+			verts[v_idx]     = a - perp1 + toward
+			verts[v_idx + 1] = a + perp1 + toward
+			verts[v_idx + 2] = b + perp1 + toward
+			verts[v_idx + 3] = b - perp1 + toward
+			v_idx += 4
+
+			indices[i_idx]     = base_v
+			indices[i_idx + 1] = base_v + 1
+			indices[i_idx + 2] = base_v + 2
+			indices[i_idx + 3] = base_v
+			indices[i_idx + 4] = base_v + 2
+			indices[i_idx + 5] = base_v + 3
+			i_idx += 6
+
+			if stacks >= 2:
+				var perp2 := dir.cross(perp1.normalized()).normalized() * o
+				var base_v2 := v_idx
+				verts[v_idx]     = a - perp2 + toward
+				verts[v_idx + 1] = a + perp2 + toward
+				verts[v_idx + 2] = b + perp2 + toward
+				verts[v_idx + 3] = b - perp2 + toward
+				v_idx += 4
+
+				indices[i_idx]     = base_v2
+				indices[i_idx + 1] = base_v2 + 1
+				indices[i_idx + 2] = base_v2 + 2
+				indices[i_idx + 3] = base_v2
+				indices[i_idx + 4] = base_v2 + 2
+				indices[i_idx + 5] = base_v2 + 3
+				i_idx += 6
+		i += 2
+
+	if v_idx > 0:
+		if v_idx < verts.size():
+			verts.resize(v_idx)
+			indices.resize(i_idx)
+		var arrays: Array = []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = verts
+		arrays[Mesh.ARRAY_INDEX] = indices
+		var mesh := ArrayMesh.new()
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		gizmo.add_mesh(mesh, material)
+## True when the node is in the editor's selection. EditorNode3DGizmo's own
+## is_selected() is not script-bound on all supported engine versions (4.8
+## added it), so query the EditorSelection directly.
+func _node_selected(node: Node3D) -> bool:
+	var sel := EditorInterface.get_selection()
+	if sel == null:
+		return false
+	return node in sel.get_selected_nodes()
+
+## Mirrors the engine's subgizmo selection into PBSelection so the dock,
+## toolbar, and commands agree with what the transform gizmo will move.
+## PBSelection.selection_changed → editor.element_selection_changed refreshes
+## the dock. Do NOT update gizmos here — this runs inside _redraw and would
+## loop.
+func _mirror_engine_selection(gizmo, node: PBMesh, mesh_data: PBMeshData) -> void:
+	if editor == null or editor.active_mesh != node:
+		return
+	element_editor.mirror_engine_selection(editor.selection, mesh_data, gizmo.get_subgizmo_selection())
+
+## Selected faces as a translucent n-gon fill, slightly offset along the face
+## normal and DEPTH-TESTED so it never draws through the mesh (a depth-test-off
+## fill pokes its triangle boundary through non-planar faces, reading as a
+## phantom "diagonal edge" where no edge exists).
+func _draw_selected_faces(gizmo, mesh_data: PBMeshData) -> void:
+	var selected: PackedInt32Array = gizmo.get_subgizmo_selection()
+	if selected.is_empty():
+		return
+	var expanded := element_editor.expand_face_ids(mesh_data, selected)
+	if expanded.is_empty():
+		return
+	var fill := element_editor.build_face_fill_mesh_multi(mesh_data, expanded, _live_fill_offset)
+	if fill == null:
+		return
+	if _face_fill_material == null:
+		_face_fill_material = _make_face_fill_material(Color(FACE_FILL_COLOR.r, FACE_FILL_COLOR.g, FACE_FILL_COLOR.b, FACE_FILL_COLOR.a * selection_opacity))
+	else:
+		_face_fill_material.albedo_color = Color(FACE_FILL_COLOR.r, FACE_FILL_COLOR.g, FACE_FILL_COLOR.b, FACE_FILL_COLOR.a * selection_opacity)
+	gizmo.add_mesh(fill, _face_fill_material)
+
+## The hovered (not selected) face as a translucent yellow fill — same yellow
+## as the selection, just slightly more transparent.
+func _draw_hover_face(gizmo, mesh_data: PBMeshData) -> void:
+	var hover_id: int = editor.hover_id
+	if hover_id < 0 or hover_id >= mesh_data.faces.size():
+		return
+	# Suppression uses the EXPANDED selection (loop/conversion groups): a
+	# selected-but-not-seed face must not glow as hovered.
+	if element_editor.expand_face_ids(mesh_data, gizmo.get_subgizmo_selection()).has(hover_id):
+		return
+	var fill := element_editor.build_face_fill_mesh(mesh_data, hover_id, _live_fill_offset)
+	if fill == null:
+		return
+	if _face_hover_fill_material == null:
+		_face_hover_fill_material = _make_face_fill_material(Color(HOVER_FACE_FILL_COLOR.r, HOVER_FACE_FILL_COLOR.g, HOVER_FACE_FILL_COLOR.b, HOVER_FACE_FILL_COLOR.a * hover_opacity))
+	else:
+		_face_hover_fill_material.albedo_color = Color(HOVER_FACE_FILL_COLOR.r, HOVER_FACE_FILL_COLOR.g, HOVER_FACE_FILL_COLOR.b, HOVER_FACE_FILL_COLOR.a * hover_opacity)
+	gizmo.add_mesh(fill, _face_hover_fill_material)
+
+## Selected edges as bright on-top strokes (thick in EDGE mode). Loop
+## selections (alt+click) highlight their whole ring.
+func _draw_selected_edges(gizmo, mesh_data: PBMeshData) -> void:
+	var selected_ids: PackedInt32Array = gizmo.get_subgizmo_selection()
+	if selected_ids.is_empty():
+		return
+	var expanded := element_editor.expand_edge_ids(mesh_data, selected_ids)
+	if expanded.is_empty():
+		return
+	var positions := mesh_data.positions
+	var pos_count: int = positions.size()
+	var edges := mesh_data.get_common_edges()
+	var edges_count: int = edges.size()
+	var lines := PackedVector3Array()
+	lines.resize(expanded.size() * 2)
+	var write_idx: int = 0
+	for eid in expanded:
+		if eid >= 0 and eid < edges_count:
+			var edge: PBEdge = edges[eid]
+			if edge.a >= 0 and edge.a < pos_count and edge.b >= 0 and edge.b < pos_count:
+				lines[write_idx] = positions[edge.a]
+				lines[write_idx + 1] = positions[edge.b]
+				write_idx += 2
+	if write_idx < lines.size():
+		lines.resize(write_idx)
+	if lines.size() >= 2:
+		_add_thick_lines(gizmo, lines, get_material("pb_selected_edge", gizmo), _live_stroke_offset * 1.2, 2)
+## The hovered (not selected) edge as a translucent yellow on-top stroke.
+func _draw_hover_edge(gizmo, mesh_data: PBMeshData) -> void:
+	var hover_id: int = editor.hover_id
+	var edges := mesh_data.get_common_edges()
+	if hover_id < 0 or hover_id >= edges.size():
+		return
+	# Suppression uses the EXPANDED selection (loop/conversion groups).
+	if element_editor.expand_edge_ids(mesh_data, gizmo.get_subgizmo_selection()).has(hover_id):
+		return
+	var positions := mesh_data.positions
+	var edge: PBEdge = edges[hover_id]
+	if edge.a < 0 or edge.a >= positions.size() or edge.b < 0 or edge.b >= positions.size():
+		return
+	_add_thick_lines(gizmo, PackedVector3Array([positions[edge.a], positions[edge.b]]),
+		get_material("pb_hover_edge", gizmo), _live_stroke_offset * 1.2, 2)
+
+## All shared vertices as gray dots, selected ones as opaque yellow dots, the
+## hovered one (when not selected) as a slightly more transparent yellow dot.
+func _draw_vertex_dots(gizmo, mesh_data: PBMeshData) -> void:
+	var positions := mesh_data.positions
+	var pos_count: int = positions.size()
+	var unselected := PackedVector3Array()
+	var selected := PackedVector3Array()
+	var hovered := PackedVector3Array()
+	var hover_id: int = editor.hover_id
+	var sub_selected: PackedInt32Array = gizmo.get_subgizmo_selection()
+	var sel_set := {}
+	for s in sub_selected:
+		sel_set[s] = true
+	if editor != null and editor.selection != null and not editor.selection.selected_vertices.is_empty():
+		for s in editor.selection.selected_vertices:
+			sel_set[s] = true
+	var sv_count: int = mesh_data.shared_vertices.size()
+	for sv_idx in range(sv_count):
+		var sv: PBSharedVertex = mesh_data.shared_vertices[sv_idx]
+		if sv == null or sv.indices.is_empty():
+			continue
+		var idx: int = sv.indices[0]
+		if idx < 0 or idx >= pos_count:
+			continue
+		if sel_set.has(sv_idx):
+			selected.append(positions[idx])
+		elif sv_idx == hover_id:
+			hovered.append(positions[idx])
+		else:
+			unselected.append(positions[idx])
+
+	_add_points_mesh(gizmo, unselected, _vertex_dot_material)
+	_add_points_mesh(gizmo, hovered, _vertex_dot_hover_material)
+	_add_points_mesh(gizmo, selected, _vertex_dot_selected_material)
+static func _add_points_mesh(gizmo, points: PackedVector3Array, material: StandardMaterial3D) -> void:
+	if points.is_empty():
+		return
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = points
+	var points_mesh := ArrayMesh.new()
+	points_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_POINTS, arrays)
+	gizmo.add_mesh(points_mesh, material)
+
+# ==============================================================================
+# Shape-creation overlays
+# ==============================================================================
+
+## Lazily builds the direct creation overlay materials (see the field docs).
+func _creation_materials() -> void:
+	if _creation_edge_material == null:
+		_creation_edge_material = _make_overlay_material(CREATION_COLOR)
+	if _creation_arrow_material == null:
+		_creation_arrow_material = _make_overlay_material(CREATION_ARROW_COLOR)
+	if _creation_vert_material == null:
+		_creation_vert_material = _make_point_material(SELECTED_COLOR, 11.0)
+		_creation_vert_material.render_priority = RenderingServer.MATERIAL_RENDER_PRIORITY_MAX
+
+## Adds the orange facing arrow as a crisp, solid 3D arrow: a solid rectangular
+## shaft along `dir` plus a solid triangular arrowhead at the tip, lying in the
+## dragged surface plane with perpendicular finning for all-angle visibility.
+## Crisp and solid at any zoom level, avoiding the fuzzy multi-line artifact.
+func _add_creation_arrow(gizmo, to_local: Transform3D, base: Vector3, dir: Vector3,
+		length: float, plane_normal: Vector3) -> void:
+	if length < 0.001:
+		return
+	var norm_dir := dir.normalized()
+	var tip := base + norm_dir * length
+	var side := norm_dir.cross(plane_normal).normalized()
+	if side.length_squared() < 0.5:
+		side = norm_dir.cross(Vector3.UP)
+		if side.length_squared() < 0.5:
+			side = norm_dir.cross(Vector3.RIGHT)
+	side = side.normalized()
+	var up := side.cross(norm_dir).normalized()
+
+	var barb_len: float = length * 0.30
+	var head_half_width: float = length * 0.20
+	var head_base := tip - norm_dir * barb_len
+	var left_barb := head_base + side * head_half_width
+	var right_barb := head_base - side * head_half_width
+	var shaft_half_width: float = maxf(length * 0.035, 0.01)
+
+	# Transform all key points to local space
+	var l_base := to_local * base
+	var l_tip := to_local * tip
+	var l_head_base := to_local * head_base
+	var l_left_barb := to_local * left_barb
+	var l_right_barb := to_local * right_barb
+
+	var l_side := to_local.basis * (side * shaft_half_width)
+
+	# 1. Solid mesh: flat arrowhead triangle + shaft quad lying strictly in the plane
+	var verts := PackedVector3Array()
+	var indices := PackedInt32Array()
+
+	# Arrowhead: solid triangle in the plane (tip, left_barb, right_barb)
+	verts.append(l_tip)                            # 0
+	verts.append(l_left_barb)                     # 1
+	verts.append(l_right_barb)                    # 2
+	indices.append_array([0, 1, 2])
+
+	# Shaft: flat quad in the plane
+	var s_idx := verts.size()
+	verts.append(l_base - l_side)                 # s_idx + 0
+	verts.append(l_base + l_side)                 # s_idx + 1
+	verts.append(l_head_base + l_side)            # s_idx + 2
+	verts.append(l_head_base - l_side)            # s_idx + 3
+	indices.append_array([
+		s_idx, s_idx + 1, s_idx + 2,
+		s_idx, s_idx + 2, s_idx + 3
+	])
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	gizmo.add_mesh(mesh, _creation_arrow_material)
+
+	# 2. Crisp 1px outline lines for guaranteed subpixel visibility
+	var outline := PackedVector3Array([
+		l_base, l_head_base,
+		l_head_base, l_left_barb,
+		l_left_barb, l_tip,
+		l_tip, l_right_barb,
+		l_right_barb, l_head_base
+	])
+	gizmo.add_lines(outline, _creation_arrow_material)
+## Adds yellow square vertex gizmos (GL points) at the world-space points.
+func _add_vert_squares(gizmo, to_local: Transform3D, world_points: PackedVector3Array) -> void:
+	if world_points.is_empty():
+		return
+	var local := PackedVector3Array()
+	for p in world_points:
+		local.append(to_local * p)
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = local
+	var points_mesh := ArrayMesh.new()
+	points_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_POINTS, arrays)
+	gizmo.add_mesh(points_mesh, _creation_vert_material)
+
+## Creation overlays for the preview node. BASE: the cyan base-rect outline
+## (mesh still hidden) plus the orange facing arrow ON THE PLANE and yellow
+## vertex squares at the drag's start/end corners. HEIGHT/PARAMS: the cyan
+## 3D box bounds, the arrow (local +Z — the basis orients it along `facing`)
+## and squares at the drag start, drag end, and the lifted end corner. All
+## overlays draw thick and on top (visible through geometry).
+func _draw_creation_preview(gizmo, mesh_data: PBMeshData, creator: PBShapeCreator) -> void:
+	# PARAMS: the shape is placed and the adjust modal is open — the cyan
+	# base/bounds box only buries the actual trim/shape the user is trying
+	# to see. Draw nothing but the mesh.
+	if creator.state == PBShapeCreator.State.PARAMS:
+		return
+	_creation_materials()
+	var node := gizmo.get_node_3d() as Node3D
+	if node == null:
+		return
+	var to_local := node.global_transform.affine_inverse()
+	var creation_offset: float = _live_stroke_offset * 1.5
+
+	if creator.state == PBShapeCreator.State.BASE:
+		var corners := creator.base_rect_corners()
+		var lines := PackedVector3Array()
+		for i in range(corners.size()):
+			lines.append(to_local * corners[i])
+			lines.append(to_local * corners[(i + 1) % corners.size()])
+		_add_thick_lines(gizmo, lines, _creation_edge_material, creation_offset)
+		creation_outline_draws += 1
+		# Facing arrow on the base plane — ONLY for shapes with a meaningful
+		# facing (stairs' high side, door's front); a symmetric shape would
+		# make it noise.
+		if creator.facing_direction() != Vector3.ZERO:
+			var arrow_len: float = clampf(maxf(creator.u_size, creator.v_size) * 0.6, 0.35, 2.0)
+			_add_creation_arrow(gizmo, to_local, creator.rect_center, creator.arrow_direction(),
+				arrow_len, creator.plane_normal)
+		_add_vert_squares(gizmo, to_local,
+			PackedVector3Array([creator.base_start, creator.base_end]))
+		return
+
+
+	# HEIGHT / PARAMS: box bounds around the live preview mesh.
+	var aabb := PBShapeCreator._aabb_of(mesh_data)
+	var p0 := aabb.position
+	var p1 := aabb.end
+	var c := [p0.x, p1.x]
+	var d := [p0.y, p1.y]
+	var e := [p0.z, p1.z]
+	var corners: Array[Vector3] = []
+	for xi in c:
+		for yi in d:
+			for zi in e:
+				corners.append(Vector3(xi, yi, zi))
+	# Corner order above: index bits (x:4, y:2, z:1). The 12 box edges join
+	# pairs differing in exactly one axis bit.
+	var edges := [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 3],
+		[2, 6], [3, 7], [4, 5], [4, 6], [5, 7], [6, 7]]
+	var lines := PackedVector3Array()
+	for edge in edges:
+		lines.append(corners[edge[0]])
+		lines.append(corners[edge[1]])
+	_add_thick_lines(gizmo, lines, _creation_edge_material, creation_offset)
+	creation_outline_draws += 1
+
+	# Facing arrow from the base center along local +Z (the placement basis
+	# points +Z along the creator's facing heuristic) — only for shapes with
+	# a meaningful facing; symmetric shapes get no arrow.
+	if creator.facing_direction() != Vector3.ZERO:
+		var base_center := Vector3(aabb.get_center().x, p0.y, aabb.get_center().z)
+		var arrow_len: float = clampf(aabb.get_longest_axis_size() * 0.5, 0.3, 2.0)
+		_add_creation_arrow(gizmo, Transform3D(), base_center, Vector3(0, 0, 1),
+			arrow_len, Vector3(0, 1, 0))
+
+	# Vertex squares: drag start, drag end, and the extruded end corner.
+	var lifted := creator.base_end + creator.plane_normal * creator.height
+	_add_vert_squares(gizmo, to_local,
+		PackedVector3Array([creator.base_start, creator.base_end, lifted]))
+
+	# Height plane: when Alt is held while raising a shape, draw a translucent
+	# infinite white plane at 0.25 opacity at the shape's current height.
+	if creator.state == PBShapeCreator.State.HEIGHT and creator.show_height_plane:
+		var lifted_local: Vector3 = to_local * lifted
+		gizmo.add_mesh(_get_height_plane_mesh(), _get_height_plane_material(),
+			Transform3D(Basis.IDENTITY, Vector3(0.0, lifted_local.y, 0.0)))
+
+## The hovered surface face during creation: cyan translucent fill at the
+## selection opacity + its outline as thick on-top cyan strokes. While the
+## session is still ARMED (no drag yet), also draws the yellow vertex square
+## under the cursor.
+func _draw_creation_hover(gizmo, mesh_data: PBMeshData, face_index: int) -> void:
+	if face_index >= 0 and face_index < mesh_data.faces.size():
+		var fill := element_editor.build_face_fill_mesh(mesh_data, face_index, _live_fill_offset)
+		var col := Color(HOVER_FACE_FILL_COLOR.r, HOVER_FACE_FILL_COLOR.g, HOVER_FACE_FILL_COLOR.b, HOVER_FACE_FILL_COLOR.a * hover_opacity)
+		if _face_hover_fill_material == null:
+			_face_hover_fill_material = _make_face_fill_material(col)
+		else:
+			_face_hover_fill_material.albedo_color = col
+		gizmo.add_mesh(fill, _face_hover_fill_material)
+
+	# ARMED: one square under the cursor (on the hovered surface point).
+	var armed_drawing := (shape_creator != null and shape_creator.state == PBShapeCreator.State.ARMED) \
+		or (ngon_drawer != null and ngon_drawer.state == PBNgonDrawer.State.ARMED)
+	if armed_drawing:
+		_creation_materials()
+		var node := gizmo.get_node_3d() as Node3D
+		if node != null:
+			var to_local := node.global_transform.affine_inverse()
+			_add_vert_squares(gizmo, to_local, PackedVector3Array([creation_hover_point]))
+
+## Trim Walls session highlights: teal fill under the cursor, amber on every
+## chosen wall face. Returns true when this node is session-relevant (the
+## caller early-outs so element overlays don't fight the session colors).
+func _draw_trim_walls_highlights(gizmo, mesh_data: PBMeshData, node: PBMesh) -> bool:
+	var is_hover := trim_walls_hover_node == node and trim_walls_hover_face >= 0
+	var chosen_faces := PackedInt32Array()
+	for w in trim_walls_chosen:
+		if w.get("mesh") == node:
+			chosen_faces.append(int(w.get("face", -1)))
+	if not is_hover and chosen_faces.is_empty():
+		return false
+	if node == null:
+		return false
+	var fill_offset := _live_fill_offset
+	if is_hover:
+		var hover_fill := element_editor.build_face_fill_mesh(mesh_data, trim_walls_hover_face, fill_offset)
+		if hover_fill != null:
+			gizmo.add_mesh(hover_fill, _trim_walls_material(true))
+	if not chosen_faces.is_empty():
+		var multi := element_editor.build_face_fill_mesh_multi(mesh_data, chosen_faces, fill_offset)
+		if multi != null:
+			gizmo.add_mesh(multi, _trim_walls_material(false))
+	# Strokes read over the fills at any zoom.
+	if is_hover:
+		var stroke_pts := PackedVector3Array()
+		var poly := mesh_data.get_face_outline_positions(trim_walls_hover_face)
+		# get_face_positions is already LOCAL (gizmo space) - pushing it
+		# through the inverse node transform displaced the outline off the
+		# face entirely.
+		for i in range(poly.size()):
+			stroke_pts.append(poly[i])
+			stroke_pts.append(poly[(i + 1) % poly.size()])
+		if stroke_pts.size() >= 2:
+			_add_thick_lines(gizmo, stroke_pts, _trim_walls_material(true, true), _live_stroke_offset, 1)
+	return true
+
+var _trim_walls_hover_mat: StandardMaterial3D = null
+var _trim_walls_hover_stroke_mat: StandardMaterial3D = null
+var _trim_walls_chosen_mat: StandardMaterial3D = null
+
+const TRIM_WALLS_TEAL := Color(0.0, 0.85, 0.75, 0.4)
+const TRIM_WALLS_TEAL_STROKE := Color(0.2, 1.0, 0.9, 0.9)
+const TRIM_WALLS_AMBER := Color(1.0, 0.65, 0.1, 0.14)
+
+func _trim_walls_material(hover: bool, stroke := false) -> StandardMaterial3D:
+	if hover and stroke:
+		if _trim_walls_hover_stroke_mat == null:
+			_trim_walls_hover_stroke_mat = StandardMaterial3D.new()
+			_trim_walls_hover_stroke_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			_trim_walls_hover_stroke_mat.albedo_color = TRIM_WALLS_TEAL_STROKE
+			_trim_walls_hover_stroke_mat.no_depth_test = true
+		return _trim_walls_hover_stroke_mat
+	if hover:
+		if _trim_walls_hover_mat == null:
+			_trim_walls_hover_mat = StandardMaterial3D.new()
+			_trim_walls_hover_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			_trim_walls_hover_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			_trim_walls_hover_mat.albedo_color = TRIM_WALLS_TEAL
+			_trim_walls_hover_mat.no_depth_test = true
+		return _trim_walls_hover_mat
+	if _trim_walls_chosen_mat == null:
+		_trim_walls_chosen_mat = StandardMaterial3D.new()
+		_trim_walls_chosen_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_trim_walls_chosen_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_trim_walls_chosen_mat.albedo_color = TRIM_WALLS_AMBER
+		# Chosen faces stay DEPTH-TESTED and dim: a see-through amber wall
+		# drowns the scene (the "orange highlights are distracting" report).
+	return _trim_walls_chosen_mat
+
+## Draws the polygon vertices, connecting lines, and live line to cursor for Knife / N-Gon drawing.
+func _draw_ngon_drawer_overlay(gizmo, mesh_data: PBMeshData, drawer: PBNgonDrawer) -> void:
+	_creation_materials()
+	var node := gizmo.get_node_3d() as Node3D
+	if node == null:
+		return
+	var to_local := node.global_transform.affine_inverse()
+	var creation_offset: float = _live_stroke_offset * 1.5
+
+	# 1. Drawn lines between placed vertices
+	var pts := drawer.points
+	if pts.size() >= 2:
+		var lines := PackedVector3Array()
+		for i in range(pts.size() - 1):
+			lines.append(to_local * pts[i])
+			lines.append(to_local * pts[i + 1])
+		_add_thick_lines(gizmo, lines, _creation_edge_material, creation_offset)
+
+	# 2. Live line from last vertex to cursor
+	if not pts.is_empty() and drawer.live_cursor_point != Vector3.ZERO:
+		var last_p := pts[pts.size() - 1]
+		if last_p.distance_to(drawer.live_cursor_point) > 0.001:
+			var live_line := PackedVector3Array([to_local * last_p, to_local * drawer.live_cursor_point])
+			_add_thick_lines(gizmo, live_line, _creation_edge_material, creation_offset)
+
+	# 3. If hovering near first vertex (and >= 3 vertices), draw closing line preview
+	if pts.size() >= 3 and drawer.hovered_vert_idx == 0:
+		var close_line := PackedVector3Array([to_local * drawer.live_cursor_point, to_local * pts[0]])
+		_add_thick_lines(gizmo, close_line, _creation_edge_material, creation_offset)
+
+	# 4. Placed vertices (yellow squares)
+	if not pts.is_empty():
+		var vert_pts := PackedVector3Array()
+		for p in pts:
+			vert_pts.append(p)
+		_add_vert_squares(gizmo, to_local, vert_pts)
+
+	# 5. Live cursor point square (under mouse)
+	if drawer.live_cursor_point != Vector3.ZERO:
+		_add_vert_squares(gizmo, to_local, PackedVector3Array([drawer.live_cursor_point]))
+
+## Draws the live 3D extrusion bounds for N-Gon shape extrusion in HEIGHT state.
+func _draw_ngon_height_preview(gizmo, mesh_data: PBMeshData, drawer: PBNgonDrawer) -> void:
+	_creation_materials()
+	var node := gizmo.get_node_3d() as Node3D
+	if node == null:
+		return
+	var to_local := node.global_transform.affine_inverse()
+	var creation_offset: float = _live_stroke_offset * 1.5
+
+	var pts := drawer.points
+	var n := pts.size()
+	if n < 3:
+		return
+
+	var h_offset := drawer.plane_normal * drawer.height
+
+	var lines := PackedVector3Array()
+	# Bottom cap edges
+	for i in range(n):
+		var j := (i + 1) % n
+		lines.append(to_local * pts[i])
+		lines.append(to_local * pts[j])
+	# Top cap edges
+	for i in range(n):
+		var j := (i + 1) % n
+		lines.append(to_local * (pts[i] + h_offset))
+		lines.append(to_local * (pts[j] + h_offset))
+	# Side vertical edges
+	for i in range(n):
+		lines.append(to_local * pts[i])
+		lines.append(to_local * (pts[i] + h_offset))
+
+	_add_thick_lines(gizmo, lines, _creation_edge_material, creation_offset)
+
+	# Vertex squares at bottom and top
+	var vert_pts := PackedVector3Array()
+	for p in pts:
+		vert_pts.append(p)
+		vert_pts.append(p + h_offset)
+	_add_vert_squares(gizmo, to_local, vert_pts)
+## Collider inspection overlay over the node's ACTIVE physics shape.
+##
+## Two layers:
+## 1. Bright green x-ray wireframe of the exact collision triangles the
+##    physics server holds (raw concave faces / engine debug hull via
+##    PBColliderAudit.shape_faces) — shows the collider that EXISTS, never
+##    the mesh that "should" produce it.
+## 2. A depth-tested solid "contact skin": every triangle INFLATED 3 cm along
+##    its FRONT normal (the side Godot physics collides with) and drawn twice
+##    — as-is in translucent GREEN, reversed in RED, both back-culled. Read
+##    from OUTSIDE the collider:
+##      green skin wrapping the mesh  = faces wound correctly;
+##      a RED patch                   = that face's collidable side points
+##    					INWARD (bodies would tunnel in and be trapped);
+##      a patch of skin MISSING       = the face's front points into the mesh
+##                                     (inflated into the geometry).
+##    The inflation keeps the skin reading outside the render mesh; depth
+##    testing keeps far-side backs (the interior views of a sound shell) from
+##    bleeding through and reading as false red — an x-ray solid pass cannot
+##    distinguish "inverted face" from "far side of a correct shell".
+const COLLIDER_SKIN_INFLATE := 0.03
+
+var _collider_front_material: StandardMaterial3D
+var _collider_back_material: StandardMaterial3D
+
+func _draw_collider_debug(gizmo, node: PBMesh) -> void:
+	var body := node.get_collider_body()
+	if body == null:
+		return
+	var col_shape := body.get_node_or_null(NodePath(PBMesh.COLLIDER_SHAPE_NAME)) as CollisionShape3D
+	if col_shape == null or col_shape.shape == null:
+		return
+
+	var tris := PBColliderAudit.shape_faces(col_shape.shape)
+	if tris.size() < 3:
+		return
+
+	# Vertex normals welded by position: corner-sharing triangles get the SAME
+	# offset, so the inflated skin stays connected across creases instead of
+	# opening rim gaps (through which far-side backs read as false red).
+	var vnormal_sums := {}
+	for i in range(0, tris.size() - 2, 3):
+		var fn := PBColliderAudit.tri_front_normal(tris[i], tris[i + 1], tris[i + 2])
+		if fn == Vector3.ZERO:
+			continue
+		for k in range(3):
+			var key := _collider_vert_key(tris[i + k])
+			vnormal_sums[key] = vnormal_sums.get(key, Vector3.ZERO) + fn
+
+	var lines := PackedVector3Array()
+	var front_tris := PackedVector3Array()
+	var back_tris := PackedVector3Array()
+	front_tris.resize(tris.size())
+	back_tris.resize(tris.size())
+	for i in range(0, tris.size() - 2, 3):
+		var a := tris[i]
+		var b := tris[i + 1]
+		var c := tris[i + 2]
+		lines.append(a)
+		lines.append(b)
+		lines.append(b)
+		lines.append(c)
+		lines.append(c)
+		lines.append(a)
+		var oa := _collider_skin_offset(a, vnormal_sums)
+		var ob := _collider_skin_offset(b, vnormal_sums)
+		var oc := _collider_skin_offset(c, vnormal_sums)
+		front_tris[i] = a + oa
+		front_tris[i + 1] = b + ob
+		front_tris[i + 2] = c + oc
+		back_tris[i] = a + oa
+		back_tris[i + 1] = c + oc
+		back_tris[i + 2] = b + ob
+
+	gizmo.add_lines(lines, get_material("pb_collider_debug", gizmo))
+	if _collider_front_material == null:
+		_collider_front_material = _make_collider_side_material(Color(0.1, 1.0, 0.4, 0.30))
+	if _collider_back_material == null:
+		_collider_back_material = _make_collider_side_material(Color(1.0, 0.12, 0.1, 0.45))
+	gizmo.add_mesh(_tris_to_mesh(front_tris), _collider_front_material)
+	gizmo.add_mesh(_tris_to_mesh(back_tris), _collider_back_material)
+
+static func _tris_to_mesh(tris: PackedVector3Array) -> ArrayMesh:
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = tris
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
+
+static func _collider_vert_key(v: Vector3) -> String:
+	return "%d,%d,%d" % [int(round(v.x * 10000.0)), int(round(v.y * 10000.0)), int(round(v.z * 10000.0))]
+
+func _collider_skin_offset(v: Vector3, vnormal_sums: Dictionary) -> Vector3:
+	var sum: Vector3 = vnormal_sums.get(_collider_vert_key(v), Vector3.ZERO)
+	if sum == Vector3.ZERO:
+		return Vector3.ZERO
+	return sum.normalized() * COLLIDER_SKIN_INFLATE
+
+## Unshaded translucent material for the collider skin passes. DEPTH-TESTED
+## (the skin must be occluded by geometry in front of it — far-side backs
+## must not bleed through); CULL_BACK is what makes front vs back winding
+## visible per viewpoint.
+func _make_collider_side_material(color: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = color
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.no_depth_test = false
+	mat.cull_mode = BaseMaterial3D.CULL_BACK
+	return mat

@@ -1,0 +1,1253 @@
+## PBShapeComplex — Generator for complex PoiBuilder shape primitives.
+##
+## Provides procedural generation methods for Sphere (Icosphere), Torus,
+## Arch, Stairs, and Door primitives returning valid PBMeshData instances.
+@tool
+class_name PBShapeComplex
+extends RefCounted
+
+# ==============================================================================
+# Helper Functions
+# ==============================================================================
+
+## Helper to build shared_vertices by grouping vertex indices with matching 3D positions.
+static func _build_shared_vertices(positions: PackedVector3Array) -> Array[PBSharedVertex]:
+	var groups: Dictionary = {} # String key -> PackedInt32Array
+	for i in range(positions.size()):
+		var p: Vector3 = positions[i]
+		var sx: float = snappedf(p.x, 0.0001) + 0.0
+		var sy: float = snappedf(p.y, 0.0001) + 0.0
+		var sz: float = snappedf(p.z, 0.0001) + 0.0
+		var key: String = "%.4f,%.4f,%.4f" % [sx, sy, sz]
+		if not groups.has(key):
+			groups[key] = PackedInt32Array()
+		groups[key].append(i)
+
+	var shared: Array[PBSharedVertex] = []
+	for key in groups.keys():
+		var sv := PBSharedVertex.new(groups[key])
+		shared.append(sv)
+	return shared
+
+## Ear-clips a simple CCW polygon (2D) into index triangles. Concave-safe;
+## reflex and collinear corners are skipped as ears, and a guard bails to a
+## fan fallback if the corner cases ever stall (our polygons are mild).
+static func _triangulate_2d(points: PackedVector2Array) -> Array:
+	var n := points.size()
+	var idxs: Array[int] = []
+	for i in range(n):
+		idxs.append(i)
+	var tris: Array = []
+	var guard: int = n * n + 16
+	while idxs.size() > 3 and guard > 0:
+		guard -= 1
+		var m := idxs.size()
+		var clipped := false
+		for i in range(m):
+			var i0: int = idxs[(i + m - 1) % m]
+			var i1: int = idxs[i]
+			var i2: int = idxs[(i + 1) % m]
+			var a := points[i0]
+			var b := points[i1]
+			var c := points[i2]
+			if (b - a).cross(c - b) <= 0.0000001:
+				continue  # reflex or collinear corner — not an ear
+			var ear := true
+			for j in idxs:
+				if j == i0 or j == i1 or j == i2:
+					continue
+				var pj: Vector2 = points[j]
+				if pj.distance_squared_to(a) < 0.000001 or pj.distance_squared_to(b) < 0.000001 or pj.distance_squared_to(c) < 0.000001:
+					continue
+				if PBShapeComplex._point_in_triangle(pj, a, b, c):
+					ear = false
+					break
+			if not ear:
+				continue
+			tris.append([i0, i1, i2])
+			idxs.remove_at(i)
+			clipped = true
+			break
+		if not clipped:
+			break
+	if idxs.size() == 3:
+		tris.append([idxs[0], idxs[1], idxs[2]])
+	elif idxs.size() > 3:
+		for i in range(1, idxs.size() - 1):
+			tris.append([idxs[0], idxs[i], idxs[i + 1]])
+	return _delaunay_refine_2d(points, tris)
+
+## Applies Lawson's edge-flipping algorithm to refine an existing 2D triangulation
+## into a Constrained Delaunay Triangulation (CDT). This eliminates arbitrary long
+## diagonals, maximizes minimum angles, and produces symmetric, intuitive triangulations
+## when edges have split midpoints (e.g. subdivided adjacent faces or merged n-gons).
+static func _delaunay_refine_2d(points: PackedVector2Array, tris: Array) -> Array:
+	if tris.size() <= 1:
+		return tris
+
+	# 1. Ensure all triangles are wound CCW
+	for i in range(tris.size()):
+		var t: Array = tris[i]
+		var a: Vector2 = points[t[0]]
+		var b: Vector2 = points[t[1]]
+		var c: Vector2 = points[t[2]]
+		if (b - a).cross(c - b) < 0.0:
+			tris[i] = [t[0], t[2], t[1]]
+
+	var max_flips: int = points.size() * points.size() + 24
+	var flipped := true
+	while flipped and max_flips > 0:
+		flipped = false
+		max_flips -= 1
+
+		# Map internal edges to the triangles sharing them
+		var edge_map: Dictionary = {}
+		for ti in range(tris.size()):
+			var t: Array = tris[ti]
+			for e in range(3):
+				var u: int = t[e]
+				var v: int = t[(e + 1) % 3]
+				var key := Vector2i(mini(u, v), maxi(u, v))
+				if not edge_map.has(key):
+					edge_map[key] = []
+				edge_map[key].append([ti, u, v])
+
+		for key: Vector2i in edge_map:
+			var shared: Array = edge_map[key]
+			if shared.size() == 2:
+				var s0: Array = shared[0]
+				var s1: Array = shared[1]
+				var ti0: int = s0[0]
+				var ti1: int = s1[0]
+				var u0: int = s0[1]
+				var v0: int = s0[2]
+				var t0: Array = tris[ti0]
+				var t1: Array = tris[ti1]
+
+				# Find opposite vertices in t0 and t1
+				var opp0: int = -1
+				for idx: int in t0:
+					if idx != key.x and idx != key.y:
+						opp0 = idx
+						break
+				var opp1: int = -1
+				for idx: int in t1:
+					if idx != key.x and idx != key.y:
+						opp1 = idx
+						break
+				if opp0 < 0 or opp1 < 0:
+					continue
+
+				# Orient u and v such that in t0 the CCW order is (u_idx, opp0, v_idx)
+				var u_idx: int = u0
+				var v_idx: int = v0
+				if (t0[0] == u0 and t0[1] == opp0) or (t0[1] == u0 and t0[2] == opp0) or (t0[2] == u0 and t0[0] == opp0):
+					u_idx = u0
+					v_idx = v0
+				else:
+					u_idx = v0
+					v_idx = u0
+
+				var pu: Vector2 = points[u_idx]
+				var po0: Vector2 = points[opp0]
+				var pv: Vector2 = points[v_idx]
+				var po1: Vector2 = points[opp1]
+
+				# Check strict convexity of quadrilateral (u_idx, opp0, v_idx, opp1) in CCW order
+				var quad_pts: Array[Vector2] = [pu, po0, pv, po1]
+				var convex := true
+				for i in range(4):
+					var pa: Vector2 = quad_pts[i]
+					var pb: Vector2 = quad_pts[(i + 1) % 4]
+					var pc: Vector2 = quad_pts[(i + 2) % 4]
+					var cp: float = (pb - pa).cross(pc - pb)
+					if cp <= 0.000001:
+						convex = false
+						break
+				if not convex:
+					continue
+
+				# In-circle determinant for po1 in circumcircle of (pu, po0, pv)
+				var adx: float = pu.x - po1.x
+				var ady: float = pu.y - po1.y
+				var bdx: float = po0.x - po1.x
+				var bdy: float = po0.y - po1.y
+				var cdx: float = pv.x - po1.x
+				var cdy: float = pv.y - po1.y
+				var det: float = (adx * adx + ady * ady) * (bdx * cdy - cdx * bdy) \
+					- (bdx * bdx + bdy * bdy) * (adx * cdy - cdx * ady) \
+					+ (cdx * cdx + cdy * cdy) * (adx * bdy - bdx * ady)
+				if det > 0.000001:
+					tris[ti0] = [u_idx, opp0, opp1]
+					tris[ti1] = [v_idx, opp1, opp0]
+					flipped = true
+					break
+
+	return tris
+
+static func _point_in_triangle(p: Vector2, a: Vector2, b: Vector2, c: Vector2) -> bool:
+	if p.distance_squared_to(a) < 0.000001 or p.distance_squared_to(b) < 0.000001 or p.distance_squared_to(c) < 0.000001:
+		return false
+	var d1 := (b - a).cross(p - a)
+	var d2 := (c - b).cross(p - b)
+	var d3 := (a - c).cross(p - c)
+	var has_neg := d1 < -0.0000001 or d2 < -0.0000001 or d3 < -0.0000001
+	var has_pos := d1 > 0.0000001 or d2 > 0.0000001 or d3 > 0.0000001
+	return not (has_neg and has_pos)
+
+## Helper to add a quad face (4 vertices, 2 triangles = 6 indices) to mesh arrays.
+static func _add_quad(
+	positions: PackedVector3Array,
+	uvs: PackedVector2Array,
+	faces: Array[PBFace],
+	p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3,
+	uv0: Vector2 = Vector2(0.0, 0.0),
+	uv1: Vector2 = Vector2(1.0, 0.0),
+	uv2: Vector2 = Vector2(1.0, 1.0),
+	uv3: Vector2 = Vector2(0.0, 1.0),
+	smoothing_group: int = 0
+) -> void:
+	var base: int = positions.size()
+	positions.append(p0)
+	positions.append(p1)
+	positions.append(p2)
+	positions.append(p3)
+
+	uvs.append(uv0)
+	uvs.append(uv1)
+	uvs.append(uv2)
+	uvs.append(uv3)
+
+	var face := PBFace.new(PackedInt32Array([
+		base + 0, base + 1, base + 2,
+		base + 2, base + 3, base + 0
+	]))
+	face.smoothing_group = smoothing_group
+	faces.append(face)
+
+## Helper to add a single triangle face (3 vertices) to mesh arrays.
+static func _add_tri(
+	positions: PackedVector3Array,
+	uvs: PackedVector2Array,
+	faces: Array[PBFace],
+	p0: Vector3, p1: Vector3, p2: Vector3,
+	smoothing_group: int = 0
+) -> void:
+	var base: int = positions.size()
+	positions.append(p0)
+	positions.append(p1)
+	positions.append(p2)
+	uvs.append(Vector2(0.0, 0.0))
+	uvs.append(Vector2(1.0, 0.0))
+	uvs.append(Vector2(0.0, 1.0))
+	var face := PBFace.new(PackedInt32Array([
+		base + 0, base + 1, base + 2
+	]))
+	face.smoothing_group = smoothing_group
+	faces.append(face)
+
+# ==============================================================================
+# 1. Sphere (Icosphere) Generator
+# ==============================================================================
+
+## Creates an icosphere by recursively subdividing a regular icosahedron.
+## Returns a PBMeshData with radius, subdivisions, and optional smooth shading.
+static func create_sphere(radius: float = 0.5, subdivisions: int = 2, smooth: bool = true) -> PBMeshData:
+	var mesh_data := PBMeshData.new()
+	var subs: int = maxi(0, subdivisions)
+	var rad: float = maxf(0.0001, radius)
+
+	# Regular icosahedron template vertices
+	var phi: float = (1.0 + sqrt(5.0)) * 0.5
+	var template: Array[Vector3] = [
+		Vector3(-1.0,  phi,  0.0), # 0
+		Vector3( 1.0,  phi,  0.0), # 1
+		Vector3(-1.0, -phi,  0.0), # 2
+		Vector3( 1.0, -phi,  0.0), # 3
+		Vector3( 0.0, -1.0,  phi), # 4
+		Vector3( 0.0,  1.0,  phi), # 5
+		Vector3( 0.0, -1.0, -phi), # 6
+		Vector3( 0.0,  1.0, -phi), # 7
+		Vector3( phi,  0.0, -1.0), # 8
+		Vector3( phi,  0.0,  1.0), # 9
+		Vector3(-phi,  0.0, -1.0), # 10
+		Vector3(-phi,  0.0,  1.0), # 11
+	]
+
+	# 20 triangular faces of the icosahedron (outward CCW winding)
+	var base_triangles_idx: Array = [
+		# 5 around vertex 0
+		[0, 11, 5],
+		[0, 5, 1],
+		[0, 1, 7],
+		[0, 7, 10],
+		[0, 10, 11],
+		# 5 adjacent to top
+		[1, 5, 9],
+		[5, 11, 4],
+		[11, 10, 2],
+		[10, 7, 6],
+		[7, 1, 8],
+		# 5 around vertex 3
+		[3, 9, 4],
+		[3, 4, 2],
+		[3, 2, 6],
+		[3, 6, 8],
+		[3, 8, 9],
+		# 5 adjacent to bottom
+		[4, 9, 5],
+		[2, 4, 11],
+		[6, 2, 10],
+		[8, 6, 7],
+		[9, 8, 1],
+	]
+
+	var current_triangles: Array = []
+	for tri_idx in base_triangles_idx:
+		var v0: Vector3 = template[tri_idx[0]].normalized() * rad
+		var v1: Vector3 = template[tri_idx[1]].normalized() * rad
+		var v2: Vector3 = template[tri_idx[2]].normalized() * rad
+		# Ensure CCW outward normal
+		var norm: Vector3 = (v1 - v0).cross(v2 - v0)
+		if norm.dot(v0 + v1 + v2) < 0.0:
+			current_triangles.append([v0, v2, v1])
+		else:
+			current_triangles.append([v0, v1, v2])
+
+	# Subdivide recursively
+	for _s in range(subs):
+		var next_triangles: Array = []
+		for tri in current_triangles:
+			var p0: Vector3 = tri[0]
+			var p2: Vector3 = tri[1]
+			var p5: Vector3 = tri[2]
+
+			var p1: Vector3 = ((p0 + p2) * 0.5).normalized() * rad
+			var p3: Vector3 = ((p0 + p5) * 0.5).normalized() * rad
+			var p4: Vector3 = ((p2 + p5) * 0.5).normalized() * rad
+
+			next_triangles.append([p0, p1, p3])
+			next_triangles.append([p1, p2, p4])
+			next_triangles.append([p1, p4, p3])
+			next_triangles.append([p3, p4, p5])
+		current_triangles = next_triangles
+
+	# Build mesh arrays: unshared vertices (3 per triangle)
+	var positions := PackedVector3Array()
+	var textures0 := PackedVector2Array()
+	var faces: Array[PBFace] = []
+
+	var total_verts: int = current_triangles.size() * 3
+	positions.resize(total_verts)
+	textures0.resize(total_verts)
+
+	var smooth_grp: int = 1 if smooth else 0
+
+	for i in range(current_triangles.size()):
+		var tri: Array = current_triangles[i]
+		var base: int = i * 3
+
+		var v0: Vector3 = tri[0]
+		var v1: Vector3 = tri[1]
+		var v2: Vector3 = tri[2]
+
+		positions[base + 0] = v0
+		positions[base + 1] = v1
+		positions[base + 2] = v2
+
+		# Spherical UV coordinates
+		var n0: Vector3 = v0.normalized()
+		var n1: Vector3 = v1.normalized()
+		var n2: Vector3 = v2.normalized()
+
+		textures0[base + 0] = Vector2(0.5 + atan2(n0.z, n0.x) / (2.0 * PI), 0.5 - asin(clampf(n0.y, -1.0, 1.0)) / PI)
+		textures0[base + 1] = Vector2(0.5 + atan2(n1.z, n1.x) / (2.0 * PI), 0.5 - asin(clampf(n1.y, -1.0, 1.0)) / PI)
+		textures0[base + 2] = Vector2(0.5 + atan2(n2.z, n2.x) / (2.0 * PI), 0.5 - asin(clampf(n2.y, -1.0, 1.0)) / PI)
+
+		var face := PBFace.new(PackedInt32Array([base + 0, base + 1, base + 2]))
+		face.smoothing_group = smooth_grp
+		face.manual_uv = true
+		faces.append(face)
+
+	mesh_data.positions = positions
+	mesh_data.textures0 = textures0
+	mesh_data.faces = faces
+	mesh_data.shared_vertices = _build_shared_vertices(positions)
+	mesh_data.shared_textures = []
+	mesh_data.invalidate_caches()
+	return mesh_data
+
+# ==============================================================================
+# 2. Torus Generator
+# ==============================================================================
+
+## Creates a torus mesh centered at the origin in the XZ plane.
+## rows: cross-section divisions, columns: revolution divisions.
+static func create_torus(
+	major_radius: float = 0.5,
+	minor_radius: float = 0.15,
+	rows: int = 12,
+	columns: int = 16,
+	smooth: bool = true
+) -> PBMeshData:
+	var mesh_data := PBMeshData.new()
+	var num_rows: int = maxi(3, rows)
+	var num_cols: int = maxi(3, columns)
+
+	var positions := PackedVector3Array()
+	var textures0 := PackedVector2Array()
+	var faces: Array[PBFace] = []
+
+	var smooth_grp: int = 1 if smooth else 0
+	var u_tiles: float = maxf(1.0, roundf(major_radius / maxf(0.001, minor_radius)))
+	for j in range(num_cols):
+		var j1: int = j
+		var j2: int = (j + 1) % num_cols
+
+		var theta1: float = (float(j1) / float(num_cols)) * TAU
+		var theta2: float = (float(j2) / float(num_cols)) * TAU
+
+		var cos_t1: float = cos(theta1)
+		var sin_t1: float = sin(theta1)
+		var cos_t2: float = cos(theta2)
+		var sin_t2: float = sin(theta2)
+
+		var u1: float = (float(j1) / float(num_cols)) * u_tiles
+		var u2: float = (float(j + 1) / float(num_cols)) * u_tiles
+
+		for i in range(num_rows):
+			var i1: int = i
+			var i2: int = (i + 1) % num_rows
+
+			var phi1: float = (float(i1) / float(num_rows)) * TAU
+			var phi2: float = (float(i2) / float(num_rows)) * TAU
+
+			var cos_p1: float = cos(phi1)
+			var sin_p1: float = sin(phi1)
+			var cos_p2: float = cos(phi2)
+			var sin_p2: float = sin(phi2)
+
+			var v1: float = float(i1) / float(num_rows)
+			var v2: float = float(i + 1) / float(num_rows)
+
+			var r1: float = major_radius + minor_radius * cos_p1
+			var r2: float = major_radius + minor_radius * cos_p2
+
+			# 4 quad vertices
+			var p0 := Vector3(r1 * cos_t1, minor_radius * sin_p1, r1 * sin_t1)
+			var p1 := Vector3(r1 * cos_t2, minor_radius * sin_p1, r1 * sin_t2)
+			var p2 := Vector3(r2 * cos_t2, minor_radius * sin_p2, r2 * sin_t2)
+			var p3 := Vector3(r2 * cos_t1, minor_radius * sin_p2, r2 * sin_t1)
+
+			var uv0 := Vector2(u1, v1)
+			var uv1 := Vector2(u2, v1)
+			var uv2 := Vector2(u2, v2)
+			var uv3 := Vector2(u1, v2)
+
+			# Winding: (p0, p1, p2, p3) walks +theta then +phi, whose cross
+			# product points INTO the tube (inward normals — the classic
+			# inside-out torus). Traversing p0 → p3 → p2 → p1 flips the quad
+			# to CCW-from-outside like every other generator.
+			_add_quad(positions, textures0, faces, p0, p3, p2, p1, uv0, uv3, uv2, uv1, smooth_grp)
+
+	mesh_data.positions = positions
+	mesh_data.textures0 = textures0
+	mesh_data.faces = faces
+	for f in faces:
+		if f != null:
+			f.manual_uv = true
+	mesh_data.shared_vertices = _build_shared_vertices(positions)
+	mesh_data.shared_textures = []
+	mesh_data.invalidate_caches()
+	return mesh_data
+
+# ==============================================================================
+# 3. Arch Generator
+# ==============================================================================
+
+## Creates an extruded cylindrical arch segment with inner and outer profiles.
+static func create_arch(
+	radius: float = 1.0,
+	depth: float = 0.5,
+	thickness: float = 0.25,
+	sides: int = 8,
+	arch_degrees: float = 180.0,
+	end_caps: bool = true,
+	smooth: bool = true
+) -> PBMeshData:
+	var mesh_data := PBMeshData.new()
+	var num_sides: int = maxi(3, sides)
+	var degs: float = clampf(arch_degrees, 1.0, 360.0)
+	# The tube can never be thicker than the arch's radius (the inner
+	# profile would fold inside out past the outer one).
+	var inner_rad: float = maxf(0.001, radius - minf(thickness, radius * 0.999))
+	var hd: float = depth * 0.5
+	var is_full_circle: bool = absf(degs - 360.0) < 0.001
+	var make_caps: bool = end_caps and not is_full_circle
+
+	# Outer and inner 2D profile points along the arc
+	var outer_pts: Array[Vector2] = []
+	var inner_pts: Array[Vector2] = []
+	for k in range(num_sides + 1):
+		var angle_rad: float = deg_to_rad(degs * float(k) / float(num_sides))
+		var cos_a: float = cos(angle_rad)
+		var sin_a: float = sin(angle_rad)
+		outer_pts.append(Vector2(radius * cos_a, radius * sin_a))
+		inner_pts.append(Vector2(inner_rad * cos_a, inner_rad * sin_a))
+
+	var positions := PackedVector3Array()
+	var textures0 := PackedVector2Array()
+	var faces: Array[PBFace] = []
+
+	var wall_smooth_grp: int = 1 if smooth else 0
+
+	for k in range(num_sides):
+		var k1: int = k
+		var k2: int = k + 1
+
+		var o_f1 := Vector3(outer_pts[k1].x, outer_pts[k1].y,  hd)
+		var o_f2 := Vector3(outer_pts[k2].x, outer_pts[k2].y,  hd)
+		var o_b1 := Vector3(outer_pts[k1].x, outer_pts[k1].y, -hd)
+		var o_b2 := Vector3(outer_pts[k2].x, outer_pts[k2].y, -hd)
+
+		var i_f1 := Vector3(inner_pts[k1].x, inner_pts[k1].y,  hd)
+		var i_f2 := Vector3(inner_pts[k2].x, inner_pts[k2].y,  hd)
+		var i_b1 := Vector3(inner_pts[k1].x, inner_pts[k1].y, -hd)
+		var i_b2 := Vector3(inner_pts[k2].x, inner_pts[k2].y, -hd)
+
+		# 1. Outer wall quad (facing outwards)
+		_add_quad(positions, textures0, faces, o_f1, o_b1, o_b2, o_f2, Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1), wall_smooth_grp)
+
+		# 2. Inner wall quad (facing inwards)
+		_add_quad(positions, textures0, faces, i_f1, i_f2, i_b2, i_b1, Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1), wall_smooth_grp)
+
+		# 3. Front face quad (facing +Z)
+		_add_quad(positions, textures0, faces, i_f1, o_f1, o_f2, i_f2, Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1), 0)
+
+		# 4. Back face quad (facing -Z)
+		_add_quad(positions, textures0, faces, i_b1, i_b2, o_b2, o_b1, Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1), 0)
+
+	# End caps if not full 360 circle
+	if make_caps:
+		# Start cap (at k = 0, facing along -tangent)
+		var i_f0 := Vector3(inner_pts[0].x, inner_pts[0].y,  hd)
+		var i_b0 := Vector3(inner_pts[0].x, inner_pts[0].y, -hd)
+		var o_b0 := Vector3(outer_pts[0].x, outer_pts[0].y, -hd)
+		var o_f0 := Vector3(outer_pts[0].x, outer_pts[0].y,  hd)
+		_add_quad(positions, textures0, faces, i_f0, i_b0, o_b0, o_f0, Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1), 0)
+
+		# End cap (at k = num_sides, facing along +tangent)
+		var i_fk := Vector3(inner_pts[num_sides].x, inner_pts[num_sides].y,  hd)
+		var o_fk := Vector3(outer_pts[num_sides].x, outer_pts[num_sides].y,  hd)
+		var o_bk := Vector3(outer_pts[num_sides].x, outer_pts[num_sides].y, -hd)
+		var i_bk := Vector3(inner_pts[num_sides].x, inner_pts[num_sides].y, -hd)
+		_add_quad(positions, textures0, faces, i_fk, o_fk, o_bk, i_bk, Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1), 0)
+
+	mesh_data.positions = positions
+	mesh_data.textures0 = textures0
+	mesh_data.faces = faces
+	mesh_data.shared_vertices = _build_shared_vertices(positions)
+	mesh_data.shared_textures = []
+	mesh_data.invalidate_caches()
+	return mesh_data
+
+# ==============================================================================
+# 4. Stairs Generator (Straight Only)
+# ==============================================================================
+
+## Creates a straight staircase centered at the origin.
+## size: total bounding box extents, steps: number of steps, sides: whether to build side walls and back.
+static func create_stairs(
+	size: Vector3 = Vector3(1, 1, 2),
+	steps: int = 6,
+	sides: bool = true
+) -> PBMeshData:
+	var mesh_data := PBMeshData.new()
+	var num_steps: int = maxi(1, steps)
+
+	var hw: float = size.x * 0.5
+	var hh: float = size.y * 0.5
+	var hd: float = size.z * 0.5
+
+	var step_h: float = size.y / float(num_steps)
+	var step_d: float = size.z / float(num_steps)
+
+	var positions := PackedVector3Array()
+	var textures0 := PackedVector2Array()
+	var faces: Array[PBFace] = []
+
+	for s in range(num_steps):
+		var y0: float = -hh + float(s) * step_h
+		var y1: float = -hh + float(s + 1) * step_h
+		var z0: float = -hd + float(s) * step_d
+		var z1: float = -hd + float(s + 1) * step_d
+
+		# 1. Riser: vertical front face (normal -Z)
+		var r0 := Vector3(-hw, y0, z0)
+		var r1 := Vector3(-hw, y1, z0)
+		var r2 := Vector3( hw, y1, z0)
+		var r3 := Vector3( hw, y0, z0)
+		_add_quad(positions, textures0, faces, r0, r1, r2, r3)
+
+		# 2. Tread: horizontal top face (normal +Y)
+		var t0 := Vector3(-hw, y1, z0)
+		var t1 := Vector3(-hw, y1, z1)
+		var t2 := Vector3( hw, y1, z1)
+		var t3 := Vector3( hw, y1, z0)
+		_add_quad(positions, textures0, faces, t0, t1, t2, t3)
+
+	if sides:
+		# Build the 2D profile polygon in (Z, Y): bottom-front -> bottom-back -> top-back -> stepped descent
+		var side_poly := PackedVector2Array()
+		side_poly.append(Vector2(-hd, -hh))
+		side_poly.append(Vector2(hd, -hh))
+		side_poly.append(Vector2(hd, hh))
+		for s in range(num_steps - 1, -1, -1):
+			var y0: float = -hh + float(s) * step_h
+			var y1: float = -hh + float(s + 1) * step_h
+			var z0: float = -hd + float(s) * step_d
+			side_poly.append(Vector2(z0, y1))
+			if s > 0:
+				side_poly.append(Vector2(z0, y0))
+
+		var corner_tris := _triangulate_2d(side_poly)
+
+		# Left side wall: one merged n-gon face (normal -X)
+		var base_l: int = positions.size()
+		for p in side_poly:
+			positions.append(Vector3(-hw, p.y, p.x))
+			textures0.append(Vector2(p.x, p.y))
+		var l_indexes := PackedInt32Array()
+		for t in corner_tris:
+			l_indexes.append_array(PackedInt32Array([base_l + int(t[0]), base_l + int(t[1]), base_l + int(t[2])]))
+		faces.append(PBFace.new(l_indexes))
+
+		# Right side wall: one merged n-gon face (normal +X, reversed triangle winding)
+		var base_r: int = positions.size()
+		for p in side_poly:
+			positions.append(Vector3(hw, p.y, p.x))
+			textures0.append(Vector2(p.x, p.y))
+		var r_indexes := PackedInt32Array()
+		for t in corner_tris:
+			r_indexes.append_array(PackedInt32Array([base_r + int(t[0]), base_r + int(t[2]), base_r + int(t[1])]))
+		faces.append(PBFace.new(r_indexes))
+
+		# Back wall quad (normal +Z)
+		var b0 := Vector3(-hw, -hh, hd)
+		var b1 := Vector3( hw, -hh, hd)
+		var b2 := Vector3( hw,  hh, hd)
+		var b3 := Vector3(-hw,  hh, hd)
+		_add_quad(positions, textures0, faces, b0, b1, b2, b3)
+
+	mesh_data.positions = positions
+	mesh_data.textures0 = textures0
+	mesh_data.faces = faces
+	mesh_data.shared_vertices = _build_shared_vertices(positions)
+	mesh_data.shared_textures = []
+	mesh_data.invalidate_caches()
+	return mesh_data
+## Creates a curved/spiral staircase centered at the origin.
+## stair_width: radial width of the stair tread.
+## height: total height of the staircase.
+## inner_radius: inner hole radius (0 = pie/wedge steps meeting at center).
+## circumference: angular sweep in degrees (default 180°, positive curves right, negative left).
+## steps: number of steps.
+## sides: whether to build outer/inner side walls and back.
+## Derives the curved-stair sweep and radii so the arc's bounding box EXACTLY
+## fills a dragged rect (edge-to-edge): the SHORT rect axis becomes the radial
+## depth (r_out pins to it) and the LONG axis is matched by bisecting the
+## sweep. Bbox contract of create_curved_stairs for sweep a in (0, 90]:
+##   span_x = r_out - r_in*cos(a), span_z = r_out*sin(a), r_in = ratio*r_out.
+## (For a > 90 the inner wall's far side grows the box, so the exact solution
+## for a long-or-square rect always lives in (0, 90].)
+## Returns {"sweep_deg", "inner_radius", "stair_width"}.
+static func curved_stairs_sizing(rect_w: float, rect_d: float, inner_ratio: float = 0.25) -> Dictionary:
+	# The chord pins to rect_w and the radial depth to rect_d; a deeper-than-
+	# wide rect solves with swapped roles and sets rotate_90 — the generator's
+	# swap_axes exchanges the axes so the final bbox matches the rect.
+	var swap: bool = rect_d > rect_w
+	var long_side := maxf(0.1, maxf(rect_w, rect_d))
+	var short_side := maxf(0.1, minf(rect_w, rect_d))
+	var ratio: float = long_side / short_side
+	var k := inner_ratio
+	var lo := 0.5
+	var hi := 90.0
+	for i in range(48):
+		var mid := (lo + hi) * 0.5
+		var a := deg_to_rad(mid)
+		var span_x := (short_side / sin(a)) * (1.0 - k * cos(a))
+		if span_x > long_side:
+			lo = mid
+		else:
+			hi = mid
+	var sweep_deg := (lo + hi) * 0.5
+	var r_out: float = short_side / sin(deg_to_rad(sweep_deg))
+	return {
+		"sweep_deg": sweep_deg,
+		"inner_radius": r_out * k,
+		"stair_width": r_out * (1.0 - k),
+		"rotate_90": swap,
+	}
+
+static func create_curved_stairs(
+	stair_width: float = 1.5,
+	height: float = 2.0,
+	inner_radius: float = 0.5,
+	circumference: float = 180.0,
+	steps: int = 8,
+	sides: bool = true,
+	swap_axes: bool = false
+) -> PBMeshData:
+	var mesh_data := PBMeshData.new()
+	var num_steps: int = maxi(1, steps)
+	var hh: float = height * 0.5
+	var r_in: float = maxf(0.0, inner_radius)
+	var r_out: float = r_in + maxf(0.05, stair_width)
+	var is_pie: bool = r_in <= 0.0001
+
+	var sweep_deg: float = circumference
+	var is_flipped: bool = sweep_deg < 0.0
+	var cir: float = deg_to_rad(absf(sweep_deg))
+	if cir <= 0.0001:
+		cir = deg_to_rad(180.0)
+
+	var positions := PackedVector3Array()
+	var textures0 := PackedVector2Array()
+	var faces: Array[PBFace] = []
+
+	var step_h: float = height / float(num_steps)
+
+	for s in range(num_steps):
+		var inc0: float = (float(s) / float(num_steps)) * cir
+		var inc1: float = (float(s + 1) / float(num_steps)) * cir
+
+		var y0: float = -hh + float(s) * step_h
+		var y1: float = -hh + float(s + 1) * step_h
+
+		var v0 := Vector3(-cos(inc0), 0.0, sin(inc0))
+		var v1 := Vector3(-cos(inc1), 0.0, sin(inc1))
+
+		# 1. Riser: vertical face at angle inc0, normal facing against climb (-Z at start)
+		var r0 := Vector3(v0.x * r_out, y0, v0.z * r_out)
+		var r1 := Vector3(v0.x * r_out, y1, v0.z * r_out)
+		var r2 := Vector3(v0.x * r_in,  y1, v0.z * r_in)
+		var r3 := Vector3(v0.x * r_in,  y0, v0.z * r_in)
+		_add_quad(positions, textures0, faces, r0, r1, r2, r3)
+
+		# 2. Tread: horizontal step top at y1, normal +Y
+		if is_pie:
+			var t_center := Vector3(0.0, y1, 0.0)
+			var t_out0 := Vector3(v0.x * r_out, y1, v0.z * r_out)
+			var t_out1 := Vector3(v1.x * r_out, y1, v1.z * r_out)
+			_add_tri(positions, textures0, faces, t_center, t_out0, t_out1)
+		else:
+			var t0 := Vector3(v0.x * r_in,  y1, v0.z * r_in)
+			var t1 := Vector3(v0.x * r_out, y1, v0.z * r_out)
+			var t2 := Vector3(v1.x * r_out, y1, v1.z * r_out)
+			var t3 := Vector3(v1.x * r_in,  y1, v1.z * r_in)
+			_add_quad(positions, textures0, faces, t0, t1, t2, t3)
+
+		if sides:
+			# Outer wall under step s (facing radially outward)
+			var ow_b0 := Vector3(v0.x * r_out, -hh, v0.z * r_out)
+			var ow_b1 := Vector3(v1.x * r_out, -hh, v1.z * r_out)
+			var ow_t1 := Vector3(v1.x * r_out,  y1, v1.z * r_out)
+			if s == 0:
+				var ow_t0 := Vector3(v0.x * r_out, y1, v0.z * r_out)
+				_add_quad(positions, textures0, faces, ow_b0, ow_b1, ow_t1, ow_t0)
+			else:
+				var ow_t0 := Vector3(v0.x * r_out, y0, v0.z * r_out)
+				_add_quad(positions, textures0, faces, ow_b0, ow_b1, ow_t1, ow_t0)
+				# Connecting vertical triangle under the tread
+				var tri0 := Vector3(v0.x * r_out, y0, v0.z * r_out)
+				var tri1 := Vector3(v1.x * r_out, y1, v1.z * r_out)
+				var tri2 := Vector3(v0.x * r_out, y1, v0.z * r_out)
+				_add_tri(positions, textures0, faces, tri0, tri1, tri2)
+
+			# Inner wall under step s (facing radially inward toward center)
+			if not is_pie:
+				var iw_b0 := Vector3(v0.x * r_in, -hh, v0.z * r_in)
+				var iw_b1 := Vector3(v1.x * r_in, -hh, v1.z * r_in)
+				var iw_t1 := Vector3(v1.x * r_in,  y1, v1.z * r_in)
+				if s == 0:
+					var iw_t0 := Vector3(v0.x * r_in, y1, v0.z * r_in)
+					_add_quad(positions, textures0, faces, iw_b1, iw_b0, iw_t0, iw_t1)
+				else:
+					var iw_t0 := Vector3(v0.x * r_in, y0, v0.z * r_in)
+					_add_quad(positions, textures0, faces, iw_b1, iw_b0, iw_t0, iw_t1)
+					# Connecting vertical triangle under the tread
+					var itri0 := Vector3(v0.x * r_in, y0, v0.z * r_in)
+					var itri1 := Vector3(v0.x * r_in, y1, v0.z * r_in)
+					var itri2 := Vector3(v1.x * r_in, y1, v1.z * r_in)
+					_add_tri(positions, textures0, faces, itri0, itri1, itri2)
+	if sides:
+		# Back wall at final angle cir, from -hh to +hh
+		var v_end := Vector3(-cos(cir), 0.0, sin(cir))
+		var b0 := Vector3(v_end.x * r_out, -hh, v_end.z * r_out)
+		var b1 := Vector3(v_end.x * r_in,  -hh, v_end.z * r_in)
+		var b2 := Vector3(v_end.x * r_in,   hh, v_end.z * r_in)
+		var b3 := Vector3(v_end.x * r_out,  hh, v_end.z * r_out)
+		_add_quad(positions, textures0, faces, b0, b1, b2, b3)
+
+
+	# Negative curvature: mirror along X. swap_axes (deep rects): exchange the
+	# chord/radial axes so the bbox matches the dragged orientation. Each is a
+	# reflection — the winding reverses when EXACTLY ONE of them applies.
+	if is_flipped:
+		for i in range(positions.size()):
+			positions[i].x = -positions[i].x
+	if swap_axes:
+		for i in range(positions.size()):
+			var sp := positions[i]
+			positions[i] = Vector3(sp.z, sp.y, sp.x)
+	if is_flipped != swap_axes:
+		for face in faces:
+			face.reverse()
+
+
+	# Center around origin in X and Z
+	if positions.size() > 0:
+		var min_x: float = positions[0].x
+		var max_x: float = positions[0].x
+		var min_z: float = positions[0].z
+		var max_z: float = positions[0].z
+		for p in positions:
+			min_x = minf(min_x, p.x)
+			max_x = maxf(max_x, p.x)
+			min_z = minf(min_z, p.z)
+			max_z = maxf(max_z, p.z)
+		var offset := Vector3((min_x + max_x) * 0.5, 0.0, (min_z + max_z) * 0.5)
+		for i in range(positions.size()):
+			positions[i] -= offset
+	mesh_data.positions = positions
+	mesh_data.textures0 = textures0
+	mesh_data.faces = faces
+	mesh_data.shared_vertices = _build_shared_vertices(positions)
+	mesh_data.shared_textures = []
+	mesh_data.invalidate_caches()
+	return mesh_data
+
+
+## Builds ONLY the physics ramp wedge for create_curved_stairs: a closed solid
+## under an inclined annular-sector top (incline + radial walls + floor + back
+## wall). This is the RAMP collider — a smooth walkable stand-in for the steps.
+## PBMesh._update_collider rebuilds it fresh from shape_params; it is never
+## stored on the mesh data (a stored copy goes stale on the first edit).
+##
+## WINDING (load-bearing): triangles are emitted CW seen from OUTSIDE — Godot's
+## front-face convention — because Godot Physics collides on the FRONT side of
+## concave triangles only (ConcavePolygonShape3D.backface_collision stays
+## false). The visual mesh is CCW-from-outside in data and is reversed inside
+## to_array_mesh(); this array bypasses that path, so it must be pre-reversed.
+## An inward-wound wedge is passable from outside and solid from inside —
+## characters walk in through a wall and get trapped (the 0.9.28 bug).
+## Regression lock: test_pb_collider_audit.gd (signed volume, per-face exterior
+## ray battery, character containment + climb).
+static func create_curved_stairs_ramp(
+	stair_width: float = 1.5,
+	height: float = 2.0,
+	inner_radius: float = 0.5,
+	circumference: float = 180.0,
+	steps: int = 8,
+	sides: bool = true
+) -> PackedVector3Array:
+	var num_steps: int = maxi(1, steps)
+	var hh: float = height * 0.5
+	var r_in: float = maxf(0.0, inner_radius)
+	var r_out: float = r_in + maxf(0.05, stair_width)
+
+	# PIE STAIRS (inner_radius == 0): the visual mesh fans the treads to the
+	# axis, but fanning the collider there leaves one unsealable vertical slit
+	# per spoke (adjacent fan triangles meet the axis at different heights, and
+	# a one-sided concave face cannot close the crack from both sides). The
+	# ramp instead keeps a tiny 5cm-radius pole hole — walkable-behavior
+	# identical, closed shell, uniform audits.
+	if r_in < 0.05:
+		r_in = 0.05
+
+	var is_flipped: bool = circumference < 0.0
+	var cir: float = deg_to_rad(absf(circumference))
+	if cir <= 0.0001:
+		cir = deg_to_rad(180.0)
+
+	var ramp := PackedVector3Array()
+
+	var add_tri := func(a: Vector3, b: Vector3, c: Vector3) -> void:
+		ramp.append(a)
+		ramp.append(b)
+		ramp.append(c)
+
+	# Tessellate the wedge along the sweep FINER than the step grid. The
+	# incline is a twisted helical strip: with one quad per step its two
+	# triangle halves' normals differ by ~25 degrees (measured: 27 deg vs 53
+	# deg local slope on the default stairs), and the second half pops ~0.18 m
+	# above the first's plane. To a character controller the steep facet is a
+	# WALL (floor_max_angle 45-50 deg), so a capsule climbing the ramp locks
+	# dead against the first crease — the "stuck on touch" report. Crease
+	# angle falls with the SQUARE of the slice arc; 4 slices per step keeps
+	# every facet within ~1-2 degrees of the true slope.
+	const SLICES_PER_STEP := 4
+	var total: int = num_steps * SLICES_PER_STEP
+
+	for g in range(total):
+		var f0: float = float(g) / float(total)
+		var f1: float = float(g + 1) / float(total)
+
+		var inc0: float = f0 * cir
+		var inc1: float = f1 * cir
+
+		var ramp_y0: float = -hh + f0 * height
+		var ramp_y1: float = -hh + f1 * height
+
+		var v0 := Vector3(-cos(inc0), 0.0, sin(inc0))
+		var v1 := Vector3(-cos(inc1), 0.0, sin(inc1))
+
+		# Top incline: front must point up-and-downhill (out of the wedge).
+		var rp0 := Vector3(v0.x * r_in,  ramp_y0, v0.z * r_in)
+		var rp1 := Vector3(v0.x * r_out, ramp_y0, v0.z * r_out)
+		var rp2 := Vector3(v1.x * r_out, ramp_y1, v1.z * r_out)
+		var rp3 := Vector3(v1.x * r_in,  ramp_y1, v1.z * r_in)
+		add_tri.call(rp0, rp2, rp1)
+		add_tri.call(rp0, rp3, rp2)
+
+		if sides:
+			# Outer wall: front points radially outward. At the first segment
+			# the wedge pinches to a line (ramp_y0 == -hh), so the quad
+			# collapses to one triangle — emit only the non-degenerate half.
+			var row_b0 := Vector3(v0.x * r_out, -hh, v0.z * r_out)
+			var row_b1 := Vector3(v1.x * r_out, -hh, v1.z * r_out)
+			var row_t1 := Vector3(v1.x * r_out, ramp_y1, v1.z * r_out)
+			var row_t0 := Vector3(v0.x * r_out, ramp_y0, v0.z * r_out)
+			add_tri.call(row_b0, row_t1, row_b1)
+			if ramp_y0 > -hh + 0.0001:
+				add_tri.call(row_b0, row_t0, row_t1)
+
+			# Inner wall: front points toward the center hole. Same first-
+			# segment pinch: (riw_b1, riw_t0, riw_b0) degenerates there, so
+			# the OTHER half is the one that always carries the wall.
+			var riw_b0 := Vector3(v0.x * r_in, -hh, v0.z * r_in)
+			var riw_b1 := Vector3(v1.x * r_in, -hh, v1.z * r_in)
+			var riw_t1 := Vector3(v1.x * r_in, ramp_y1, v1.z * r_in)
+			var riw_t0 := Vector3(v0.x * r_in, ramp_y0, v0.z * r_in)
+			add_tri.call(riw_b1, riw_t1, riw_t0)
+			if ramp_y0 > -hh + 0.0001:
+				add_tri.call(riw_b1, riw_t0, riw_b0)
+
+			# Floor: front points down (-Y).
+			var rf_out0 := Vector3(v0.x * r_out, -hh, v0.z * r_out)
+			var rf_out1 := Vector3(v1.x * r_out, -hh, v1.z * r_out)
+			var rf_in0 := Vector3(v0.x * r_in, -hh, v0.z * r_in)
+			var rf_in1 := Vector3(v1.x * r_in, -hh, v1.z * r_in)
+			add_tri.call(rf_in0, rf_out1, rf_in1)
+			add_tri.call(rf_in0, rf_out0, rf_out1)
+
+	if sides:
+		# Back wall at the final angle: front points away from the wedge.
+		var v_end := Vector3(-cos(cir), 0.0, sin(cir))
+		var rb0 := Vector3(v_end.x * r_out, -hh, v_end.z * r_out)
+		var rb1 := Vector3(v_end.x * r_in,  -hh, v_end.z * r_in)
+		var rb2 := Vector3(v_end.x * r_in,   hh, v_end.z * r_in)
+		var rb3 := Vector3(v_end.x * r_out,  hh, v_end.z * r_out)
+		add_tri.call(rb0, rb2, rb1)
+		add_tri.call(rb0, rb3, rb2)
+
+	# Negative curvature: mirror along X (flips handedness) and re-reverse
+	# winding so fronts stay outward — mirrors the visual-mesh flip above.
+	if is_flipped:
+		for i in range(ramp.size()):
+			ramp[i].x = -ramp[i].x
+		for i in range(0, ramp.size(), 3):
+			var tmp := ramp[i + 1]
+			ramp[i + 1] = ramp[i + 2]
+			ramp[i + 2] = tmp
+
+	# Center the wedge in XZ exactly like the mesh (same angle/radius sample
+	# set, so the extremes coincide with the visual mesh's own centering).
+	if ramp.size() > 0:
+		var min_x: float = ramp[0].x
+		var max_x: float = ramp[0].x
+		var min_z: float = ramp[0].z
+		var max_z: float = ramp[0].z
+		for p in ramp:
+			min_x = minf(min_x, p.x)
+			max_x = maxf(max_x, p.x)
+			min_z = minf(min_z, p.z)
+			max_z = maxf(max_z, p.z)
+		var offset := Vector3((min_x + max_x) * 0.5, 0.0, (min_z + max_z) * 0.5)
+		for i in range(ramp.size()):
+			ramp[i] -= offset
+	return ramp
+# ==============================================================================
+# 5. Door Generator
+# ==============================================================================
+
+## Creates a doorway frame centered at the origin with an opening.
+## width / height / depth: overall bounding dimensions.
+## opening_height: opening height measured from the bottom edge.
+## leg_width: width of each side leg (the frame).
+## arched: top the opening with a semicircular arch (one arc segment per
+##         arch_segments) instead of a flat lintel. The arch always spans
+##         the full opening width; when the opening is taller than half its
+##         width it is a true semicircle, otherwise it flattens into an
+##         elliptical segment springing from the opening's bottom corners.
+static func create_door(
+	width: float = 3.0,
+	height: float = 2.5,
+	opening_height: float = 2.0,
+	leg_width: float = 0.5,
+	depth: float = 1.0,
+	arched: bool = true,
+	arch_segments: int = 6
+) -> PBMeshData:
+	var mesh_data := PBMeshData.new()
+
+	var hw: float = width * 0.5
+	var hh: float = height * 0.5
+	var hd: float = depth * 0.5
+
+	# Frame columns (leg_width clamped so the opening can never close).
+	var leg: float = clampf(leg_width, 0.01, width * 0.5 - 0.01)
+	var x0: float = -hw
+	var x1: float = -hw + leg
+	var x2: float = hw - leg
+	var x3: float = hw
+	var xc: float = 0.5 * (x1 + x2)
+
+	# Opening top, measured from the bottom edge (always below the frame top).
+	var y0: float = -hh
+	var y2: float = hh
+	var yo: float = y0 + clampf(opening_height, 0.05, height - 0.05)
+
+	# Arch profile: an ellipse arc spanning the opening, springing at
+	# spring_y and peaking at the opening top. A true semicircle when the
+	# opening is at least half as tall as it is wide.
+	var spring_y: float = yo
+	var arc_segs: int = 0
+	var arc: PackedVector2Array = PackedVector2Array()
+	if arched:
+		# Cap rise to at most half the opening height so the door always has
+		# vertical jambs and never degenerates into a floor-springing oval arch.
+		var rise: float = minf(0.5 * (x2 - x1), (yo - y0) * 0.5)
+		if rise >= 0.0001:
+			spring_y = yo - rise
+			if absf(spring_y - y0) < 0.0001:
+				spring_y = y0  # exact floor springing
+			arc_segs = maxi(1, arch_segments)
+			for k in range(arc_segs + 1):
+				var t: float = PI * (1.0 - float(k) / float(arc_segs))
+				arc.append(Vector2(xc + (xc - x1) * cos(t), spring_y + rise * sin(t)))
+			arc[0] = Vector2(x1, spring_y)
+			arc[arc_segs] = Vector2(x2, spring_y)
+			# Snap apex points that touch the opening top onto it exactly — the
+			# spandrel corners and the header strip boundaries must be THE SAME
+			# point or the shell carries a float-fuzz T-junction.
+			for k in range(arc_segs + 1):
+				if absf(arc[k].y - yo) < 0.0001:
+					arc[k].y = yo
+
+	## The shell is welded ONE FACE PER SIDE, and the sides are SIMPLE
+	## POLYGONS: the opening is a notch touching the bottom edge, so the
+	## front/back are one concave n-gon each (ear-clipped — the notch adds
+	## no hole and no interior triangulation edges reach the perimeter).
+	## The perimeter carries no collinear splits: the outer walls and the
+	## top are plain full-size quads that pair edge-for-edge with it, and
+	## extruding a side produces exactly one wall per true edge.
+	var has_jambs: bool = spring_y > y0 + 0.0001
+
+	var positions := PackedVector3Array()
+	var textures0 := PackedVector2Array()
+	var faces: Array[PBFace] = []
+
+	# ── Front/back sides (z = ±hd): ONE ear-clipped n-gon each ──────────────
+	# CCW corner walk: bottom rim into the notch, over the arch (or under
+	# the lintel), back along the bottom rim, up the right side and across.
+	# (Corner dedup matters: a floor-springing arch's arc endpoints ARE its
+	# rim corners.)
+	var front2 := PackedVector2Array()
+	var push := func(p: Vector2) -> void:
+		if front2.is_empty() or front2[front2.size() - 1].distance_to(p) > 0.0001:
+			front2.append(p)
+	push.call(Vector2(x0, y0))
+	push.call(Vector2(x1, y0))
+	if arc_segs > 0:
+		for k in range(arc_segs + 1):
+			push.call(arc[k])
+	else:
+		push.call(Vector2(x1, yo))
+		push.call(Vector2(x2, yo))
+	push.call(Vector2(x2, y0))
+	push.call(Vector2(x3, y0))
+	push.call(Vector2(x3, y2))
+	push.call(Vector2(x0, y2))
+	# The walk closes: drop a final corner equal to the first one.
+	if front2.size() > 3 and front2[0].distance_to(front2[front2.size() - 1]) < 0.0001:
+		front2.remove_at(front2.size() - 1)
+
+	# The ear clip needs the CCW (front) winding; the back face re-uses the
+	# same triangulation with each triangle's winding flipped (CCW-from-
+	# outside flips with the normal).
+	var corner_tris: Array = _triangulate_2d(front2)
+	for z in [hd, -hd]:
+		var base: int = positions.size()
+		for p in front2:
+			positions.append(Vector3(p.x, p.y, z))
+			textures0.append(p)
+		var indexes := PackedInt32Array()
+		for t in corner_tris:
+			if z == hd:
+				indexes.append_array(PackedInt32Array([base + int(t[0]), base + int(t[1]), base + int(t[2])]))
+			else:
+				indexes.append_array(PackedInt32Array([base + int(t[0]), base + int(t[2]), base + int(t[1])]))
+		faces.append(PBFace.new(indexes))
+
+	# ── Opening reveals ──────────────────────────────────────────────────────
+	# A flat-topped opening (or a semicircle springing above the floor) has
+	# jamb walls; an elliptical arch springing at the floor has none.
+	if has_jambs:
+		# Left jamb (normal +X)
+		_add_quad(positions, textures0, faces,
+			Vector3(x1, y0, hd), Vector3(x1, y0, -hd), Vector3(x1, spring_y, -hd), Vector3(x1, spring_y, hd))
+		# Right jamb (normal -X)
+		_add_quad(positions, textures0, faces,
+			Vector3(x2, y0, hd), Vector3(x2, spring_y, hd), Vector3(x2, spring_y, -hd), Vector3(x2, y0, -hd))
+	if arc_segs == 0:
+		# Flat lintel underside (normal -Y)
+		_add_quad(positions, textures0, faces,
+			Vector3(x1, yo, hd), Vector3(x1, yo, -hd), Vector3(x2, yo, -hd), Vector3(x2, yo, hd))
+	else:
+		# Arch tunnel: one quad per segment, normals pointing into the
+		# opening (toward the arc center).
+		for k in range(arc_segs):
+			_add_quad(positions, textures0, faces,
+				Vector3(arc[k].x, arc[k].y, hd), Vector3(arc[k].x, arc[k].y, -hd),
+				Vector3(arc[k + 1].x, arc[k + 1].y, -hd), Vector3(arc[k + 1].x, arc[k + 1].y, hd))
+
+	# ── Outer shell (the frame's outside faces) ─────────────────────────────
+	# Plain full-size quads: the front/back polygons' side and top edges are
+	# single perimeter edges now, so the walls and top pair edge-for-edge
+	# with no split points at all.
+	# Left outer wall (normal -X)
+	_add_quad(positions, textures0, faces,
+		Vector3(x0, y0, -hd), Vector3(x0, y0, hd), Vector3(x0, y2, hd), Vector3(x0, y2, -hd))
+	# Right outer wall (normal +X)
+	_add_quad(positions, textures0, faces,
+		Vector3(x3, y0, -hd), Vector3(x3, y2, -hd), Vector3(x3, y2, hd), Vector3(x3, y0, hd))
+	# Top wall (normal +Y)
+	_add_quad(positions, textures0, faces,
+		Vector3(x0, y2, -hd), Vector3(x0, y2, hd), Vector3(x3, y2, hd), Vector3(x3, y2, -hd))
+
+	mesh_data.positions = positions
+	mesh_data.textures0 = textures0
+	mesh_data.faces = faces
+	mesh_data.shared_vertices = _build_shared_vertices(positions)
+	mesh_data.shared_textures = []
+	mesh_data.invalidate_caches()
+	return mesh_data
+
+## Creates a 3D extruded prism from an arbitrary n-gon polygon.
+## Both the top and bottom caps are emitted as single merged n-gon PBFace instances,
+## and side walls are emitted as individual quad PBFace instances.
+## polygon: base vertices in 3D (at least 3 vertices)
+## height: extrusion distance along normal (positive or negative)
+## normal: extrusion direction (if ZERO, computed from polygon vertices)
+static func create_ngon_prism(
+	polygon: PackedVector3Array,
+	height: float = 1.0,
+	normal: Vector3 = Vector3.ZERO
+) -> PBMeshData:
+	if polygon.size() < 3:
+		return null
+
+	var n := normal
+	if n.length_squared() < 0.0001:
+		n = PBMath.normal_from_positions(polygon, PackedInt32Array(range(polygon.size())))
+		if n.length_squared() < 0.0001:
+			n = Vector3.UP
+	n = n.normalized()
+
+	var up := Vector3.UP if absf(n.dot(Vector3.UP)) < 0.9 else Vector3.RIGHT
+	var u_axis := n.cross(up).normalized()
+	var v_axis := n.cross(u_axis).normalized()
+	var origin := polygon[0]
+
+	var pts2d := PackedVector2Array()
+	for p in polygon:
+		pts2d.append(Vector2((p - origin).dot(u_axis), (p - origin).dot(v_axis)))
+
+	var area := 0.0
+	var num_pts := pts2d.size()
+	for i in range(num_pts):
+		var j := (i + 1) % num_pts
+		area += pts2d[i].x * pts2d[j].y - pts2d[j].x * pts2d[i].y
+
+	var poly_3d := polygon.duplicate()
+	if area < 0.0:
+		pts2d.reverse()
+		var poly_rev := PackedVector3Array()
+		for i in range(poly_3d.size() - 1, -1, -1):
+			poly_rev.append(poly_3d[i])
+		poly_3d = poly_rev
+
+	var tris := _triangulate_2d(pts2d)
+	if tris.is_empty():
+		return null
+
+	var eff_height := height if absf(height) > 0.0001 else 0.001
+	var extrusion_offset := n * eff_height
+
+	var positions := PackedVector3Array()
+	var textures0 := PackedVector2Array()
+	var faces: Array[PBFace] = []
+
+	# Bottom Cap (at base) - normal points -N
+	var base_bottom := positions.size()
+	for p in poly_3d:
+		positions.append(p)
+		textures0.append(Vector2((p - origin).dot(u_axis), (p - origin).dot(v_axis)))
+	var bottom_idxs := PackedInt32Array()
+	for t in tris:
+		if eff_height >= 0.0:
+			bottom_idxs.append_array(PackedInt32Array([base_bottom + int(t[0]), base_bottom + int(t[2]), base_bottom + int(t[1])]))
+		else:
+			bottom_idxs.append_array(PackedInt32Array([base_bottom + int(t[0]), base_bottom + int(t[1]), base_bottom + int(t[2])]))
+	faces.append(PBFace.new(bottom_idxs))
+
+	# Top Cap (at base + extrusion_offset) - normal points +N
+	var base_top := positions.size()
+	for p in poly_3d:
+		positions.append(p + extrusion_offset)
+		textures0.append(Vector2((p - origin).dot(u_axis), (p - origin).dot(v_axis)))
+	var top_idxs := PackedInt32Array()
+	for t in tris:
+		if eff_height >= 0.0:
+			top_idxs.append_array(PackedInt32Array([base_top + int(t[0]), base_top + int(t[1]), base_top + int(t[2])]))
+		else:
+			top_idxs.append_array(PackedInt32Array([base_top + int(t[0]), base_top + int(t[2]), base_top + int(t[1])]))
+	faces.append(PBFace.new(top_idxs))
+
+	# Side Quads (connecting base to top for each perimeter edge)
+	var n_corners := poly_3d.size()
+	for i in range(n_corners):
+		var j := (i + 1) % n_corners
+		var b_i := poly_3d[i]
+		var b_j := poly_3d[j]
+		var t_i := poly_3d[i] + extrusion_offset
+		var t_j := poly_3d[j] + extrusion_offset
+		if eff_height >= 0.0:
+			_add_quad(positions, textures0, faces, b_i, b_j, t_j, t_i)
+		else:
+			_add_quad(positions, textures0, faces, b_i, t_i, t_j, b_j)
+
+	var mesh_data := PBMeshData.new()
+	mesh_data.positions = positions
+	mesh_data.textures0 = textures0
+	mesh_data.faces = faces
+	mesh_data.shared_vertices = _build_shared_vertices(positions)
+	if mesh_data.materials.is_empty():
+		var def_mat := PBMeshData.get_default_material()
+		if def_mat != null:
+			mesh_data.materials.append(def_mat)
+	mesh_data.shared_textures = []
+	mesh_data.calculate_normals()
+	mesh_data.invalidate_caches()
+	return mesh_data

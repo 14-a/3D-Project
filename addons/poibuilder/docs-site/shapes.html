@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shapes — PoiBuilder 0.9.167</title>
+<meta name="description" content="Press on any surface, drag a base, set the height. Fifteen primitives share that language. Trim is the exception — it commits on release.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Create</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Shapes</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html" class="current">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Shapes</h1><p class="lead">Press on any surface, drag a base, set the height. Fifteen primitives share that language. Trim is the exception — it commits on release.</p><h2 id="the-drag">The drag</h2>
+<ol class="steps"><li><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_new_shape.svg" width="13" height="13" alt="">New Shape<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="New Shape"><img src="assets/icons/icon_new_shape.svg" width="16" height="16" alt="New Shape" title="New Shape"><span class="tl-target-ring"></span></span><span class="tl-btn" title="N-Gon"><img src="assets/icons/icon_ngon.svg" width="16" height="16" alt="N-Gon" title="N-Gon"></span><span class="tl-btn" title="Edit Params"><img src="assets/icons/icon_edit_params.svg" width="16" height="16" alt="Edit Params" title="Edit Params"></span></span><span class="br-row">Row 2 · Shapes</span><span class="br-head"><img src="assets/icons/icon_new_shape.svg" width="26" height="26" alt=""><span class="br-title">New Shape</span></span><span class="br-desc">Arms primitive creation: drag the base on any surface, set the height, click to confirm.</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> → pick a type. Nothing is created yet.</li><li>Press on a <code>PBMesh</code> face or on the grid. Drag the base <strong>in that plane</strong>.</li><li>The first motion <strong>locks the drag axis</strong> on axis-aligned surfaces.</li><li>Release. Move to set height along the face normal (negative grows below).</li><li>Click to confirm. <kbd>Esc</kbd> before that click creates nothing.</li></ol>
+<p>Modifiers during the drag:</p>
+<ul><li><kbd>Ctrl</kbd> locks the drag direction and facing arrow.</li><li><kbd>Alt</kbd> shows the height plane.</li><li><kbd>G</kbd> toggles draw-on-grid (start on the plugin grid even over a mesh).</li></ul>
+<figure><img class="shot" src="create-wall.png" alt="The same drag on a wall: the box grows along the wall&#x27;s normal, not &quot;up in the world&quot;."><figcaption>The same drag on a wall: the box grows along the wall&#x27;s normal, not &quot;up in the world&quot;.</figcaption></figure>
+<figure><video class="shot" autoplay loop muted playsinline controls src="clips/create-floor.mp4"></video><figcaption>Floor, then wall, then a slope — one gesture, three planes.</figcaption></figure>
+<h2 id="params-modal">Params modal</h2>
+<p>Shapes with parameters the drag cannot express (step count, arch, sides…) open a live-preview modal after the click. <strong>Apply</strong> keeps them, <strong>Cancel</strong> restores the placement values. Either way the node is selected.</p>
+<p><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_edit_params.svg" width="13" height="13" alt="">Edit Params<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="New Shape"><img src="assets/icons/icon_new_shape.svg" width="16" height="16" alt="New Shape" title="New Shape"></span><span class="tl-btn" title="N-Gon"><img src="assets/icons/icon_ngon.svg" width="16" height="16" alt="N-Gon" title="N-Gon"></span><span class="tl-btn tl-target" title="Edit Params"><img src="assets/icons/icon_edit_params.svg" width="16" height="16" alt="Edit Params" title="Edit Params"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 2 · Shapes</span><span class="br-head"><img src="assets/icons/icon_edit_params.svg" width="26" height="26" alt=""><span class="br-title">Edit Params</span></span><span class="br-desc">Re-opens the creation parameters of the selected shape (until it is hand-edited).</span><span class="br-req">Needs: A pristine factory shape</span></span></span> reopens that modal. It is enabled only while the mesh still has a <code>shape_id</code> and has not been topology-edited. Extrude, knife, delete — anything that rewrites faces — marks it edited, and the factory parameters no longer describe the mesh.</p>
+<figure><img class="shot" src="create-params.png" alt="Live parameter modal — adjusting step count updates the preview mesh in real time."><figcaption>Live parameter modal — adjusting step count updates the preview mesh in real time.</figcaption></figure>
+<h2 id="the-fifteen">The fifteen</h2>
+<table><thead><tr><th>Shape</th><th>Use it for</th><th>Parameters (defaults)</th></tr></thead><tbody><tr><td>Cube</td><td>Blocking, floors, walls</td><td>width / height / depth</td></tr><tr><td>Stair</td><td>Straight runs between floors</td><td>size + steps (6), sides</td></tr><tr><td>Curved stair</td><td>Spiral / quarter-turn</td><td>width 1.5 m, height 2 m, inner radius 0.5 m, curvature 180°, steps 8, sides</td></tr><tr><td>Prism</td><td>Roofs, ramps</td><td>size</td></tr><tr><td>Cylinder</td><td>Columns</td><td>radius 0.5 m, height 1 m, sides 8</td></tr><tr><td>Plane</td><td>Floors, water sheets</td><td>width / depth 1 m</td></tr><tr><td>Door</td><td>Openings, arched gateways</td><td>3 × 2.5 × 1 m, opening 2 m, frame 0.5 m, arched, 6 arch segments</td></tr><tr><td>Pipe</td><td>Hollow columns, ducts</td><td>radius 0.5 m, height 1 m, thickness 0.125 m, sides 8</td></tr><tr><td>Cone</td><td>Caps, roofs</td><td>radius 0.5 m, height 1 m, sides 8</td></tr><tr><td>Sprite</td><td>Billboards, trees, signs</td><td>width / height 1 m, lit, cast shadow, auto-orient</td></tr><tr><td>Arch</td><td>Openings, bridges</td><td>radius 1 m, depth 0.5 m, thickness 0.3 m, sides 8, sweep 180°</td></tr><tr><td>Sphere</td><td>Props, lights&#x27; stand-ins</td><td>radius 0.5 m, subdivisions 2</td></tr><tr><td>Torus</td><td>Column bases, rails</td><td>outer 0.5 m, tube 0.15 m</td></tr><tr><td>N-gon</td><td>Custom prism from the N-Gon tool</td><td>radius 1 m, height 2 m, sides 6</td></tr><tr><td>Trim</td><td>Skirting, cornice, dado — <a href="trims.html">own page</a></td><td>profile, length, height 0.15 m, depth 0.05 m, arc segments, upside down, flip side</td></tr></tbody></table>
+<p>N-Gon is also a drawing tool: click points, <kbd>Enter</kbd> to set height.</p>
+<figure><img class="shot" src="shapes-lineup.png" alt="The primitive lineup, each generated from parameters."><figcaption>The primitive lineup, each generated from parameters.</figcaption></figure>
+<h2 id="use-cases">Use cases</h2>
+<h3 id="a-staircase-between-two-floors">A staircase between two floors</h3>
+<ol class="steps"><li>New Shape → Stair. Drag from the lower slab toward the upper, along the run.</li><li>Height = floor-to-floor. Apply.</li><li>Raise <strong>Steps</strong> until the treads meet the landing. Edit Params if you already confirmed.</li><li>Sides on = closed stringers. Off = open treads.</li></ol>
+<figure><img class="shot" src="create-stairs.png" alt="Live step count. The preview is the mesh you will keep."><figcaption>Live step count. The preview is the mesh you will keep.</figcaption></figure>
+<h3 id="an-arched-doorway">An arched doorway</h3>
+<p>Directional shapes like <strong>Door</strong> and <strong>Stair</strong> display a solid orange arrow on the base plane while you drag. For a doorway:</p>
+<ul><li><strong>What the arrow indicates:</strong> The arrow points in the doorway&#x27;s <strong>facing direction</strong> — through the opening, perpendicular to the door frame (the path a character walks through). The doorway opening spans the <strong>width</strong> (perpendicular to the arrow), while the wall thickness is the <strong>depth</strong> (parallel to the arrow).</li><li><strong>How the arrow is determined:</strong> Because doors are wider than they are thick, the arrow naturally chooses the <strong>shorter dimension</strong> of your dragged base rectangle (unlike stairs, which follow the longer dimension along the run). The arrow points <strong>away from the drag start</strong> along your mouse direction, snapped to the nearest cardinal world axis on cardinal surfaces to keep the doorway square with the world.</li><li><strong>Locking direction with <kbd>Ctrl</kbd>:</strong> While dragging the base footprint, holding <kbd>Ctrl</kbd> locks the current facing direction and arrow vector. Once locked, moving the mouse resizes the base rectangle without the arrow recomputing or flipping 90° if the aspect ratio shifts.</li></ul>
+<p><strong>Example gesture — making a door face a specific way:</strong></p>
+<p>If you want a doorway facing <strong>North</strong> (along -Z) in an East-West wall:</p>
+<ol class="steps"><li>Pick <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_new_shape.svg" width="13" height="13" alt="">New Shape<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="New Shape"><img src="assets/icons/icon_new_shape.svg" width="16" height="16" alt="New Shape" title="New Shape"><span class="tl-target-ring"></span></span><span class="tl-btn" title="N-Gon"><img src="assets/icons/icon_ngon.svg" width="16" height="16" alt="N-Gon" title="N-Gon"></span><span class="tl-btn" title="Edit Params"><img src="assets/icons/icon_edit_params.svg" width="16" height="16" alt="Edit Params" title="Edit Params"></span></span><span class="br-row">Row 2 · Shapes</span><span class="br-head"><img src="assets/icons/icon_new_shape.svg" width="26" height="26" alt=""><span class="br-title">New Shape</span></span><span class="br-desc">Arms primitive creation: drag the base on any surface, set the height, click to confirm.</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> → <strong>Door</strong>, then click on the floor where you want the doorway.</li><li>Drag a short distance in the direction you want it to face (pull slightly <strong>North</strong>). The orange arrow immediately appears, pointing North along the short axis.</li><li>Press and hold <strong><kbd>Ctrl</kbd></strong> to lock that facing direction.</li><li>While still holding <kbd>Ctrl</kbd>, drag laterally (<strong>East or West</strong>) to pull out the full doorway width (e.g. 2.5 m). Because <kbd>Ctrl</kbd> is held, the arrow stays locked pointing North instead of flipping sideways.</li><li>Release the mouse button to commit the base footprint.</li><li>Move the mouse upward to set the doorway height, then click to confirm.</li><li>The params modal opens: tick <strong>Arched</strong>, raise <strong>Arch Segments</strong> (6–8) for a rounder head, and adjust <strong>leg_width</strong> (the jamb width). Click <strong>Apply</strong>.</li></ol>
+<h3 id="a-torus-column-base">A torus column base</h3>
+<p>Drag <strong>Torus</strong> on the floor at the column&#x27;s foot. Outer radius ≈ column radius + tube. Edit Params to fatten the tube without moving the node.</p>
+<h3 id="a-sprite-billboard">A sprite billboard</h3>
+<p><strong>Sprite</strong> is a one-face card. <strong>Auto Orient To Camera</strong> turns it into a billboard at export. Place trees and signs with the sprite placer (<kbd>B</kbd>) instead if you want the carousel.</p>
+<blockquote class="gotcha">Height is along the <em>pressed face&#x27;s normal</em>. On a wall that is &quot;out of the wall&quot;, not world +Y. If the preview disappears into the floor, you dragged height negative — flip the mouse.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="interface.html"><span class="dir">← Previous</span><strong class="pager-title">Interface</strong></a><a class="pager-card pager-next" href="trims.html"><span class="dir">Next →</span><strong class="pager-title">Trims</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

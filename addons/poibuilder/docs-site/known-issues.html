@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Known issues (alpha) — PoiBuilder 0.9.167</title>
+<meta name="description" content="Rough edges we know about, where they bite, and the workaround — documented instead of discovered.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Reference</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Known issues (alpha)</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html" class="current">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Known issues (alpha)</h1><p class="lead">Rough edges we know about, where they bite, and the workaround — documented instead of discovered.</p><p>PoiBuilder is in its first alpha. These are known, confirmed, and queued for fixes after the alpha — each says where it bites and what to do in the meantime. If you hit something not on this page, check the <a href="faq.html">FAQ</a> first, then file it.</p>
+<h2 id="billboards-render-unlit-on-the-psp-even-when-set-to-lit">Billboards render unlit on the PSP, even when set to lit</h2>
+<p><strong>Where:</strong> retro export on the device.</p>
+<p>A billboard placed with the sprite placer (or a <code>sprite*</code>-named MeshInstance3D) carries its lit flag, and the editor honours it — but the PSP build currently draws every billboard UNLIT, so foliage and other lit billboards stay at full brightness in dusk/night scenes while everything around them darkens.</p>
+<p><strong>Workaround:</strong> light billboards&#x27; surroundings so full brightness reads as intentional, or prefer emissive-style art on the retro target. The modern GLB and the live Godot scene are not affected.</p>
+<h2 id="a-transparent-scrolling-plane-can-cast-an-unexpected-shadow-on-the-psp">A transparent scrolling plane can cast an unexpected shadow on the PSP</h2>
+<p><strong>Where:</strong> retro export on the device.</p>
+<p>A plane with a transparent (blended) scrolling texture — a waterfall sheet, a smoke plane — can generate a shadow on the device that the editor never shows. The editor renders the plane as transparent; the retro bake can treat its silhouette as an occluder, so a dark patch appears where nothing in the editor suggested one.</p>
+<p><strong>Workaround:</strong> turn off <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_shadow.svg" width="13" height="13" alt="">Cast Shadows<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Lit"><img src="assets/icons/icon_lit.svg" width="16" height="16" alt="Lit" title="Lit"></span><span class="tl-btn tl-target" title="Cast Shadows"><img src="assets/icons/icon_shadow.svg" width="16" height="16" alt="Cast Shadows" title="Cast Shadows"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 3 · Object State</span><span class="br-head"><img src="assets/icons/icon_shadow.svg" width="26" height="26" alt=""><span class="br-title">Cast Shadows</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Shadow casting on/off for every selected object. Same mixed-checkbox semantics as Lit.</span><span class="br-req">Needs: Selected objects</span></span></span> for scrolling/transparent planes (row 3 toggle — select the plane, uncheck it) before exporting to the retro target. Visually verify with a Godot viewer of the bake (the repository&#x27;s <code>run_viewer.sh</code> is the reference — adapt it to your setup as needed) plus PPSSPP (look-correctness only), or the hardware loop.</p>
+<h2 id="a-stamp-cannot-span-two-objects">A stamp cannot span two objects</h2>
+<p><strong>Where:</strong> decal stamps (all targets).</p>
+<p>A stamp paints pixels into the decal layer of a MESH — it may span several FACES of that mesh freely (floor tiles, up a staircase side), but it stops at mesh boundaries. Placing a stamp across two separately-created objects is not possible today.</p>
+<p><strong>Workaround:</strong> merge the objects first (<a href="objects.html">Merge Objs</a>) or create the surface as one mesh (one floor with <a href="ops.html">inset</a> work). Duplicate the stamp per object as a last resort.</p>
+<h2 id="painting-small-faces-is-laggy">Painting small faces is laggy</h2>
+<p><strong>Where:</strong> splat/decal painting in the editor — <strong>old / integrated GPUs only</strong>. On the machines used for the current benchmark baseline (an RTX 5060 desktop) this is NOT observable: small faces paint as smoothly as big ones at any brush size. It shows up on the five-year-old integrated-GPU laptop that serves as the worst-case machine in the <a href="performance.html">performance</a> table.</p>
+<p>Brushing over a small face (a 0.5 m tile, a trim strip) runs noticeably below the smoothness of big faces — the per-stroke cost is dominated by fixed work (mask texture sync) that does not scale down with the face, and the weak iGPU is where that fixed cost starts to show.</p>
+<p><strong>Workaround:</strong> paint the small faces in one continuous pass rather than many separate dabs; where possible, paint detail on a larger face and let the UV tiling carry it. Fix queued — the paint pipeline is being reworked towards incremental stroke upload (when it lands, this note retires).</p>
+<h2 id="paint-stroke-rate-is-not-uniform-dotted-lines-at-speed">Paint stroke rate is not uniform (dotted lines at speed)</h2>
+<p><strong>Where:</strong> splat/decal brush.</p>
+<p>Dab spacing is tied to stroke events, not to distance travelled, and the rate is not adjustable — drag quickly and the stroke comes out DOTTED, like a series of stamps, instead of a continuous line.</p>
+<p><strong>Workaround:</strong> drag slowly, or paint the line in overlapping dabs. Interpolation-by-distance (which makes fast drags continuous) and a stroke-rate control are planned for the same paint rework as the small-face lag above.</p>
+<h2 id="a-poibuilderized-mesh-can-export-with-mangled-uvs-to-the-psp">A poibuilderized mesh can export with mangled UVs to the PSP</h2>
+<p><strong>Where:</strong> retro export, after Poibuilderize.</p>
+<p>A mesh converted with <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_poibuilderize.svg" width="13" height="13" alt="">Poibuilderize<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Merge Objs"><img src="assets/icons/icon_merge_objects.svg" width="16" height="16" alt="Merge Objs" title="Merge Objs"></span><span class="tl-btn" title="Mirror"><img src="assets/icons/icon_mirror.svg" width="16" height="16" alt="Mirror" title="Mirror"></span><span class="tl-btn" title="Center Pivot"><img src="assets/icons/icon_center_pivot.svg" width="16" height="16" alt="Center Pivot" title="Center Pivot"></span><span class="tl-btn" title="Freeze Xform"><img src="assets/icons/icon_freeze_transform.svg" width="16" height="16" alt="Freeze Xform" title="Freeze Xform"></span><span class="tl-btn tl-target" title="Poibuilderize"><img src="assets/icons/icon_poibuilderize.svg" width="16" height="16" alt="Poibuilderize" title="Poibuilderize"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 4 · Object Tools</span><span class="br-head"><img src="assets/icons/icon_poibuilderize.svg" width="26" height="26" alt=""><span class="br-title">Poibuilderize</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Converts any MeshInstance3D or CSG shape (including CSGCombiner3D) into an editable PBMesh.</span><span class="br-req">Needs: A MeshInstance3D or CSG node</span></span></span> (for example a barrel GLB whose top you extruded) can look correct in the Godot editor — right materials, right UVs, right tiling — and still export with mangled UVs to the <code>.pbm</code> on some parts (reported on a barrel&#x27;s metal rim: the hoops sample the wrong atlas region on the device while the body is fine).</p>
+<p>The cause is in the conversion of multi-mesh/multi-material glTF subtrees: face corners are rebuilt from triangles, and a UV island that spans a material boundary can survive in the editor but lose its per-region mapping during the retro tile bake.</p>
+<p><strong>Workaround (either):</strong></p>
+<ul><li>Leave props you do not need to face-edit UNCONVERTED — plain MeshInstance3D nodes export with their textures sanitized and place correctly (that is what the demo map&#x27;s barrels do).</li><li>If you must edit it, re-assign the affected faces a dedicated material (Texture mode + <a href="uv.html">UV editor</a> planar re-projection) before exporting.</li></ul>
+<p>Until this is fixed, verify a converted prop&#x27;s retro bake in the viewer before committing to it.</p>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="modern-glb-splat.html"><span class="dir">← Previous</span><strong class="pager-title">Splat in a modern .glb</strong></a><a class="pager-card pager-next" href="faq.html"><span class="dir">Next →</span><strong class="pager-title">FAQ</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

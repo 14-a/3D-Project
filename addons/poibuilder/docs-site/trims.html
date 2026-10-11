@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trims — PoiBuilder 0.9.167</title>
+<meta name="description" content="Skirting in one drag. Click walls for a mitred ring. Six profiles, cornice is the same strip upside down.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Create</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Trims</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html" class="current">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Trims</h1><p class="lead">Skirting in one drag. Click walls for a mitred ring. Six profiles, cornice is the same strip upside down.</p><h2 id="trim-one-drag">Trim (one drag)</h2>
+<p>New Shape → <strong>Trim</strong>. This one does <strong>not</strong> wait for a height click. It commits when you release the base.</p>
+<ul><li>Start on the floor against a wall. The strip <strong>stands up</strong>, flush on the edge you started from.</li><li>The <strong>longer</strong> side of the drag is the run length. Depth is never dragged — type it in the panel. The project remembers the last depth.</li><li>Drawn on a wall, the strip lies flat with its bottom on the drag&#x27;s lower edge.</li></ul>
+<p>Profiles (0–5): <strong>Flat, Chamfer, Round, Cove, Ogee, Stepped</strong>.</p>
+<ul><li><strong>Upside Down</strong> turns a skirting into its cornice twin.</li><li><strong>Flip Side</strong> mirrors across the wall.</li><li><strong>Arc Segments</strong> only affect Round, Cove, Ogee.</li></ul>
+<figure><img class="shot" src="trim-one-drag.png" alt="Trim Parameters modal on a live skirting run — profile, height, depth, and cornice flips."><figcaption>Trim Parameters modal on a live skirting run — profile, height, depth, and cornice flips.</figcaption></figure>
+<h3 id="use-case-a-skirting-board">Use case — a skirting board</h3>
+<ol class="steps"><li>New Shape → Trim. Press at the wall/floor corner, drag along the wall.</li><li>Release. Switch profile to Ogee if you want a moulding; Upside Down for a cornice on the same wall.</li><li>Apply. Repeat per wall, or use Trim Walls for the whole room.</li></ol>
+<h2 id="trim-walls-click-faces">Trim Walls (click faces)</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 4 · Trim Walls</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn tl-target" title="Trim Walls"><img src="assets/icons/icon_trim_walls.svg" width="16" height="16" alt="Trim Walls" title="Trim Walls"><span class="tl-target-ring"></span></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-trim_walls" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 24 24, 24 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-trim_walls)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_trim_walls.svg" width="38" height="38" alt="Trim Walls">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Trim Walls</strong>
+        <kbd class="tl-key">Enter applies · Esc cancels</kbd>
+      </div>
+      <p class="tl-card-desc">Interactive wall-clicking tool that generates continuous mitred skirting and cornices.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Wall faces to click</span>
+        <span class="tl-badge tl-badge-row">Row 4</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p>Toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_trim_walls.svg" width="13" height="13" alt="">Trim Walls<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Trim Walls"><img src="assets/icons/icon_trim_walls.svg" width="16" height="16" alt="Trim Walls" title="Trim Walls"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 4 · Trim Walls</span><span class="br-head"><img src="assets/icons/icon_trim_walls.svg" width="26" height="26" alt=""><span class="br-title">Trim Walls</span><kbd class="br-key">Enter applies · Esc cancels</kbd></span><span class="br-desc">Click wall faces to sweep mitred trim along them (teal hover, amber chosen).</span><span class="br-req">Needs: Wall faces to click</span></span></span> (row 4). Parameters appear immediately. Then click wall faces on any PoiBuilder mesh, in any order.</p>
+<ul><li>Hover: teal. Chosen: amber.</li><li>Click again to drop a face. <kbd>Backspace</kbd> drops the last.</li><li><kbd>Enter</kbd>, double-click, or <strong>Apply</strong> commits. <kbd>Esc</kbd> cancels.</li><li>Corners mitre at any angle. Overlapping walls carry trim on the visible run only.</li><li>A closed perimeter becomes a ring. A doorway <strong>breaks</strong> the run at the jambs.</li><li><strong>Placement Bottom / Top</strong> + <strong>Offset</strong>: skirting on the slab even when wall cubes reach below it; cornice tucks under the ceiling.</li><li>Result is <strong>one</strong> object. Edit Params stays live for the same walls — change profile, height, depth, offset without re-clicking.</li></ul>
+<figure><img class="shot" src="trim-walls.png" alt="Mitred corners across inside, outside, and shallow angles."><figcaption>Mitred corners across inside, outside, and shallow angles.</figcaption></figure>
+<h3 id="use-case-dress-a-room">Use case — dress a room</h3>
+<ol class="steps"><li>Arm Trim Walls. Height 0.1 m, depth 0.05 m, profile Chamfer.</li><li>Click the four walls. Enter. Skirting, mitred.</li><li>Select the new trim, Edit Params, tick <strong>Upside Down</strong>, raise Offset if you want a dado. Do <strong>not</strong> flip a door-loop to Placement Top — see the limitation below.</li><li>For a cornice on a simple, door-free run: Placement Top, or Upside Down on Bottom.</li></ol>
+<blockquote class="limit"><strong>KNOWN LIMITATION.</strong> Switching a multi-segment loop that has openings (doors, arches, stairs) from Bottom to Top does not produce a contiguous cornice at the structure&#x27;s top edge. Opening-adjacent runs sit at the arch/lintel. Use Bottom placement for loops with openings, or select only the simple faces for Top and place the rest by hand. The panel status line reports wall→run count; if a swap &quot;does nothing&quot;, it produced no runs at the placement edge.</blockquote>
+<p>Keys: none bound. Arm from the toolbar.</p>
+<p>Related: <a href="shapes.html">Shapes</a>, <a href="first-minutes.html">First minutes</a>.</p>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="shapes.html"><span class="dir">← Previous</span><strong class="pager-title">Shapes</strong></a><a class="pager-card pager-next" href="select.html"><span class="dir">Next →</span><strong class="pager-title">Selecting</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

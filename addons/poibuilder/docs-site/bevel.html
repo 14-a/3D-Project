@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bevel — PoiBuilder 0.9.167</title>
+<meta name="description" content="Chamfer or fillet selected edges or faces. Distance and segments live in a modal. The new band stays selected.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Edit</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Bevel</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html" class="current">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Bevel</h1><p class="lead">Chamfer or fillet selected edges or faces. Distance and segments live in a modal. The new band stays selected.</p><p>Toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_bevel.svg" width="13" height="13" alt="">Bevel<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"></span><span class="tl-btn" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"></span><span class="tl-btn tl-target" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"></span><span class="tl-btn" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"></span><span class="tl-btn" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"></span><span class="tl-btn" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span></span><span class="br-row">Row 1 · Mesh Operations</span><span class="br-head"><img src="assets/icons/icon_bevel.svg" width="26" height="26" alt=""><span class="br-title">Bevel</span><kbd class="br-key">Ctrl + B</kbd></span><span class="br-desc">Chamfers or fillets selected edges (or face perimeters) with a live distance/segments modal.</span><span class="br-req">Needs: Edge or face selection</span></span></span>. Key <kbd>Ctrl</kbd>+<kbd>B</kbd>.</p>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 1 · Mesh Operations</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"></span><span class="tl-btn" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"></span><span class="tl-btn tl-target" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"></span><span class="tl-btn" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"></span><span class="tl-btn" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"></span><span class="tl-btn" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-bevel" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 86 24, 86 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-bevel)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_bevel.svg" width="38" height="38" alt="Bevel">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Bevel</strong>
+        <kbd class="tl-key">Ctrl + B</kbd>
+      </div>
+      <p class="tl-card-desc">Chamfer or fillet selected edges or face perimeters into smooth rounded bands.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Edge or face selection</span>
+        <span class="tl-badge tl-badge-row">Row 1</span>
+      </div>
+    </div>
+  </div>
+</div>
+<figure><img class="shot" src="edit-bevel.png" alt="Bevel with live preview — distance and segment rounding."><figcaption>Bevel with live preview — distance and segment rounding.</figcaption></figure>
+<h2 id="when">When</h2>
+<p>Round a tabletop, chamfer a stone block, fillet a pipe intersection, knock the corner off a doorway so light catches it.</p>
+<h2 id="steps">Steps</h2>
+<ol class="steps"><li>Edge mode: select the edges (Alt+click a loop around a box). Or face mode: bevel the outline of the faces.</li><li>Click <strong>Bevel</strong>. The overlay modal opens with <strong>distance</strong> and <strong>segments</strong>.</li><li>Drag distance. Raise segments above 1 for a rounded fillet.</li><li><strong>Apply</strong>. Clicking elsewhere also applies (bevel is the exception to the create-modal rule). Selection change cancels.</li></ol>
+<p>The op keeps selection on the <strong>new band</strong>, so you can bevel again or assign a material immediately.</p>
+<h2 id="face-vs-edge">Face vs edge</h2>
+<ul><li><strong>Edge bevel</strong> walks the selected edges, inserts the chamfer/fillet strip, rebuilds the adjacent faces.</li><li><strong>Face bevel</strong> treats the face boundary as the edge set.</li><li>Corners with more than two selected edges grow a rounded dome when segments &gt; 1.</li></ul>
+<p>Distance is clamped deterministically if the mesh cannot fit it — the overlay reports the limit. The op does not secretly retry at half distance.</p>
+<blockquote class="gotcha">Bevel rewrites topology. Edit Params on the original primitive dies, same as after extrude. Undo is a whole-mesh snapshot.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="ops-joins.html"><span class="dir">← Previous</span><strong class="pager-title">Holes &amp; joins</strong></a><a class="pager-card pager-next" href="materials.html"><span class="dir">Next →</span><strong class="pager-title">Materials</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

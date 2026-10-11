@@ -1,0 +1,394 @@
+## PBExportDialog — Editor dialog for exporting PoiBuilder maps.
+##
+## PBM (the PSP/retro map) is the default format; GLB comes in two flavors,
+## Modern Bake (paint baked into textures, no vertex lighting — the format to
+## play and ship on the modern pipeline) and Retro Baked (the vertex-lit
+## transport for the PSP pipeline and viewers). Individual toggles for quad
+## subdivision, lighting bake (shadows + AO), texture baking, billboards, and
+## collision meshes apply to the retro bakes.
+@tool
+class_name PBExportDialog
+extends ConfirmationDialog
+
+signal export_completed(path: String, mode: int)
+
+var _mode_option: OptionButton
+var _chk_subdivide: CheckBox
+var _spin_grid_size: SpinBox
+var _chk_bake_lighting: CheckBox
+var _chk_bake_shadows: CheckBox
+var _chk_bake_ao: CheckBox
+var _spin_ao_samples: SpinBox
+var _spin_bake_boost: SpinBox
+var _spin_ao_distance: SpinBox
+var _chk_bake_textures: CheckBox
+var _opt_splat_mode: OptionButton
+var _spin_tile_res: OptionButton
+var _spin_max_tex_size: OptionButton
+var _chk_export_billboards: CheckBox
+var _chk_export_colliders: CheckBox
+var _chk_cleanup_intermediate: CheckBox
+var _txt_path: LineEdit
+var _btn_browse: Button
+var _file_dialog: FileDialog
+var _lbl_status: Label
+var _progress_container: VBoxContainer
+var _progress_bar: ProgressBar
+var _lbl_progress_phase: Label
+var _lbl_progress_detail: Label
+var _btn_cancel_export: Button
+
+var _is_exporting: bool = false
+var _cancel_token: PBMapExporter.CancellationToken = null
+var _scene_root: Node = null
+
+func _init() -> void:
+	title = "Export PoiBuilder Map"
+	min_size = Vector2(480, 520)
+	ok_button_text = "Export"
+	dialog_hide_on_ok = false
+	_build_ui()
+func _build_ui() -> void:
+	var root_vb := VBoxContainer.new()
+	root_vb.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root_vb.add_theme_constant_override("separation", 8)
+	add_child(root_vb)
+
+	# Format selection — PBM is the default (PSP/retro, one-click export).
+	# The Modern Bake is the FIRST GLB flavor: it is the format to play and
+	# ship on the modern pipeline (paint baked, lighting left to the engine).
+	var hb_mode := HBoxContainer.new()
+	var lbl_mode := Label.new()
+	lbl_mode.text = "Format:"
+	lbl_mode.custom_minimum_size = Vector2(160, 0)
+	hb_mode.add_child(lbl_mode)
+	_mode_option = OptionButton.new()
+	_mode_option.add_item("PBM — PoiBuilder Retro Map (PSP)", FORMAT_PBM)
+	_mode_option.add_item("GLB — Modern Bake (lightmap-ready)", FORMAT_MODERN_GLB)
+	_mode_option.add_item("GLB — Retro Baked Map (vertex-lit)", FORMAT_RETRO_GLB)
+	_mode_option.set_item_tooltip(0, "One click to a fully baked retro map: vertex lighting, tile atlas, collision, emitters. Plays on the PSP and any .pbm consumer.")
+	_mode_option.set_item_tooltip(1, "The recommended play/ship format for the modern pipeline: splat paint and decals baked into per-face textures, plain standard materials, collision meshes — no vertex lighting, so realtime lights or LightmapGI stay in charge.")
+	_mode_option.set_item_tooltip(2, "The retro bake as glTF: grid quads, vertex lighting, tile textures. The transport for the retro viewers and the PSP pipeline.")
+	_mode_option.select(0)
+	_mode_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mode_option.item_selected.connect(_on_mode_selected)
+	hb_mode.add_child(_mode_option)
+	root_vb.add_child(hb_mode)
+
+	root_vb.add_child(HSeparator.new())
+
+	# Geometry & Subdivision
+	var hb_sub := HBoxContainer.new()
+	_chk_subdivide = CheckBox.new()
+	_chk_subdivide.text = "Subdivide Faces into Grid Quads"
+	_chk_subdivide.button_pressed = true
+	_chk_subdivide.tooltip_text = "Chops faces into triangulated quads aligned to the texture grid for dense vertex lighting and tile baking"
+	hb_sub.add_child(_chk_subdivide)
+
+	var lbl_grid := Label.new()
+	lbl_grid.text = "Tile Grid Size (m):"
+	hb_sub.add_child(lbl_grid)
+
+	_spin_grid_size = SpinBox.new()
+	_spin_grid_size.min_value = 0.25
+	_spin_grid_size.max_value = 8.0
+	_spin_grid_size.step = 0.25
+	_spin_grid_size.value = 1.0
+	_spin_grid_size.custom_minimum_size = Vector2(80, 0)
+	hb_sub.add_child(_spin_grid_size)
+	root_vb.add_child(hb_sub)
+
+	# Textures & Baking
+	var hb_tex := HBoxContainer.new()
+	_chk_bake_textures = CheckBox.new()
+	_chk_bake_textures.text = "Bake Splatting & Decals to Tiles"
+	_chk_bake_textures.button_pressed = true
+	_chk_bake_textures.tooltip_text = "Generates composite tile textures for painted areas; unpainted tiles reuse the base texture"
+	hb_tex.add_child(_chk_bake_textures)
+
+	var hb_splat := HBoxContainer.new()
+	hb_splat.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hb_tex.add_child(hb_splat)
+	var lbl_splat := Label.new()
+	lbl_splat.text = "Modern paint:"
+	hb_splat.add_child(lbl_splat)
+	_opt_splat_mode = OptionButton.new()
+	_opt_splat_mode.name = "SplatModeSelector"
+	_opt_splat_mode.add_item("Bake into textures", PBMapExporter.ExportSettings.SplatMode.BAKE)
+	_opt_splat_mode.add_item("Include splat data", PBMapExporter.ExportSettings.SplatMode.INCLUDE)
+	_opt_splat_mode.tooltip_text = "Modern (.glb) export only. Bake: each painted face is composited into its own texture — self-contained, any engine sees the paint. Include: keeps the live layer stack (masks in TEXCOORD_2) and writes masks/layers/decals as sidecar PNGs described in the material extras, for engines that run the documented blend."
+	hb_splat.add_child(_opt_splat_mode)
+
+	var lbl_res := Label.new()
+	lbl_res.text = "Tile Res:"
+	hb_tex.add_child(lbl_res)
+
+	_spin_tile_res = OptionButton.new()
+	_spin_tile_res.add_item("32x32", 32)
+	_spin_tile_res.add_item("64x64", 64)
+	_spin_tile_res.add_item("128x128", 128)
+	_spin_tile_res.add_item("256x256", 256)
+	_spin_tile_res.add_item("512x512", 512)
+	_spin_tile_res.select(2) # 128 default
+	hb_tex.add_child(_spin_tile_res)
+
+	var lbl_max := Label.new()
+	lbl_max.text = "Max Size:"
+	hb_tex.add_child(lbl_max)
+
+	_spin_max_tex_size = OptionButton.new()
+	_spin_max_tex_size.add_item("64x64", 64)
+	_spin_max_tex_size.add_item("128x128", 128)
+	_spin_max_tex_size.add_item("256x256", 256)
+	_spin_max_tex_size.add_item("512x512", 512)
+	_spin_max_tex_size.add_item("1024x1024", 1024)
+	_spin_max_tex_size.select(3) # 512 default
+	_spin_max_tex_size.tooltip_text = "Enforces power-of-two texture dimensions clamped to this maximum size for retro engines"
+	hb_tex.add_child(_spin_max_tex_size)
+	root_vb.add_child(hb_tex)
+
+	root_vb.add_child(HSeparator.new())
+
+	# Lighting Bake (Vertex Colors)
+	_chk_bake_lighting = CheckBox.new()
+	_chk_bake_lighting.text = "Bake Lighting into Vertex Colors"
+	_chk_bake_lighting.button_pressed = true
+	_chk_bake_lighting.toggled.connect(func(on: bool):
+		# CheckBox greys via `disabled`, SpinBox via `editable` (the old code
+		# wrote `editable` on the CheckBoxes, which threw on every toggle).
+		_chk_bake_shadows.disabled = not on
+		_chk_bake_ao.disabled = not on
+		_spin_ao_samples.editable = on
+	)
+	root_vb.add_child(_chk_bake_lighting)
+
+	var hb_light_ops := HBoxContainer.new()
+	hb_light_ops.add_theme_constant_override("separation", 16)
+
+	_chk_bake_shadows = CheckBox.new()
+	_chk_bake_shadows.text = "Direct Shadows"
+	_chk_bake_shadows.button_pressed = true
+	hb_light_ops.add_child(_chk_bake_shadows)
+
+	_chk_bake_ao = CheckBox.new()
+	_chk_bake_ao.text = "Ambient Occlusion"
+	_chk_bake_ao.button_pressed = true
+	hb_light_ops.add_child(_chk_bake_ao)
+
+	var lbl_ao_samp := Label.new()
+	lbl_ao_samp.text = "AO Rays:"
+	hb_light_ops.add_child(lbl_ao_samp)
+
+	_spin_ao_samples = SpinBox.new()
+	_spin_ao_samples.min_value = 4
+	_spin_ao_samples.max_value = 64
+	_spin_ao_samples.value = 16
+	hb_light_ops.add_child(_spin_ao_samples)
+
+	var lbl_boost := Label.new()
+	lbl_boost.text = "Bake Boost:"
+	lbl_boost.tooltip_text = "Modulate-2x: baked vertex colors are multiplied by this (saturating at 1.0). Lifts shadows and mid-tones of dusk/night bakes the way retro hardware's modulate stages did; sunlit areas ride the clamp. 1.0 disables."
+	hb_light_ops.add_child(lbl_boost)
+	_spin_bake_boost = SpinBox.new()
+	_spin_bake_boost.min_value = 1.0
+	_spin_bake_boost.max_value = 4.0
+	_spin_bake_boost.step = 0.5
+	_spin_bake_boost.value = 2.0
+	_spin_bake_boost.tooltip_text = lbl_boost.tooltip_text
+	hb_light_ops.add_child(_spin_bake_boost)
+	root_vb.add_child(hb_light_ops)
+
+	root_vb.add_child(HSeparator.new())
+
+	# Entities & Billboards
+	var hb_entities := HBoxContainer.new()
+	_chk_export_billboards = CheckBox.new()
+	_chk_export_billboards.text = "Export Billboards (Lit affected by vertex light)"
+	_chk_export_billboards.button_pressed = true
+	hb_entities.add_child(_chk_export_billboards)
+
+	_chk_export_colliders = CheckBox.new()
+	_chk_export_colliders.text = "Export Colliders (Collider_*)"
+	_chk_export_colliders.button_pressed = true
+	hb_entities.add_child(_chk_export_colliders)
+	root_vb.add_child(hb_entities)
+
+	root_vb.add_child(HSeparator.new())
+
+	# Output path
+	var lbl_path_title := Label.new()
+	lbl_path_title.text = "Output File Path:"
+	root_vb.add_child(lbl_path_title)
+
+	var hb_path := HBoxContainer.new()
+	_txt_path = LineEdit.new()
+	_txt_path.text = "res://exports/exported_map.pbm"
+	_txt_path.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hb_path.add_child(_txt_path)
+
+	_btn_browse = Button.new()
+	_btn_browse.text = "Browse..."
+	_btn_browse.pressed.connect(_on_browse_pressed)
+	hb_path.add_child(_btn_browse)
+	root_vb.add_child(hb_path)
+
+	_chk_cleanup_intermediate = CheckBox.new()
+	_chk_cleanup_intermediate.text = "Clean intermediate files (extracted .png textures)"
+	_chk_cleanup_intermediate.button_pressed = true
+	_chk_cleanup_intermediate.tooltip_text = "Removes any loose extracted .png textures to prevent project clutter. Uncheck to keep for debugging."
+	root_vb.add_child(_chk_cleanup_intermediate)
+
+	PBMapExporter.ensure_export_dir(_txt_path.text)
+	_lbl_status = Label.new()
+	_lbl_status.modulate = Color(0.2, 0.9, 1.0)
+	root_vb.add_child(_lbl_status)
+
+	# Progress reporting container
+	_progress_container = VBoxContainer.new()
+	_progress_container.visible = false
+	_progress_container.add_theme_constant_override("separation", 4)
+
+	var hb_prog_head := HBoxContainer.new()
+	_lbl_progress_phase = Label.new()
+	_lbl_progress_phase.text = "Exporting map..."
+	_lbl_progress_phase.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hb_prog_head.add_child(_lbl_progress_phase)
+
+	_btn_cancel_export = Button.new()
+	_btn_cancel_export.text = "Cancel"
+	_btn_cancel_export.pressed.connect(_on_cancel_export_pressed)
+	hb_prog_head.add_child(_btn_cancel_export)
+	_progress_container.add_child(hb_prog_head)
+
+	_progress_bar = ProgressBar.new()
+	_progress_bar.min_value = 0.0
+	_progress_bar.max_value = 100.0
+	_progress_bar.value = 0.0
+	_progress_bar.custom_minimum_size = Vector2(0, 18)
+	_progress_container.add_child(_progress_bar)
+
+	_lbl_progress_detail = Label.new()
+	_lbl_progress_detail.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	_progress_container.add_child(_lbl_progress_detail)
+	root_vb.add_child(_progress_container)
+
+	# File Dialog
+	_file_dialog = FileDialog.new()
+	_file_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	_file_dialog.access = FileDialog.ACCESS_RESOURCES
+	_file_dialog.filters = PackedStringArray(["*.glb ; Binary glTF Map", "*.gltf ; Text glTF Scene", "*.pbm ; PoiBuilder Retro Map (PSP / Retro)"])
+	_file_dialog.file_selected.connect(func(path: String): _txt_path.text = path)
+	add_child(_file_dialog)
+
+	confirmed.connect(_on_confirmed)
+
+func open_dialog(scene_root: Node) -> void:
+	_scene_root = scene_root
+	_lbl_status.text = ""
+	_progress_container.visible = false
+	_is_exporting = false
+	get_ok_button().disabled = false
+	popup_centered()
+## Dialog-local format ids (PBM rides the RETRO export mode with a .pbm path).
+enum {
+	FORMAT_PBM = 100,
+	FORMAT_RETRO_GLB = 101,
+	FORMAT_MODERN_GLB = 102,
+}
+
+func _selected_format() -> int:
+	return _mode_option.get_selected_id() if _mode_option != null else FORMAT_PBM
+
+func _on_mode_selected(_idx: int) -> void:
+	var is_retro := _selected_format() != FORMAT_MODERN_GLB
+	_chk_subdivide.button_pressed = is_retro
+	_chk_bake_lighting.button_pressed = is_retro
+	_chk_bake_textures.button_pressed = is_retro
+	if _opt_splat_mode != null:
+		_opt_splat_mode.disabled = is_retro
+		# Every format switch re-parks the paint mode on the optimized bake:
+		# picking the modern GLB lands on it (paint composited into textures,
+		# lighting left to the consuming engine), and the retro flavors keep
+		# the (disabled) selector parked there too.
+		_opt_splat_mode.select(PBMapExporter.ExportSettings.SplatMode.BAKE)
+	# Keep the path's extension honest for the chosen format.
+	var path := _txt_path.text.strip_edges()
+	var want_ext := ".pbm" if _selected_format() == FORMAT_PBM else ".glb"
+	if not path.is_empty() and not path.to_lower().ends_with(want_ext):
+		var base := path.get_basename()
+		if base.is_empty():
+			base = "exported_map"
+		_txt_path.text = base + want_ext
+
+func _on_browse_pressed() -> void:
+	_file_dialog.current_path = _txt_path.text
+	_file_dialog.popup_centered(Vector2(600, 450))
+
+func _on_cancel_export_pressed() -> void:
+	if _cancel_token != null:
+		_cancel_token.cancel()
+		_lbl_progress_phase.text = "Cancelling export..."
+
+func _on_confirmed() -> void:
+	if _is_exporting:
+		return
+
+	if _scene_root == null:
+		_lbl_status.modulate = Color(1.0, 0.3, 0.3)
+		_lbl_status.text = "Error: No active scene to export."
+		return
+
+	var path := _txt_path.text.strip_edges()
+	if path.is_empty():
+		_lbl_status.modulate = Color(1.0, 0.3, 0.3)
+		_lbl_status.text = "Error: Output path cannot be empty."
+		return
+
+	_is_exporting = true
+	get_ok_button().disabled = true
+	_lbl_status.text = ""
+	_progress_container.visible = true
+	_progress_bar.value = 0.0
+	_lbl_progress_phase.text = "Starting export..."
+	_lbl_progress_detail.text = ""
+
+	var settings := PBMapExporter.ExportSettings.new()
+	settings.export_mode = PBMapExporter.ExportMode.MODERN if _selected_format() == FORMAT_MODERN_GLB \
+			else PBMapExporter.ExportMode.RETRO
+	settings.subdivide_quads = _chk_subdivide.button_pressed
+	settings.grid_size = _spin_grid_size.value
+	settings.bake_lighting = _chk_bake_lighting.button_pressed
+	settings.bake_shadows = _chk_bake_shadows.button_pressed
+	settings.bake_ao = _chk_bake_ao.button_pressed
+	settings.ao_samples = int(_spin_ao_samples.value)
+	settings.bake_boost = _spin_bake_boost.value
+	settings.bake_textures = _chk_bake_textures.button_pressed
+	if _opt_splat_mode != null:
+		settings.splat_mode = _opt_splat_mode.get_selected_id() as PBMapExporter.ExportSettings.SplatMode
+	settings.tile_resolution = _spin_tile_res.get_selected_id()
+	settings.max_texture_size = _spin_max_tex_size.get_selected_id()
+	settings.export_billboards = _chk_export_billboards.button_pressed
+	settings.export_colliders = _chk_export_colliders.button_pressed
+	settings.cleanup_intermediate_files = _chk_cleanup_intermediate.button_pressed
+	var progress_cb := func(pct: float, phase: String, detail: String):
+		_progress_bar.value = pct * 100.0
+		_lbl_progress_phase.text = phase
+		_lbl_progress_detail.text = detail
+
+	var err: Error = await PBMapExporter.export_map_async(_scene_root, path, settings, progress_cb, _cancel_token)
+
+	_is_exporting = false
+	get_ok_button().disabled = false
+
+	if err == OK:
+		_lbl_status.modulate = Color(0.2, 0.9, 1.0)
+		_lbl_status.text = "Export successful: %s" % path
+		export_completed.emit(path, settings.export_mode)
+	elif _cancel_token != null and _cancel_token.cancelled or err == ERR_SKIP:
+		_lbl_status.modulate = Color(1.0, 0.7, 0.2)
+		_lbl_status.text = "Export cancelled by user."
+		_progress_container.visible = false
+	else:
+		_lbl_status.modulate = Color(1.0, 0.3, 0.3)
+		_lbl_status.text = "Export failed with error code: %d" % err
+		_progress_container.visible = false

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paint &amp; stamps — PoiBuilder 0.9.167</title>
+<meta name="description" content="Up to eight splat layers per face, a paintable decal layer for stamps, and a sprite placer on B.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Surface</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Paint &amp; stamps</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html" class="current">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Paint &amp; stamps</h1><p class="lead">Up to eight splat layers per face, a paintable decal layer for stamps, and a sprite placer on B.</p><h2 id="splatting">Splatting</h2>
+<p>The Material dock&#x27;s paint mode. Up to <strong>8 layers</strong> per face. Brush the blend between two (or more) albedos — grass into rock, dirt into tile.</p>
+<figure><img class="shot" src="paint-splat.png" alt="Multi-layer texture splatting."><figcaption>Multi-layer texture splatting.</figcaption></figure>
+<figure><video class="shot" autoplay loop muted playsinline controls src="clips/paint-splat.mp4"></video><figcaption>The brush writes weights, not new geometry.</figcaption></figure>
+<h2 id="decal-stamps">Decal stamps</h2>
+<p>A stamp is a PNG painted <strong>into the surface</strong>, not a node hovering over it, and it is a <strong>single click</strong> — no dragging, no stroke: pick a tile pattern or a magic circle and click it onto a wall or a floor. Click to paste (no dragging): it lands in the face&#x27;s <strong>decal layer</strong> at 256 texels/m — the same uniform density as the splat masks — and it keeps its own colors and alpha 1:1. The layer is cropped to the area you actually paint and grows as you spread out, so a stamp is as crisp on a 32 m courtyard floor as on a 2 m panel; the source image is resampled to the footprint (interpolated up, filtered down) rather than dropped to the nearest texel.</p>
+<p>Because it is pixels, a stamp can <strong>span several faces</strong>: overhang a floor tile&#x27;s edge, continue onto the neighbouring wall, cover a whole staircase side. It paints only faces its plane is roughly parallel to, so a stamp never smears sideways down a perpendicular wall; stamp and brush sizes are metres on screen, whatever the mesh&#x27;s own scale.</p>
+<p>The decal layer is paintable on its own, and it is the same layer stamps land in:</p>
+<ul><li><strong>Brush → Color</strong> paints a flat colour with the editor&#x27;s colour picker (the ring wears the colour).</li><li><strong>Brush → Palette image</strong> dabs the selected texture as pixels — how you touch up or extend a decal by hand.</li><li><strong>Erase</strong> rubs either back out, including parts of a stamp.</li><li>Radius, softness and opacity behave as they do for splatting; the Stamp tab&#x27;s <em>Open Decal Brush</em> button jumps straight to these controls.</li></ul>
+<blockquote class="">[note] The <strong>Brush</strong> row belongs to the decal layer: <strong>Paint into → Splat layers</strong> always paints the selected palette texture into a layer&#x27;s mask, so the row is disabled (and says so) while that target is chosen. <strong>Palette image</strong> is the default source.</blockquote>
+<blockquote class="">[note] <strong>Decal density is per face.</strong> The decal image is cropped to the area you actually painted and holds 256 texels/m — until that area gets big: past the window&#x27;s caps (4096 px per axis, 32 MB of texels) the density falls so the paint never has to be dropped, and a 60 m floor painted across 25 m lands around 130 texels/m. The overlay&#x27;s readout says what the face you are hovering gives you (<code>Decal: 133 texels/m</code>), and a stamp on its own — a small painted span — always keeps the full density. Large painted <em>areas</em> belong in splat layers; the decal layer is for stickers and dabbed detail.</blockquote>
+<p><strong>Clear Layer</strong> (paint panel) clears the decal layer whenever the brush is pointed at Decal; <strong>Clear Decal Layer</strong> (stamp panel) wipes all of it at once. Every one of those actions is undoable.</p>
+<p>Retro export <strong>bakes</strong> stamps into unique tiles; unpainted tiles reuse the base texture. Modern <code>.glb</code> export either bakes the whole stack into per-face textures or ships it as data — see <a href="modern-glb-splat.html">Splatting in a modern .glb</a>.</p>
+<figure><img class="shot" src="paint-stamp.png" alt="A stamp painted across two faces, then partly erased."><figcaption>A stamp painted across two faces, then partly erased.</figcaption></figure>
+<h2 id="sprite-placer">Sprite placer</h2>
+<p><kbd>B</kbd> arms the placer. A carousel of billboard textures, raise and scale while placing. Good for trees, candles, distant props. Name prefix <code>sprite</code>/<code>billboard</code>/<code>tree</code>/… also marks a MeshInstance3D as a billboard at export.</p>
+<p>While placing: drag to <strong>raise</strong> the billboard off the surface — a green line marks the ground anchor and the overlay shows the offset in metres — then move left/right to <strong>scale</strong> (the overlay shows width x height in metres plus the scale multiplier).</p>
+<h2 id="asset-categories">Asset categories</h2>
+<p>Sprites, stamps and paint textures live in separate pickers — a tree image never shows up in the stamp picker. Classification is by folder (<code>.../sprites/</code>, <code>.../stamps/</code>, <code>.../particles/</code>, <code>.../textures/</code>), then by name prefix (<code>sprite_</code>, <code>stamp_</code>, <code>particle_</code>, <code>tree_</code>, ...). Add your own by dropping files into <code>res://materials/sprites/</code>, <code>res://materials/stamps/</code> or <code>res://materials/textures/</code> — the plugin&#x27;s bundled folder is never touched.</p>
+<h2 id="scroll">Scroll</h2>
+<p>Covered on <a href="materials.html">Materials</a>. A waterfall is a plane with scroll speed, plus an optional particle emitter at the lip.</p>
+<figure><img class="shot" src="map-waterfall.png" alt="Scrolling sheets on a wall panel."><figcaption>Scrolling sheets on a wall panel.</figcaption></figure>
+<blockquote class="gotcha">The scroll speed exports as data (retro: per-mesh <code>uv_scroll</code>; modern GLB: <code>poi_uv_scroll</code> in the material&#x27;s glTF extras) — the consumer applies <code>uv(t) = uv(0) + t · speed</code>; the recipes live on <a href="export.html#scrolling-textures">Export &amp; retro</a>. The retro bake exempts a scrolling face from the tile atlas (it keeps its own texture — that is what slides), and a scrolling face must not also be splat-painted: paint bakes to a static tile.</blockquote>
+<blockquote class="gotcha">A modern <strong>.glb export</strong> cannot carry a custom shader. Choose <strong>Modern paint → Bake into textures</strong> (each painted face becomes its own texture — any engine shows your paint) or <strong>Include splat data</strong> (masks and decal channels ship as sidecar PNGs plus a <code>poi_splat</code> record in the material extras; see <a href="modern-glb-splat.html">Splatting in a modern .glb</a> for the consumer recipe). To flatten paint inside Godot itself instead of at export, the repository&#x27;s <code>bake_splat.sh</code> script does exactly that — reference it or script your own.</blockquote>
+<blockquote class="">[note] <strong>Splat paint and LightmapGI now coexist on one mesh.</strong> Masks travel in their own vertex channel (CUSTOM0), so UV2 — the channel a lightmap unwrap lives in — is never touched by painting. Unwrap it from the UV editor&#x27;s <strong>Lightmap</strong> button (it also flips the mesh to <em>GI Mode: Static</em>), bake the LightmapGI, and keep painting: the paint will not disturb the bake&#x27;s UVs.</blockquote>
+<blockquote class="gotcha"><strong>Transparent surfaces refuse paint.</strong> A billboard sprite or any alpha-blended material loses its alpha the moment it is converted to a splat (the conversion keeps albedo/colour/roughness only), so painting is REFUSED before anything changes: the brush ring goes grey, the overlay names the reason (<code>transparent material</code>), and strokes and stamp clicks on such faces are no-ops. A stamp spanning several faces paints only the opaque ones.</blockquote>
+<p>To see what a face&#x27;s paint looks like up close, the UV editor&#x27;s <strong>Splat masks</strong> channel shows the composited paint for the selected face (read-only — that space is written by painting, not by hand). <strong>UV1 (Texture)</strong> and <strong>UV2 (Lightmap)</strong> are both editable channels — see <a href="uv.html">UV editor</a>.</p>
+<p>Two brush behaviours to know while this is in alpha: painting small faces runs noticeably laggier than big ones, and fast drags come out dotted — dab spacing follows stroke events, not distance. Both have workarounds and a planned fix on <a href="known-issues.html">Known issues</a>.</p>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="uv.html"><span class="dir">← Previous</span><strong class="pager-title">UV editor</strong></a><a class="pager-card pager-next" href="objects.html"><span class="dir">Next →</span><strong class="pager-title">Objects &amp; CSG</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

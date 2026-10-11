@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mesh operations — PoiBuilder 0.9.167</title>
+<meta name="description" content="Topology-rewriting ops undo as a whole-mesh snapshot. Ops that create faces select their output.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Edit</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Mesh operations</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html" class="current">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Mesh operations</h1><p class="lead">Topology-rewriting ops undo as a whole-mesh snapshot. Ops that create faces select their output.</p><p>All of these live on toolbar row 1. Grey means the current selection cannot feed the op.</p>
+<h2 id="extrude">Extrude</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 1 · Mesh Operations</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn tl-target" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"></span><span class="tl-btn" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"></span><span class="tl-btn" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"></span><span class="tl-btn" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"></span><span class="tl-btn" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-extrude" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 24 24, 24 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-extrude)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_extrude.svg" width="38" height="38" alt="Extrude">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Extrude</strong>
+        <kbd class="tl-key">Alt + E / Shift + Move</kbd>
+      </div>
+      <p class="tl-card-desc">Extrudes selected faces outward along normals, or pulls edge fins to extend boundaries.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Face or edge selection</span>
+        <span class="tl-badge tl-badge-row">Row 1</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p><strong>When:</strong> pull a wall, a rim, a new storey.</p>
+<ul><li>Faces: the originals are removed; you get a cap plus side quads (ProBuilder region extrude).</li><li>Edges: fins along the average adjacent normal.</li><li>Live: <kbd>Shift</kbd>+Move.</li><li>Key: <kbd>Alt</kbd>+<kbd>E</kbd>.</li></ul>
+<figure><img class="shot" src="edit-extrude.png" alt="Shift + drag to extrude."><figcaption>Shift + drag to extrude.</figcaption></figure>
+<figure><video class="shot" autoplay loop muted playsinline controls src="clips/edit-extrude.mp4"></video><figcaption>The cap leaves, the sides fill in.</figcaption></figure>
+<h2 id="inset">Inset</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 1 · Mesh Operations</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"></span><span class="tl-btn tl-target" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"></span><span class="tl-btn" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"></span><span class="tl-btn" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"></span><span class="tl-btn" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-inset" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 55 24, 55 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-inset)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_inset.svg" width="38" height="38" alt="Inset">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Inset</strong>
+        <kbd class="tl-key">Alt + I / Shift + Scale</kbd>
+      </div>
+      <p class="tl-card-desc">Insets selected faces, creating an outer border and shrinking the inner face.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Face selection</span>
+        <span class="tl-badge tl-badge-row">Row 1</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p><strong>When:</strong> a window recess, a panel, a frame.</p>
+<ul><li>Planar ring around the selected faces.</li><li>Live: <kbd>Shift</kbd>+Scale on faces.</li><li>Key: <kbd>Alt</kbd>+<kbd>I</kbd>.</li></ul>
+<figure><img class="shot" src="edit-inset.png" alt="The ring it leaves, then the face lifted out of it."><figcaption>The ring it leaves, then the face lifted out of it.</figcaption></figure>
+<h2 id="loop-cut">Loop cut</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 1 · Mesh Operations</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"></span><span class="tl-btn" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"></span><span class="tl-btn" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"></span><span class="tl-btn tl-target" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"></span><span class="tl-btn" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-loopcut" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 272 24, 272 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-loopcut)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_loop_cut.svg" width="38" height="38" alt="Loop Cut">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Loop Cut</strong>
+        <kbd class="tl-key">Unbound (rebindable)</kbd>
+      </div>
+      <p class="tl-card-desc">Inserts an edge loop crossing a selected quad strip, turning corners cleanly.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ An edge crossing a quad ring</span>
+        <span class="tl-badge tl-badge-row">Row 1</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p>Select an edge that <strong>crosses</strong> a quad strip (a ring edge). <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_loop_cut.svg" width="13" height="13" alt="">Loop Cut<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"></span><span class="tl-btn" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"></span><span class="tl-btn" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"></span><span class="tl-btn tl-target" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"></span><span class="tl-btn" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span></span><span class="br-row">Row 1 · Mesh Operations</span><span class="br-head"><img src="assets/icons/icon_loop_cut.svg" width="26" height="26" alt=""><span class="br-title">Loop Cut</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Inserts an edge loop through the ring of quads crossed by the selected edge.</span><span class="br-req">Needs: An edge crossing a quad ring</span></span></span> inserts a loop through that ring. Faces with only one ring edge (fans, boundaries) stay unsplit — a T-junction is expected. Corner turns that cannot walk fail cleanly.</p>
+<figure><img class="shot" src="edit-loopcut.png" alt="The loop turns all four corners of the box."><figcaption>The loop turns all four corners of the box.</figcaption></figure>
+<h2 id="subdivide">Subdivide</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 1 · Mesh Operations</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"></span><span class="tl-btn" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"></span><span class="tl-btn" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"></span><span class="tl-btn" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"></span><span class="tl-btn" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"></span><span class="tl-btn tl-target" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-subdivide" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 334 24, 334 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-subdivide)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_subdivide.svg" width="38" height="38" alt="Subdiv">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Subdiv</strong>
+        <kbd class="tl-key">Unbound (rebindable)</kbd>
+      </div>
+      <p class="tl-card-desc">Splits selected quad faces into four sub-quads and inserts new interior edges.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Quad faces</span>
+        <span class="tl-badge tl-badge-row">Row 1</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p>Selected quads become four. Then drag the new edge.</p>
+<figure><img class="shot" src="edit-subdiv.png" alt="Subdivide, then drag the edge it created."><figcaption>Subdivide, then drag the edge it created.</figcaption></figure>
+<h2 id="merge-faces">Merge faces</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 1 · Mesh Operations</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"></span><span class="tl-btn" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"></span><span class="tl-btn" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"></span><span class="tl-btn" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"></span><span class="tl-btn tl-target" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-merge" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 303 24, 303 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-merge)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_merge.svg" width="38" height="38" alt="Merge">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Merge</strong>
+        <kbd class="tl-key">Unbound (rebindable)</kbd>
+      </div>
+      <p class="tl-card-desc">Collapses adjacent coplanar faces into a single flat n-gon.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Edge-adjacent faces</span>
+        <span class="tl-badge tl-badge-row">Row 1</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p>Edge-adjacent selected faces collapse into one n-gon per region, fan-triangulated. Coplanar is the common case; you can also merge across a crease into a bent n-gon.</p>
+<figure><img class="shot" src="edit-merge.png" alt="Merge coplanar faces, then move them as one."><figcaption>Merge coplanar faces, then move them as one.</figcaption></figure>
+<h2 id="knife">Knife</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 1 · Mesh Operations</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="Extrude"><img src="assets/icons/icon_extrude.svg" width="16" height="16" alt="Extrude" title="Extrude"></span><span class="tl-btn" title="Inset"><img src="assets/icons/icon_inset.svg" width="16" height="16" alt="Inset" title="Inset"></span><span class="tl-btn" title="Bevel"><img src="assets/icons/icon_bevel.svg" width="16" height="16" alt="Bevel" title="Bevel"></span><span class="tl-btn" title="Bridge"><img src="assets/icons/icon_bridge.svg" width="16" height="16" alt="Bridge" title="Bridge"></span><span class="tl-btn" title="Connect"><img src="assets/icons/icon_connect.svg" width="16" height="16" alt="Connect" title="Connect"></span><span class="tl-btn" title="Collapse"><img src="assets/icons/icon_collapse.svg" width="16" height="16" alt="Collapse" title="Collapse"></span><span class="tl-btn" title="Fill Hole"><img src="assets/icons/icon_fill_hole.svg" width="16" height="16" alt="Fill Hole" title="Fill Hole"></span><span class="tl-btn tl-target" title="Knife"><img src="assets/icons/icon_knife.svg" width="16" height="16" alt="Knife" title="Knife"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Loop Cut"><img src="assets/icons/icon_loop_cut.svg" width="16" height="16" alt="Loop Cut" title="Loop Cut"></span><span class="tl-btn" title="Merge"><img src="assets/icons/icon_merge.svg" width="16" height="16" alt="Merge" title="Merge"></span><span class="tl-btn" title="Subdiv"><img src="assets/icons/icon_subdivide.svg" width="16" height="16" alt="Subdiv" title="Subdiv"></span><span class="tl-btn" title="Weld"><img src="assets/icons/icon_weld.svg" width="16" height="16" alt="Weld" title="Weld"></span><span class="tl-btn" title="Detach"><img src="assets/icons/icon_detach.svg" width="16" height="16" alt="Detach" title="Detach"></span><span class="tl-btn" title="Del"><img src="assets/icons/icon_delete.svg" width="16" height="16" alt="Del" title="Del"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-knife" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 241 24, 241 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-knife)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_knife.svg" width="38" height="38" alt="Knife">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">Knife</strong>
+        <kbd class="tl-key">Unbound (rebindable)</kbd>
+      </div>
+      <p class="tl-card-desc">Cuts across faces along an interactive clicked path, splitting geometry.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ A face to cut</span>
+        <span class="tl-badge tl-badge-row">Row 1</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p>Click points across a face (edge-to-edge, or an interior hole). <kbd>Enter</kbd> completes the cut. Restricts points to the current face; edges can belong to more than one candidate.</p>
+<figure><img class="shot" src="edit-knife.png" alt="Cut a face along a drawn path."><figcaption>Cut a face along a drawn path.</figcaption></figure>
+<h2 id="n-gon-prism">N-gon prism</h2>
+<div class="toolbar-locator">
+  <div class="tl-bar-wrapper">
+    <div class="tl-bar-header">
+      <span class="tl-bar-title"><span class="tl-bar-dot"></span> PoiBuilder Toolbar</span>
+      <span class="tl-bar-row">Row 2 · Shapes</span>
+    </div>
+    <div class="tl-strip">
+      <span class="tl-btn" title="New Shape"><img src="assets/icons/icon_new_shape.svg" width="16" height="16" alt="New Shape" title="New Shape"></span><span class="tl-btn tl-target" title="N-Gon"><img src="assets/icons/icon_ngon.svg" width="16" height="16" alt="N-Gon" title="N-Gon"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Edit Params"><img src="assets/icons/icon_edit_params.svg" width="16" height="16" alt="Edit Params" title="Edit Params"></span>
+    </div>
+  </div>
+  
+  <div class="tl-pointer-track">
+    <svg class="tl-arrow-svg">
+      <defs>
+        <marker id="tl-arr-ngon" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 Z" fill="#7c5cff" />
+        </marker>
+      </defs>
+      <path d="M 46 36 C 46 16, 55 24, 55 4"
+            fill="none" stroke="#7c5cff" stroke-width="2.4" stroke-linecap="round"
+            marker-end="url(#tl-arr-ngon)" />
+    </svg>
+  </div>
+
+  <div class="tl-card">
+    <div class="tl-zoom-icon">
+      <img src="assets/icons/icon_ngon.svg" width="38" height="38" alt="N-Gon">
+    </div>
+    <div class="tl-card-body">
+      <div class="tl-card-header">
+        <strong class="tl-card-title">N-Gon</strong>
+        <kbd class="tl-key">—</kbd>
+      </div>
+      <p class="tl-card-desc">Click points on any surface to draw a custom polygon base, Enter to extrude height.</p>
+      <div class="tl-card-badges">
+        <span class="tl-badge tl-badge-req">✓ Nothing (always enabled)</span>
+        <span class="tl-badge tl-badge-row">Row 2</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p>Toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_ngon.svg" width="13" height="13" alt="">N-Gon<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="New Shape"><img src="assets/icons/icon_new_shape.svg" width="16" height="16" alt="New Shape" title="New Shape"></span><span class="tl-btn tl-target" title="N-Gon"><img src="assets/icons/icon_ngon.svg" width="16" height="16" alt="N-Gon" title="N-Gon"><span class="tl-target-ring"></span></span><span class="tl-btn" title="Edit Params"><img src="assets/icons/icon_edit_params.svg" width="16" height="16" alt="Edit Params" title="Edit Params"></span></span><span class="br-row">Row 2 · Shapes</span><span class="br-head"><img src="assets/icons/icon_ngon.svg" width="26" height="26" alt=""><span class="br-title">N-Gon</span></span><span class="br-desc">Draws a custom polygon, then extrudes it into 3D (Enter sizes the height).</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span>: click a polygon on a surface, <kbd>Enter</kbd>, drag height. Any floor plan becomes a volume.</p>
+<figure><img class="shot" src="edit-ngon.png" alt="Draw any polygon and extrude it."><figcaption>Draw any polygon and extrude it.</figcaption></figure>
+<h2 id="bevel">Bevel</h2>
+<p>Own page: <a href="bevel.html">Bevel</a>. <kbd>Ctrl</kbd>+<kbd>B</kbd>.</p>
+<h2 id="universal-rules">Universal rules</h2>
+<ul><li>Topology-rewriting ops undo as <strong>whole-mesh snapshots</strong>. There is no per-vertex undo payload that survives insertion.</li><li>Ops that create faces <strong>select those faces</strong>.</li><li>Welds make coincident corners one selectable vertex — see <a href="ops-joins.html">Holes &amp; joins</a>.</li></ul>
+<blockquote class="gotcha">Loop Cut wants a <em>ring</em> edge (the thing the loop crosses), not a loop edge (the thing the cut creates). Alt+click is the loop; Shift+Alt+click is the ring.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="transform.html"><span class="dir">← Previous</span><strong class="pager-title">Moving</strong></a><a class="pager-card pager-next" href="ops-joins.html"><span class="dir">Next →</span><strong class="pager-title">Holes &amp; joins</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

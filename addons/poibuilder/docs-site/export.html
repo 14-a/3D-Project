@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Export &amp; retro — PoiBuilder 0.9.167</title>
+<meta name="description" content="PBM is the headline product — a quick export bakes a tile-baked .pbm with vertex light for the PSP. GLB (retro-baked or modern) is one dialog away. Retro textures are sanitized on the way out.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Retro</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Export &amp; retro</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html" class="current">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Export &amp; retro</h1><p class="lead">PBM is the headline product — a quick export bakes a tile-baked .pbm with vertex light for the PSP. GLB (retro-baked or modern) is one dialog away. Retro textures are sanitized on the way out.</p><p>Toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_export.svg" width="13" height="13" alt="">Export...<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Export..."><img src="assets/icons/icon_export.svg" width="16" height="16" alt="Export..." title="Export..."><span class="tl-target-ring"></span></span><span class="tl-btn" title="Docs"><img src="assets/icons/icon_docs.svg" width="16" height="16" alt="Docs" title="Docs"></span></span><span class="br-row">Row 2 · Export</span><span class="br-head"><img src="assets/icons/icon_export.svg" width="26" height="26" alt=""><span class="br-title">Export...</span></span><span class="br-desc">Opens the export dialog: PBM (the retro .pbm map, default) or GLB — modern bake (lightmap-ready) or retro baked (vertex-lit) — with the bake options.</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> opens the dialog: <strong>Format</strong> defaults to PBM (<code>res://exports/exported_map.pbm</code>), with two GLB flavors below it — the Modern Bake first, the Retro Baked Map second. Everything else on the page applies per format.</p>
+<p>For the whole journey on one map, see the <a href="walkthrough-modern.html">walkthroughs</a>: build → export → play, once per pipeline.</p>
+<blockquote class="gotcha">The PoiBuilder scene as-is is the <em>authoring</em> format — the live splat shader and decal layers carry a significant performance cost (~4× the retro bake&#x27;s frame time on the <a href="performance.html">benchmark baseline</a>). It is highly recommended to <strong>export and play the baked map</strong> (GLB for the modern pipeline, PBM for retro); keep the editable scene for building, testing and iterating.</blockquote>
+<h2 id="modern-glb-baked">Modern GLB (baked)</h2>
+<p>The format to play and ship on the modern pipeline — selecting it in the dialog defaults to the optimized bake: <strong>paint baked into textures, no vertex lighting</strong>. Authored geometry is kept; collision meshes are named <code>Collider_*</code>; lights are exported as lights, so your realtime lights or a LightmapGI bake stay in charge. Paint has its own switch, <strong>Modern paint</strong>:</p>
+<p>Two authored looks glTF cannot carry come along as data on the nodes, and a Godot consumer restores them with a few lines (the frame benchmark does exactly this): <strong>shadow flags</strong> — a shadow-casting light tags its glTF node with <code>poi_shadow</code> extras, since KHR_lights_punctual has no shadow field — and the <strong>environment preset</strong> name, stamped on the scene root as <code>poi_env_preset</code>.</p>
+<p>The display environment a consumer applies depends on the flavor, and the difference matters:</p>
+<ul><li><strong>Retro bake</strong> — the map is <em>fully baked</em>: every lumen already lives in the vertex colors and tile textures. The consumer adds NO lighting of any kind; it shows the preset&#x27;s sky and linear fog and nothing else — <code>PBEnvironment.apply_retro_display(root, preset)</code>, which mirrors the PSP renderer exactly. Applying the live preset on top double-lights the map (measured +54% mean luminance at day vs the device) and a filmic tonemap re-decides colors the bake already decided.</li><li><strong>Modern bake</strong> — the map keeps live materials and realtime lights (with shadows restored from <code>poi_shadow</code>), so the full authored environment comes back via <code>PBEnvironment.apply_preset(root, preset)</code>: the same sky, ambient and filmic tonemap the editor showed.</li></ul>
+<p>A bare imported GLB with neither step renders with engine defaults and reads wrong.</p>
+<ul><li><strong>Bake into textures</strong> (default) — every painted face is composited into its own texture at the same texel density the editor used (256 texels/m), and its UV1 is rewritten into that texture. Self-contained: Godot, Blender, any glTF consumer shows your paint.</li><li><strong>Include splat data</strong> — the geometry keeps its mask coordinates (<code>TEXCOORD_2</code>), each painted face&#x27;s material carries a <code>poi_splat</code> record in its glTF <code>extras</code>, and the masks, layer textures and decal channel ship as PNGs next to the <code>.glb</code> under <code>&lt;map&gt;.splat/</code>. Use this when the consumer should re-blend at runtime. The recipe (with a reference shader) is in <code>docs/modern_glb_splat.md</code>; <code>PBSplatImport.rebuild_from_extras()</code> restores live, editable paint after a round trip into Godot.</li></ul>
+<h2 id="retro-baked-map">Retro baked map</h2>
+<p>The path the PSP eats — and what PBM is: the same bake written straight to the binary map instead of a GLB waypoint.</p>
+<p>What the export does:</p>
+<ul><li>Subdivides faces to the texture tiling grid (optional).</li><li>Bakes direct light, shadows, AO into <strong>vertex colours</strong>.</li><li>Bakes splat paint and the decal layer into unique <strong>tile</strong> textures; unpainted tiles reuse the base.</li><li>Writes collision hulls.</li><li>Writes lights, billboards, particle emitters, walkable meshes, environment preset.</li></ul>
+<p>Output: <code>.glb</code> as transport, and/or <code>.pbm</code> (the binary map). Both land in <code>project/exports/</code> (gitignored). The retro GLB still transports the light nodes (handy for dynamic objects), but the baked surfaces are vertex-lit — the reference viewer <em>hides</em> the imported lights to avoid double-lighting, and so should a viewer meant to reproduce the bake.</p>
+<figure><img class="shot" src="map-export.png" alt="One click to a retro .pbm map."><figcaption>One click to a retro .pbm map.</figcaption></figure>
+<h2 id="scrolling-textures">Scrolling textures</h2>
+<p>A scrolling texture is a property of the <strong>material</strong>: the Material dock writes a speed (in texture repeats per second, per UV axis, signed — negative V falls down a wall) onto the material, and the editor viewport animates it live. The exports carry the <em>speed</em>, not the animation — whichever consumer wants motion applies the one-line recipe <code>uv(t) = uv(0) + t · speed</code>:</p>
+<ul><li><strong>PBM</strong> — each mesh&#x27;s header stores <code>uv_scroll_u</code> / <code>uv_scroll_v</code> (<a href="pbm-format.html#5-1-standard-specification-animated-uv-scrolling">format §5.1</a>), and the bake exempts scrolling faces from the tile atlas so the face keeps a texture that can slide. For a proven implementation, read the reference PSP engine — <code>retro_engine/psp/psp_render.c</code> applies the offset per moving mesh on the device — or the Godot viewer, which replays it the same way.</li><li><strong>GLB (either flavor)</strong> — the speed rides the material&#x27;s glTF <code>extras</code> as <code>&quot;poi_uv_scroll&quot;: [u, v]</code> (repeats per second), in both the retro and modern bakes. A consumer that wants the falls to fall reads that record and offsets the material&#x27;s UVs over time; without those few lines the GLB shows the water at rest — which is exactly what a static glTF viewer will do.</li></ul>
+<blockquote class="gotcha">Do not splat-paint a scrolling face. Paint bakes to a static tile; keep painted and scrolling surfaces on separate faces.</blockquote>
+<h2 id="texture-sanitization">Texture sanitization</h2>
+<p>Retro consumers — the PSP especially — want <strong>power-of-two</strong> dimensions at or below <strong>max texture size</strong> (default 512). The export enforces that on every albedo, including:</p>
+<ul><li><code>PBMesh</code> tiles</li><li>Ordinary MeshInstance3D props you did <strong>not</strong> Poibuilderize</li><li>Particle atlases</li></ul>
+<p>A 300×180 import becomes a POT image ≤ 512. A 2048 atlas is downsized. Soft-alpha (blend) travels as RGBA8888; everything else prefers RGBA5551.</p>
+<p>The dialog&#x27;s &quot;max texture size&quot; dropdown is that clamp. Leave it at 512 unless you have measured a reason not to.</p>
+<h2 id="environment">Environment</h2>
+<p>The Env menu (Dawn / Day / Dusk / Night) relights the scene. Export stores the preset name. The PSP app can override it at runtime.</p>
+<figure><img class="shot" src="psp-court.png" alt="The same courtyard on a Sony PSP — not an emulator."><figcaption>The same courtyard on a Sony PSP — not an emulator.</figcaption></figure>
+<figure><img class="shot" src="psp-hud.png" alt="Measured on the device for the showcase map: 60 fps, 1618 tris, 20 draws. That row is that map, that camera, that build — not a promise about yours."><figcaption>Measured on the device for the showcase map: 60 fps, 1618 tris, 20 draws. That row is that map, that camera, that build — not a promise about yours.</figcaption></figure>
+<h2 id="the-retro-demo-engine-is-a-proof-of-concept">The retro demo engine is a proof of concept</h2>
+<p>The PSP engine in this repository (<code>retro_engine/psp/</code>) exists to answer two questions: does the <code>.pbm</code> format hold up, and how fast is a real retro target running it? That is all it tries to be — <strong>a proof of concept and a performance sanity check</strong>, not a game engine you ship with. It has no gameplay, no scripting, no toolchain polish, and it never will.</p>
+<p>The contract is the <strong>file format</strong>, not the demo:</p>
+<ul><li>The <code>.pbm</code> binary layout is fully specified in <a href="pbm-format.html">The PBM format specification</a> — write your own loader against it in your engine of choice.</li><li>The demo engine in the repo is a <strong>reference implementation</strong>: read its loader (<code>retro_engine/psp/pbm_loader.c</code>) and renderer to see how the format is meant to be consumed, then take what you need.</li><li>To eyeball the bake in Godot, reference the repository&#x27;s viewer script (<code>run_viewer.sh</code>) or roll your own: it renders the same bake (baked / vertex colour / textures / wireframe / colliders + play mode).</li></ul>
+<h2 id="authoring-for-the-retro-target">Authoring for the retro target</h2>
+<p>Architecture constraints, performance measurements, and the <code>.pbm</code> byte layout are documented on GitHub:</p>
+<ul><li><a href="https://github.com/Francesco149/poibuilder/blob/master/retro_engine/RETRO-AUTHORING.md">Retro Authoring Guide</a> — Godot authoring recipes and export baking rules.</li><li><a href="https://github.com/Francesco149/poibuilder/blob/master/retro_engine/psp/OPTIMIZATION.md">PSP Optimization Guide</a> — hardware architecture, fill rates, and the 19x texture cache cliff.</li><li><a href="https://github.com/Francesco149/poibuilder/tree/master/retro_engine">Retro Demo Engine</a> — the reference C renderer and viewer described above.</li></ul>
+<p>A scrolling material must not be atlas-packed; export already exempts it.</p>
+<blockquote class="gotcha">PPSSPP is for &quot;does it look right&quot;. Because host GPUs have massive caches, the emulator hides the PSP&#x27;s ~8 KB texture cache cliff (a 19x drop from 480 Mfrag/s to 25 Mfrag/s on misses). Do not tune performance from the emulator.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="grid.html"><span class="dir">← Previous</span><strong class="pager-title">Grid</strong></a><a class="pager-card pager-next" href="pbm-format.html"><span class="dir">Next →</span><strong class="pager-title">PBM format</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

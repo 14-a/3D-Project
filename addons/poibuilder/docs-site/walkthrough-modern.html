@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walkthrough — build a map (modern) — PoiBuilder 0.9.167</title>
+<meta name="description" content="From an empty Godot project to a finished map — architecture, splatting, decals, a waterfall, particles, billboards and a lightmapped neon room — then the same map as a GLB in a fresh project.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Walkthroughs</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Walkthrough — build a map (modern)</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html" class="current">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Walkthrough — build a map (modern)</h1><p class="lead">From an empty Godot project to a finished map — architecture, splatting, decals, a waterfall, particles, billboards and a lightmapped neon room — then the same map as a GLB in a fresh project.</p><p>This is the whole pipeline in one pass. Everything you build here is ordinary PoiBuilder work — no scripts — and every screenshot is of the finished demo map that this walkthrough constructs. (If you want to compare your result against a reference, the finished map is in PoiBuilder&#x27;s public repository — feel free to dig through how we build it there, or just roll your own.)</p>
+<h2 id="what-you-are-building">What you are building</h2>
+<figure><img class="shot" src="demo-overview.png" alt="The finished map at dusk: splat courtyard, waterfall, arched doorway, stairs to the roof, and the neon room&#x27;s glow through the door."><figcaption>The finished map at dusk: splat courtyard, waterfall, arched doorway, stairs to the roof, and the neon room&#x27;s glow through the door.</figcaption></figure>
+<p>A courtyard with a painted floor, a waterfall, and a small building: an arched doorway, exterior stairs to a walkable roof, and a closed neon room set up for baked lightmaps. Features on display: texture splatting, decal stamps, scrolling textures, particle emitters, billboards, walls/doors/stairs architecture, and LightmapGI.</p>
+<h2 id="0-empty-project">0. Empty project</h2>
+<ol class="steps"><li>New Godot <strong>4.7</strong> project (standard or .NET), any renderer. (4.6 stable works too — see <a href="install.html">Install</a>.)</li><li>Copy <code>addons/poibuilder/</code> in, enable it in <strong>Project Settings → Plugins</strong> (that enable tick is always manual).</li><li>Open any 3D scene. The PoiBuilder toolbar appears under Godot&#x27;s.</li></ol>
+<p>That is the whole setup — see <a href="install.html">Install</a> for the release-zip route.</p>
+<h2 id="1-the-courtyard-floor">1. The courtyard floor</h2>
+<p><strong>New Shape → Cube</strong>, press on the grid, drag a 16 × 16 m square, release, set the height to 0.5 m, click to confirm. Center it at the origin and sink it so the top face sits at Y = 0.</p>
+<p>Give it a material first (you will splat it in the next step): <strong>Material</strong> dock → pick a texture (a dark slate tile works well) → click the cube&#x27;s top face in <strong>Texture mode</strong> (<kbd>6</kbd>) to assign it.</p>
+<h2 id="2-splat-the-floor">2. Splat the floor</h2>
+<p>Texture splatting blends up to 8 albedos on one face, brushed like paint.</p>
+<ol class="steps"><li><strong>Material</strong> dock → <strong>Texture Paint</strong> tab. The face you selected is the target; the dock shows its base texture as layer 0.</li><li>Add a layer: pick a second texture (a brick pattern), make sure <strong>Paint into</strong> is set to <strong>Splat layers</strong>, then brush it into the mask. Paint a path from where the doorway will be, out to a circular plaza.</li><li>Brush radius, softness and opacity live in the same panel; every dab is undoable.</li></ol>
+<figure><img class="shot" src="demo-splat-decal.png" alt="Three albedos on one face: the wet-slate base, the brushed brick path and plaza, and a flower decal near the pool."><figcaption>Three albedos on one face: the wet-slate base, the brushed brick path and plaza, and a flower decal near the pool.</figcaption></figure>
+<p>Rules worth knowing: resize never stretches the tiling, and splat paint never touches UV2 (masks travel in their own vertex channel), so you can lightmap later without losing paint — see <a href="paint.html">Paint &amp; stamps</a>.</p>
+<h2 id="3-architecture-walls-door-stairs">3. Architecture: walls, door, stairs</h2>
+<ul><li><strong>Walls</strong> — New Shape → Cube for each wall piece, or one long cube with <a href="ops.html">inset/knife</a> work. 0.5 m thick, 3.5 m tall is a comfortable scale.</li><li><strong>Arched doorway</strong> — New Shape → <strong>Door</strong>. Drag the base; an orange arrow shows the facing (hold <kbd>Ctrl</kbd> to lock it), release, set the height. In the params modal: <strong>Arched</strong>, Arch Segments ~8. The door shape IS the wall piece with the opening in it — no boolean needed.</li><li><strong>Exterior stairs</strong> — New Shape → <strong>Stair</strong> against the building&#x27;s flank, running to the roof. Height = floor-to-roof; raise <strong>Steps</strong> until the treads meet the landing. The roof slab is a flat cube — walkable.</li></ul>
+<figure><img class="shot" src="demo-stairs.png" alt="Door facing, mitre-free corners: the door is a parameterized wall, the stairs land on the roof slab."><figcaption>Door facing, mitre-free corners: the door is a parameterized wall, the stairs land on the roof slab.</figcaption></figure>
+<h2 id="4-two-decals">4. Two decals</h2>
+<p>A stamp is a PNG painted INTO the surface (a single click, no drag), and it spans faces freely — see <a href="paint.html">Paint &amp; stamps</a>.</p>
+<ol class="steps"><li><strong>Stamp</strong> tab → pick an image → click the courtyard floor. Cross the brick path&#x27;s edge on purpose: the decal lands in its own layer, on top of any splat.</li><li>A second stamp on the wall beside the door (posters, tapestries), and optionally a flower patch worn into the ground by the pool.</li><li><strong>Erase</strong> in the same tab rubs decal pixels back out.</li></ol>
+<h2 id="5-the-waterfall">5. The waterfall</h2>
+<p>A waterfall is LAYERED scrolling textures + particles — no shader graph. The demo one stacks, back to front:</p>
+<ol class="steps"><li>A wall panel to fall down (a cube), topped by a thin <strong>lip</strong> the water pours from.</li><li><strong>Plane</strong> shapes hung on its face, each with a water texture and a <strong>scroll speed</strong> set in the Material dock (repeats per second, signed — negative V falls down a wall). The stack: a full-width bright <strong>veil</strong> scrolling slowly, the streaky <strong>sheet</strong> over it, two narrow side <strong>trickles</strong> on their own speeds, and a fast <strong>core</strong> in front — the parallax between speeds is what sells depth. All blended alpha.</li><li>An <strong>apron</strong> on top of the lip crawling towards the edge, a ripple <strong>pool</strong> on the floor, a bright <strong>foam</strong> ribbon at the impact and a wide faint <strong>swell</strong> behind it — every one just another scrolling plane.</li><li>Two <strong>spray billboards</strong> at the base (alpha cutout, texture scrolling upward at different rates), and a mist <a href="#7-particle-emitters">emitter</a> whose <strong>emission sphere is as wide as the sheet</strong> — a point emitter reads as a puff, the sphere reads as a bank. A second tiny emitter drifts a wisp up the wall face.</li></ol>
+<figure><img class="shot" src="demo-waterfall.png" alt="The layered falls: lip and apron, veil + sheet + trickles + core on four speeds, foam over the pool, and a mist bank as wide as the water."><figcaption>The layered falls: lip and apron, veil + sheet + trickles + core on four speeds, foam over the pool, and a mist bank as wide as the water.</figcaption></figure>
+<blockquote class="gotcha">The scroll speed is DATA that travels with the export — the retro bake writes each mesh&#x27;s speed into the <code>.pbm</code> (<code>uv_scroll_u/v</code>), and a modern GLB carries it in the material&#x27;s glTF <code>extras</code>. What does NOT travel is the animation code: a consumer moves the UVs itself (<code>uv(t) = uv(0) + t · speed</code>). See <a href="export.html#scrolling-textures">Export &amp; retro</a> for both recipes. Two authoring rules: the retro bake exempts scrolling faces from the tile atlas (a scrolling face keeps its own texture — that is what slides), and do not splat-paint a scrolling face — paint bakes to a static tile.</blockquote>
+<h2 id="6-billboards">6. Billboards</h2>
+<p><kbd>B</kbd> arms the sprite placer: pick a texture from the carousel, click a surface, drag to raise, move to scale, click to commit. Two trees and a bush fill the courtyard out. At export a billboard keeps facing the camera on the PSP; in Godot it is a quad — a <code>MeshInstance3D</code> named <code>sprite*</code>/<code>tree*</code> also exports as a billboard.</p>
+<h2 id="7-particle-emitters">7. Particle emitters</h2>
+<ol class="steps"><li><strong>Material</strong> dock → <strong>Particles</strong> tab. Pick a particle texture — presets arm themselves per texture (flame, smoke, glow).</li><li>Click a surface: the emitter appears live. Drag up/down to lift it off the surface, move left/right to tune the particle count, wheel scales the quads, click to commit. Always re-armed, Esc cancels.</li><li>To fine-tune one later: select it (object mode is fine) → <strong>⚙ Edit Emitter Properties</strong> on the overlay panel — count, size, speed, spread, additive blending, flipbook grid.</li></ol>
+<figure><img class="shot" src="demo-particles.png" alt="The brazier by the waterfall: the flipbook flame and its embers are the same emitters the retro export plays — placed in three clicks, tuned by dragging."><figcaption>The brazier by the waterfall: the flipbook flame and its embers are the same emitters the retro export plays — placed in three clicks, tuned by dragging.</figcaption></figure>
+<p>The retro format caps 64 particles per emitter and ~256 per map — the placement tool&#x27;s knobs are budget-aware so what you author is what the PSP can play.</p>
+<h2 id="8-the-neon-room-lightmap-ready">8. The neon room (lightmap-ready)</h2>
+<p>A closed room shows off baked light: dark envelope, colored strips, colored lights, props.</p>
+<ol class="steps"><li><strong>Envelope</strong> — four wall cubes, a ceiling slab, an interior floor, all with a dark material (keep the albedo texture visible: an albedo multiplier darker than ~40% crushes the pattern away).</li><li><strong>Neon strips</strong> — thin boxes with an <strong>emission</strong> material (cyan / magenta, emission energy 4–6). Emission is a light source the baker understands.</li><li><strong>Colored lights</strong> — OmniLight3D nodes, <code>light_bake_mode = Static</code>, shadows on. Keep energies LOW (1–2): a closed room concentrates them.</li><li><strong>Props</strong> — drag a GLB from the FileSystem dock into the room. The demo map uses market barrels from the <strong>PSX Modular Medieval pack by valsekamerplant</strong> (<a href="https://valsekamerplant.itch.io">itch.io</a>) — leave them unconverted; imported props export fine (see <a href="objects.html">Objects &amp; CSG</a>).</li><li><strong>Make it bake-ready</strong> — select each room mesh → <strong>UV</strong> editor → <strong>Lightmap</strong> button (unwraps UV2 and flips the mesh to <em>GI Mode: Static</em>). Add a <strong>LightmapGI</strong> node (bounces 3, directional, generate probes).</li><li><strong>Bake</strong> — with the LightmapGI node selected, Inspector → <strong>Bake Lightmaps</strong>. Walk the room: the strips and colored lights now bounce, and the barrels (GI Dynamic) pick up probe light.</li></ol>
+<figure><img class="shot" src="demo-neon-room.png" alt="The closed room: emissive strips, colored static lights, imported barrels — ready for a LightmapGI bake."><figcaption>The closed room: emissive strips, colored static lights, imported barrels — ready for a LightmapGI bake.</figcaption></figure>
+<figure><img class="shot" src="demo-neon-pedestal.png" alt="Before the bake the direct light already reads; after it, the bounce fills the corners."><figcaption>Before the bake the direct light already reads; after it, the bounce fills the corners.</figcaption></figure>
+<h2 id="9-play-it">9. Play it</h2>
+<p>Your map needs a camera before it plays. Two routes, both minutes:</p>
+<p><strong>A fly camera (the three-minute route).</strong> Add a <strong>Camera3D</strong> to the scene, make it current, and attach a script like this one:</p>
+<pre><code class="lang-gdscript">extends Camera3D
+# Minimal fly camera: click the viewport to capture the mouse,
+# WASD + mouse to fly, E/Q up/down, Shift for speed, Esc to release.
+
+@export var speed := 6.0
+@export var boost := 3.0
+@export var sensitivity := 0.003
+
+func _unhandled_input(event: InputEvent) -&gt; void:
+	if event is InputEventMouseButton and event.pressed \
+			and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	elif event is InputEventMouseMotion \
+			and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		rotate_y(-event.relative.x * sensitivity)
+		rotate_object_local(Vector3.RIGHT, -event.relative.y * sensitivity)
+	elif event.is_action_pressed(&quot;ui_cancel&quot;):
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func _process(delta: float) -&gt; void:
+	var dir := Vector3.ZERO
+	if Input.is_key_pressed(KEY_W): dir -= transform.basis.z
+	if Input.is_key_pressed(KEY_S): dir += transform.basis.z
+	if Input.is_key_pressed(KEY_A): dir -= transform.basis.x
+	if Input.is_key_pressed(KEY_D): dir += transform.basis.x
+	if Input.is_key_pressed(KEY_E): dir += Vector3.UP
+	if Input.is_key_pressed(KEY_Q): dir += Vector3.DOWN
+	if Input.is_key_pressed(KEY_SHIFT): dir *= boost
+	if dir != Vector3.ZERO:
+		global_position += dir.normalized() * speed * delta</code></pre>
+<p>Click the viewport, fly. This is usually all a map-in-progress wants.</p>
+<p><strong>A walking player.</strong> Add a <strong>CharacterBody3D</strong> with a capsule and a camera (Godot&#x27;s first-person template works), and make sure the meshes&#x27; <strong>Collider</strong> property is set (Accurate for floors/walls/stairs) — PoiBuilder meshes carry their own collision.</p>
+<h2 id="10-export-the-map-as-glb">10. Export the map as GLB</h2>
+<p>Toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_export.svg" width="13" height="13" alt="">Export...<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Export..."><img src="assets/icons/icon_export.svg" width="16" height="16" alt="Export..." title="Export..."><span class="tl-target-ring"></span></span><span class="tl-btn" title="Docs"><img src="assets/icons/icon_docs.svg" width="16" height="16" alt="Docs" title="Docs"></span></span><span class="br-row">Row 2 · Export</span><span class="br-head"><img src="assets/icons/icon_export.svg" width="26" height="26" alt=""><span class="br-title">Export...</span></span><span class="br-desc">Opens the export dialog: PBM (the retro .pbm map, default) or GLB — modern bake (lightmap-ready) or retro baked (vertex-lit) — with the bake options.</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> → <strong>GLB — Modern Bake (lightmap-ready)</strong> — the first GLB flavor, and the one to play/ship on the modern pipeline. Selecting it defaults the dialog to the optimized bake:</p>
+<ul><li><strong>Modern paint → Bake into textures</strong> (default) — every painted face (splat layers <em>and</em> decals) becomes its own texture; any consumer shows your paint.</li><li><strong>Vertex lighting off</strong> (default) — the bake carries no vertex colors; your realtime lights or a LightmapGI bake stay in charge. (The retro flavors bake light into vertices instead.)</li><li><strong>Include splat data</strong> — the alternative paint mode: masks/layers/decals ship as sidecar PNGs with a <code>poi_splat</code> record for engines that re-blend at runtime (<a href="modern-glb-splat.html">recipe</a>).</li></ul>
+<blockquote class="gotcha">Playing the PoiBuilder scene itself is for building, testing and iterating — the live splat shader and decal layers carry a real GPU cost (~4× the retro bake on the <a href="performance.html">benchmark baseline</a>). When you want to play or share the map, export the GLB and play that.</blockquote>
+<p>Collision ships as <code>Collider_*</code> meshes. Particle emitters ride the GLB as DATA: each emitter&#x27;s node carries a <code>poi_emitter</code> record in its glTF extras (count, colors, spread, the whole authoring), so a consumer rebuilds the emitter from it — the reference viewer in the repository does exactly that — or you bake the look into the textures you take along.</p>
+<h2 id="11-the-glb-in-a-fresh-project">11. The GLB in a fresh project</h2>
+<ol class="steps"><li>New Godot project → copy the exported <code>.glb</code> in (plus the <code>.splat/</code> folder if you chose <em>Include splat data</em>).</li><li>Drag it into a 3D scene. Geometry, materials, paint and colliders land as a static scene — no plugin needed to VIEW it.</li><li>Add a light and a player, press Play. That is the modern pipeline&#x27;s contract: the map is ordinary glTF when it leaves.</li></ol>
+<p>Next: the same map on a retro target — <a href="walkthrough-retro.html">Walkthrough: export to PSP/retro</a>.</p>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="objects.html"><span class="dir">← Previous</span><strong class="pager-title">Objects &amp; CSG</strong></a><a class="pager-card pager-next" href="walkthrough-retro.html"><span class="dir">Next →</span><strong class="pager-title">Export to PSP / retro</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

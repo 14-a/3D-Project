@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Materials — PoiBuilder 0.9.167</title>
+<meta name="description" content="Per-face materials, auto-UV that does not stretch on resize, and a dock that is also the paint bucket.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Surface</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Materials</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html" class="current">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Materials</h1><p class="lead">Per-face materials, auto-UV that does not stretch on resize, and a dock that is also the paint bucket.</p><h2 id="the-dock">The dock</h2>
+<p>Toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_materials.svg" width="13" height="13" alt="">Material<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Material &amp; UV"><img src="assets/icons/icon_materials.svg" width="16" height="16" alt="Material &amp; UV" title="Material &amp; UV"><span class="tl-target-ring"></span></span><span class="tl-btn" title="UV"><img src="assets/icons/icon_uv_unwrap.svg" width="16" height="16" alt="UV" title="UV"></span><span class="tl-btn" title="Panel"><img src="assets/icons/icon_panel.svg" width="16" height="16" alt="Panel" title="Panel"></span><span class="tl-btn" title="Reset Panel"><img src="assets/icons/icon_panel_reset.svg" width="16" height="16" alt="Reset Panel" title="Reset Panel"></span><span class="tl-btn" title="Settings"><img src="assets/icons/icon_settings.svg" width="16" height="16" alt="Settings" title="Settings"></span></span><span class="br-row">Row 2 · Docks</span><span class="br-head"><img src="assets/icons/icon_materials.svg" width="26" height="26" alt=""><span class="br-title">Material &amp; UV</span></span><span class="br-desc">Focuses the Material &amp; UV dock: palette, splat painting, stamps, sprites, particles.</span><span class="br-req">Needs: Nothing</span></span></span> focuses the Material &amp; UV dock. It is six modes on one segmented row:</p>
+<table><thead><tr><th>Mode</th><th>What it does</th></tr></thead><tbody><tr><td><strong>Material &amp; UV</strong></td><td>The palette below — per-face assignment, drag-and-drop, UV speed.</td></tr><tr><td><strong>Texture Paint</strong></td><td>The splat brush — see <a href="paint.html">Paint &amp; stamps</a>.</td></tr><tr><td><strong>Stamp</strong></td><td>Decal stamps in one click.</td></tr><tr><td><strong>Sprite</strong></td><td>Always-armed billboard placement.</td></tr><tr><td><strong>Shapes</strong></td><td>Always-armed primitive placement: pick a shape, drag it on any surface.</td></tr><tr><td><strong>Particles</strong></td><td>Click-to-place particle emitters (PSP-budget aware).</td></tr></tbody></table>
+<p>The palette itself:</p>
+<ul><li>Swatch grid of project materials.</li><li>Click a face (face or texture mode), click a swatch — that face takes the material.</li><li>Drag a texture from the FileSystem dock onto a face.</li><li><strong>+ Add</strong> pulls a material or texture from anywhere in the project; the scan deduplicates by content so one texture does not appear twice.</li></ul>
+<p>Texture mode (<kbd>6</kbd>) transforms the selected faces&#x27; UVs in 3D with the same gizmo — see <a href="select.html#texture-mode-move-uvs-in-the-3d-view">Texture mode</a>. For island work, use the <a href="uv.html">2D UV editor</a>.</p>
+<h2 id="auto-uv">Auto-UV</h2>
+<p>New shapes unwrap with a 1×1 m repeat. Rules the plugin keeps:</p>
+<ul><li>Resize does not stretch — UVs stay locked to object space, so a 2 m wall still shows 2 tiles.</li><li>Coplanar faces share a seam anchor, so a merged wall does not crawl.</li><li>Diagonal faces tile along their plane, not a projected smash.</li></ul>
+<p>If a ramp still looks stretched, that is a projection job: <a href="uv.html">UV editor</a>.</p>
+<h2 id="smoothing">Smoothing</h2>
+<p><span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_auto_smooth.svg" width="13" height="13" alt="">Auto Smooth<span class="br-pop"><span class="br-strip"><span class="tl-btn" title="All"><img src="assets/icons/icon_select_all.svg" width="16" height="16" alt="All" title="All"></span><span class="tl-btn" title="Invert"><img src="assets/icons/icon_invert_selection.svg" width="16" height="16" alt="Invert" title="Invert"></span><span class="tl-btn" title="Grow"><img src="assets/icons/icon_grow_selection.svg" width="16" height="16" alt="Grow" title="Grow"></span><span class="tl-btn" title="Shrink"><img src="assets/icons/icon_shrink_selection.svg" width="16" height="16" alt="Shrink" title="Shrink"></span><span class="tl-btn" title="Coplanar"><img src="assets/icons/icon_select_coplanar.svg" width="16" height="16" alt="Coplanar" title="Coplanar"></span><span class="tl-btn" title="Similar"><img src="assets/icons/icon_select_similar.svg" width="16" height="16" alt="Similar" title="Similar"></span><span class="tl-btn" title="Boundary"><img src="assets/icons/icon_select_boundary.svg" width="16" height="16" alt="Boundary" title="Boundary"></span><span class="tl-btn" title="Loop"><img src="assets/icons/icon_face_loop.svg" width="16" height="16" alt="Loop" title="Loop"></span><span class="tl-btn" title="Ring"><img src="assets/icons/icon_face_ring.svg" width="16" height="16" alt="Ring" title="Ring"></span><span class="tl-btn tl-target" title="Auto Smooth"><img src="assets/icons/icon_auto_smooth.svg" width="16" height="16" alt="Auto Smooth" title="Auto Smooth"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 3 · Selection Suite</span><span class="br-head"><img src="assets/icons/icon_auto_smooth.svg" width="26" height="26" alt=""><span class="br-title">Auto Smooth</span><kbd class="br-key">Unbound (rebindable)</kbd></span><span class="br-desc">Auto-smooths faces by dihedral angle (45°).</span><span class="br-req">Needs: A PBMesh</span></span></span> (row 3) sets smoothing groups from a 45° dihedral. Hard edges stay hard; shallow joins pick up shared normals. Lighting, not geometry.</p>
+<h2 id="particle-emitters">Particle emitters</h2>
+<p>The dock&#x27;s <strong>Particles</strong> tab places stateless particle emitters: pick a particle texture (flame, smoke, glow presets arm themselves), click a surface, drag to lift and tune, click to commit — the click-by-click lives in the <a href="walkthrough-modern.html#7-particle-emitters">modern walkthrough</a>. Fine-tune any placed emitter by selecting it and opening <strong>⚙ Edit Emitter Properties</strong> on the overlay (count, size, speed, spread, additive blending, flipbook grid).</p>
+<p>What &quot;stateless&quot; means, and why it is the headline: an emitter is authored as an ordinary <code>GPUParticles3D</code> for the editor, but its playback is a <strong>closed form</strong> — particle <em>i</em> at time <em>t</em> is a pure function of <code>(t, i, seed)</code>. There is no simulation to tick and no per-particle state to keep:</p>
+<ul><li>deterministic — the same emitter always produces the same fire, so what you preview is what every consumer shows;</li><li>cheap — a runtime re-derives each particle with a few flops, one draw call per emitter, no per-frame CPU cost that grows with age;</li><li>additive emitters need no depth sorting; blended ones draw back-to-front;</li><li>exportable as <strong>data</strong> — the retro <code>.pbm</code> carries a standard <code>emitters</code> lump and a modern <code>.glb</code> tags each emitter node with a <code>poi_emitter</code> record in its glTF extras (count, colors, spread — the whole authoring), so your engine rebuilds the identical effect instead of eyeballing it.</li></ul>
+<p>Placement knobs are budget-aware for the retro target: 64 particles per emitter and roughly 256 per map. See <a href="export.html">Export &amp; retro</a> for what ships and the <a href="pbm-format.html">format spec</a> for the lump layout.</p>
+<h2 id="scroll">Scroll</h2>
+<p>A material can carry a UV scroll speed (repeats per second, per axis, signed). It plays in the editor viewport and <strong>survives export as data</strong>: per-mesh <code>uv_scroll</code> in the retro formats, <code>poi_uv_scroll</code> in a modern GLB material&#x27;s glTF extras. The animation itself is the consumer&#x27;s one-liner (<code>uv(t) = uv(0) + t · speed</code>) — the recipes are on <a href="export.html#scrolling-textures">Export &amp; retro</a>. Waterfalls are a scrolling plane, not a shader graph.</p>
+<figure><img class="shot" src="paint-scroll.png" alt="Animated materials — UV scroll in the viewport."><figcaption>Animated materials — UV scroll in the viewport.</figcaption></figure>
+<figure><video class="shot" autoplay loop muted playsinline controls src="clips/paint-scroll.mp4"></video><figcaption>The sheet moves. The mesh does not.</figcaption></figure>
+<p>Related: <a href="paint.html">Paint &amp; stamps</a>, <a href="uv.html">UV editor</a>.</p>
+<blockquote class="gotcha">Textures that &quot;slide&quot; when you extrude were a bug class. Extrude is supposed to continue tiling across the new seam. If it does not, file it — do not compensate by hand-scaling UVs on every extrude.</blockquote>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="bevel.html"><span class="dir">← Previous</span><strong class="pager-title">Bevel</strong></a><a class="pager-card pager-next" href="uv.html"><span class="dir">Next →</span><strong class="pager-title">UV editor</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>

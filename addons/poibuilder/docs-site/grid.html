@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grid — PoiBuilder 0.9.167</title>
+<meta name="description" content="PoiBuilder has its own grid. Element drags, extrude, and shape creation snap to it. The engine grid hides while you are in a PoiBuilder context.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="">
+<input type="checkbox" id="nav-toggle" class="nav-toggle" hidden>
+<header class="top">
+  <label for="nav-toggle" class="nav-btn" aria-label="Open navigation">☰</label>
+  <a class="brand" href="index.html">
+    <img src="favicon.svg" width="22" height="22" alt="">
+    <span>PoiBuilder</span>
+    <small>0.9.167</small>
+  </a>
+  <div class="top-breadcrumb">
+    <span class="bc-sep">/</span>
+    <span class="bc-section">Retro</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-page">Grid</span>
+  </div>
+  <nav class="top-links">
+    <a href="first-minutes.html">First minutes</a>
+    <a href="keys.html">Keys</a>
+    <a href="https://github.com/Francesco149/poibuilder">GitHub</a>
+  </nav>
+</header>
+<div class="shell">
+  <label for="nav-toggle" class="nav-scrim"></label>
+  <aside class="side">
+    <p class="side-kicker">Godot 4 mesh building</p>
+    <div class="group"><div class="group-title"><span class="grp-glyph">◈</span> Start here</div>
+<a href="index.html">Welcome</a>
+<a href="install.html">Install</a>
+<a href="first-minutes.html">First minutes</a>
+<a href="interface.html">Interface</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬡</span> Create</div>
+<a href="shapes.html">Shapes</a>
+<a href="trims.html">Trims</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">❖</span> Edit</div>
+<a href="select.html">Selecting</a>
+<a href="transform.html">Moving</a>
+<a href="ops.html">Mesh operations</a>
+<a href="ops-joins.html">Holes &amp; joins</a>
+<a href="bevel.html">Bevel</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">◬</span> Surface</div>
+<a href="materials.html">Materials</a>
+<a href="uv.html">UV editor</a>
+<a href="paint.html">Paint &amp; stamps</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">⬢</span> Objects</div>
+<a href="objects.html">Objects &amp; CSG</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">•</span> Walkthroughs</div>
+<a href="walkthrough-modern.html">Build a map (modern)</a>
+<a href="walkthrough-retro.html">Export to PSP / retro</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">▲</span> Retro</div>
+<a href="grid.html" class="current">Grid</a>
+<a href="export.html">Export &amp; retro</a>
+<a href="pbm-format.html">PBM format</a>
+</div>
+<div class="group"><div class="group-title"><span class="grp-glyph">≡</span> Reference</div>
+<a href="performance.html">Performance</a>
+<a href="keys.html">Keys</a>
+<a href="modern-glb-splat.html">Splat in a modern .glb</a>
+<a href="known-issues.html">Known issues</a>
+<a href="faq.html">FAQ</a>
+</div>
+  </aside>
+  <main class="main">
+    <article class="page">
+      
+      <h1>Grid</h1><p class="lead">PoiBuilder has its own grid. Element drags, extrude, and shape creation snap to it. The engine grid hides while you are in a PoiBuilder context.</p><h2 id="what-you-see">What you see</h2>
+<p>A cyan line mesh in the 3D viewport, not a node in the scene. Elevation is session-only; unit and subdivisions persist in Editor Settings (<code>poibuilder/grid/*</code>).</p>
+<p>While any PoiBuilder context is active (mesh selected, creation armed, draw-on-grid, elevated grid) the engine&#x27;s stock grid hides.</p>
+<h2 id="keys">Keys</h2>
+<table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><kbd>Y</kbd></td><td>Toggle snapping</td></tr><tr><td><kbd>G</kbd></td><td>Draw on grid — start a shape on the plugin grid even over a mesh</td></tr><tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Elevation down / up</td></tr><tr><td><kbd>-</kbd> <kbd>=</kbd></td><td>Subdivisions coarser / finer</td></tr><tr><td><kbd>Shift</kbd>+<kbd>-</kbd> <kbd>Shift</kbd>+<kbd>=</kbd></td><td>Unit ÷2 / ×2</td></tr><tr><td><kbd>\</kbd></td><td>Reset elevation</td></tr></tbody></table>
+<p>The toolbar <span class="btnref" tabindex="0"><img class="br-ico" src="assets/icons/icon_grid.svg" width="13" height="13" alt="">Grid<span class="br-pop"><span class="br-strip"><span class="tl-btn tl-target" title="Grid"><img src="assets/icons/icon_grid.svg" width="16" height="16" alt="Grid" title="Grid"><span class="tl-target-ring"></span></span></span><span class="br-row">Row 3 · Grid</span><span class="br-head"><img src="assets/icons/icon_grid.svg" width="26" height="26" alt=""><span class="br-title">Grid</span><kbd class="br-key">= / - subdiv · [ / ] elevation · Y snap · G draw-on-grid</kbd></span><span class="br-desc">Opens the grid &amp; snapping settings; the readout beside it shows the current snap step.</span><span class="br-req">Needs: Nothing (always enabled)</span></span></span> button opens the settings panel (unit, subdivisions, elevation, draw-on-grid). The readout shows the current snap step, and the elevation when it is not zero.</p>
+<p>Object mode can sync engine snap to this grid. Element mode always uses the plugin grid.</p>
+<p>See also <a href="transform.html">Moving</a> for V-Snap and proportional editing.</p>
+    </article>
+    <nav class="pager"><div class="pager-grid"><a class="pager-card pager-prev" href="walkthrough-retro.html"><span class="dir">← Previous</span><strong class="pager-title">Export to PSP / retro</strong></a><a class="pager-card pager-next" href="export.html"><span class="dir">Next →</span><strong class="pager-title">Export &amp; retro</strong></a></div></nav>
+    <footer class="foot">
+      Docs built for PoiBuilder 0.9.167. Offline copy ships inside the addon.
+      Keys are the compiled-in defaults — rebind in Editor Settings → Shortcuts.
+    </footer>
+  </main>
+</div>
+</body>
+</html>
