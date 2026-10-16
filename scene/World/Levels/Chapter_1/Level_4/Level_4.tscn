@@ -4,7 +4,6 @@
 [ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_l1t51"]
 [ext_resource type="PackedScene" uid="uid://bu003mo73hx2e" path="res://scene/World/Levels/Chapter_1/Level_5/Level_1.tscn" id="2_cqalp"]
 [ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="2_gw143"]
-[ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="2_hrqbk"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="2_kwquh"]
 [ext_resource type="Script" uid="uid://b1foqtapm6fq7" path="res://scene/World/Levels/Chapter_1/Level_4/map.gd" id="2_vkgsd"]
 [ext_resource type="PackedScene" uid="uid://c4kmlqrqch45f" path="res://scene/World/机制_1/LevelButten/小按钮/小按钮.tscn" id="3_cjmg3"]
@@ -179,9 +178,6 @@ transform = Transform3D(1.1924881e-08, 0, 1, 0, 1, 0, -1, 0, 1.1924881e-08, 0, -
 use_collision = true
 size = Vector3(7, 1.0000001, 2)
 material = ExtResource("5_l1t51")
-
-[node name="Player" parent="." unique_id=1765428193 instance=ExtResource("2_hrqbk")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15632057, -4.7683716e-07, -0.06132178)
 
 [node name="小按钮" parent="." unique_id=1685552006 instance=ExtResource("3_cjmg3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -28)

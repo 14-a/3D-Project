@@ -3,7 +3,6 @@
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="1_mefbm"]
 [ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_mtqfh"]
 [ext_resource type="PackedScene" uid="uid://bsr8y1ylthtfk" path="res://scene/World/Levels/Chapter_1/Level_3/Level_3.tscn" id="2_1612y"]
-[ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="2_o15ty"]
 [ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="3_ctxu3"]
 [ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="3_tt13b"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="4_md3p8"]
@@ -20,9 +19,6 @@ NextScene = ExtResource("2_1612y")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1190904497]
 environment = ExtResource("3_ctxu3")
-
-[node name="Player" parent="." unique_id=1765428193 instance=ExtResource("2_o15ty")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22594976, 0, 0.4162407)
 
 [node name="Map" type="Node3D" parent="." unique_id=1585773430]
 

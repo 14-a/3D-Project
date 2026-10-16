@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://1w3w0tpuiab3"
+path="res://.godot/imported/Willow_Dead_4.obj-53f446edf4eb300a7aa53c0220d2fa7e.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Willow_Dead_4.obj-53f446edf4eb300a7aa53c0220d2fa7e.mesh"]
+
+source_file="res://scene/Model/Tree/OBJ/Willow_Dead_4.obj"
+dest_files=["res://.godot/imported/Willow_Dead_4.obj-53f446edf4eb300a7aa53c0220d2fa7e.mesh", "res://.godot/imported/Willow_Dead_4.obj-53f446edf4eb300a7aa53c0220d2fa7e.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

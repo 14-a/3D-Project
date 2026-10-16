@@ -3,7 +3,6 @@
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="1_lxhgg"]
 [ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_oite3"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="2_demj2"]
-[ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="2_k5laq"]
 [ext_resource type="PackedScene" uid="uid://dhhb28a0mqj2s" path="res://scene/World/Levels/Chapter_1/Level_4/Level_4.tscn" id="2_mdmdm"]
 [ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="3_3q4ko"]
 [ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="3_demj2"]
@@ -156,9 +155,6 @@ size = Vector3(6, 0.9999999, 2)
 material = ExtResource("7_oite3")
 
 [node name="小按钮" parent="Map/Prat3" unique_id=1553613173 instance=ExtResource("5_5sift")]
-
-[node name="Player" parent="." unique_id=1765428193 instance=ExtResource("2_k5laq")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14808702, 0, -0.024169404)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1377111066]
 transform = Transform3D(-0.75064677, 0.5721863, -0.3303518, 0.21360312, 0.683317, 0.6981774, 0.6252225, 0.45352042, -0.6351505, -0.7868, 0, 7.9326267)

@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://chqgfs5oncge1"
+path="res://.godot/imported/WoodLog_Snow.obj-43f1ab99c9c0faff82fa724f8c6ff4d8.mesh"
+
+[deps]
+
+files=["res://.godot/imported/WoodLog_Snow.obj-43f1ab99c9c0faff82fa724f8c6ff4d8.mesh"]
+
+source_file="res://scene/Model/Tree/OBJ/WoodLog_Snow.obj"
+dest_files=["res://.godot/imported/WoodLog_Snow.obj-43f1ab99c9c0faff82fa724f8c6ff4d8.mesh", "res://.godot/imported/WoodLog_Snow.obj-43f1ab99c9c0faff82fa724f8c6ff4d8.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

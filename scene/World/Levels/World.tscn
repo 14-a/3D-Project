@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://dc3q6titog2jy"]
+
+[ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="1_1brhb"]
+[ext_resource type="Script" uid="uid://cvlkjmrbfjwvs" path="res://scene/World/Levels/world.gd" id="1_mr34f"]
+[ext_resource type="PackedScene" uid="uid://5iqqcvkmyamp" path="res://scene/World/Levels/Chapter_1/Level_1/world.tscn" id="2_t3s5x"]
+[ext_resource type="PackedScene" uid="uid://btsmiyqm05keu" path="res://scene/World/Levels/Chapter_1/Level_2/level_2.tscn" id="3_w1udo"]
+[ext_resource type="PackedScene" uid="uid://bsr8y1ylthtfk" path="res://scene/World/Levels/Chapter_1/Level_3/Level_3.tscn" id="4_j3i4j"]
+[ext_resource type="PackedScene" uid="uid://dhhb28a0mqj2s" path="res://scene/World/Levels/Chapter_1/Level_4/Level_4.tscn" id="5_qhmno"]
+[ext_resource type="PackedScene" uid="uid://bu003mo73hx2e" path="res://scene/World/Levels/Chapter_1/Level_5/Level_1.tscn" id="6_xswkj"]
+[ext_resource type="PackedScene" uid="uid://cyxuyyhwlco20" path="res://scene/World/Levels/Chapter_1/Level_6/Level_6.tscn" id="7_eqays"]
+
+[node name="World" type="Node3D" unique_id=1661109]
+script = ExtResource("1_mr34f")
+Chapter = Array[PackedScene]([ExtResource("2_t3s5x"), ExtResource("3_w1udo"), ExtResource("4_j3i4j"), ExtResource("5_qhmno"), ExtResource("6_xswkj"), ExtResource("7_eqays")])
+
+[node name="Player" parent="." unique_id=1765428193 instance=ExtResource("1_1brhb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)

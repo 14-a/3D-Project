@@ -1,8 +1,0 @@
-[gd_scene format=3 uid="uid://036aukkw7ipr"]
-
-[ext_resource type="Script" uid="uid://d2jwwk2422uj8" path="res://addons/csg_blockout/scripts/metrics/csg_player_reference_3d.gd" id="1_shlym"]
-
-[node name="Ready" type="Node3D" unique_id=1006979995]
-
-[node name="PlayerRef" type="Node3D" parent="." unique_id=855869268]
-script = ExtResource("1_shlym")

@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://dy3vj0p5vm8t5"
+path="res://.godot/imported/Plant_3.obj-99576a4290b293c4cb88df5177f428ef.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Plant_3.obj-99576a4290b293c4cb88df5177f428ef.mesh"]
+
+source_file="res://scene/Model/Tree/OBJ/Plant_3.obj"
+dest_files=["res://.godot/imported/Plant_3.obj-99576a4290b293c4cb88df5177f428ef.mesh", "res://.godot/imported/Plant_3.obj-99576a4290b293c4cb88df5177f428ef.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

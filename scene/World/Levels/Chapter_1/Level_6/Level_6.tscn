@@ -3,7 +3,6 @@
 [ext_resource type="Environment" uid="uid://b0a642mbwux5x" path="res://scene/World/Levels/Chapter_1/Chapter_1.tres" id="1_kxlhi"]
 [ext_resource type="Script" uid="uid://dqn3xkhuabc8t" path="res://scene/World/Levels/worldEvent.gd" id="1_mrx0c"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_orange.tres" id="2_npth6"]
-[ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="3_n5lx4"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_dark.tres" id="3_pjrx6"]
 [ext_resource type="Material" uid="uid://crn0atsrtxwh" path="res://Materials/TempMatertials/Temp-Door.tres" id="4_78bsb"]
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="4_lemr4"]
@@ -313,8 +312,6 @@ shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1151696157]
 environment = ExtResource("1_kxlhi")
-
-[node name="Player" parent="." unique_id=1765428193 instance=ExtResource("3_n5lx4")]
 
 [node name="Map" type="Node3D" parent="." unique_id=305268387]
 

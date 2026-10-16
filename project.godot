@@ -21,7 +21,7 @@ csg_blockout/openings/door_size=Vector2(1.5, 2.5)
 [application]
 
 config/name="New Project Demo"
-run/main_scene="uid://5iqqcvkmyamp"
+run/main_scene="uid://dc3q6titog2jy"
 config/features=PackedStringArray("4.8", "Forward Plus")
 config/icon="res://icon.svg"
 

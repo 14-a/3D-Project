@@ -11,7 +11,6 @@
 [ext_resource type="Script" uid="uid://dk0lnwaxjr57t" path="res://scene/World/机制_1/Part.gd" id="9_ywiia"]
 [ext_resource type="Material" uid="uid://d1g2ktc6ladng" path="res://Texture/PNG/Light/顺时针旋转.tres" id="10_3650r"]
 [ext_resource type="Material" uid="uid://bw3g0dbwps4ox" path="res://Texture/PNG/Dark/逆时针旋转.tres" id="11_arkrr"]
-[ext_resource type="PackedScene" uid="uid://de3d04qd0cdxi" path="res://scene/Player/player.tscn" id="12_84823"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_8mrm5"]
 size = Vector3(1.6357422, 2.8831787, 1)
@@ -345,8 +344,6 @@ transform = Transform3D(0, -1, 0, 0, 0, -1, 1, 0, 0, -4, -0.5, 0)
 use_collision = true
 size = Vector3(2, 6, 1)
 material = ExtResource("11_arkrr")
-
-[node name="Player" parent="." unique_id=1765428193 instance=ExtResource("12_84823")]
 
 [connection signal="小按钮触发" from="Map/静止平台/Ready/小按钮" to="." method="旋转"]
 [connection signal="body_entered" from="Map/静止平台/End/Area3D" to="." method="toNextScene"]

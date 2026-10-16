@@ -2,6 +2,8 @@ extends Node3D
 
 @export var NextScene : PackedScene
 
+var Next : bool = false
+
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	pass # Replace with function body.
@@ -27,5 +29,5 @@ func 改变() -> void:
 
 
 func toNextScene(body: Node3D) -> void:
-	get_tree().change_scene_to_packed(NextScene)
+	Next = true
 	pass # Replace with function body.
