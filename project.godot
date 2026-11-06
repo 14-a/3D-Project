@@ -10,8 +10,8 @@ config_version=5
 
 [addons]
 
-csg_blockout/material_preset=3
-csg_blockout/custom_material_path="res://Materials/TempMatertials/Temp-Door.tres"
+csg_blockout/material_preset=1
+csg_blockout/custom_material_path="res://Texture/PNG/Light/顺时针旋转.tres"
 csg_blockout/language_override="zh_CN"
 csg_blockout/bake/lod=true
 csg_blockout/room/open_top=false
@@ -286,3 +286,4 @@ environment/ssao/half_size=false
 environment/ssil/half_size=false
 anti_aliasing/quality/msaa_3d=3
 environment/screen_space_reflection/half_size=false
+mesh_lod/lod_change/threshold_pixels=38.5

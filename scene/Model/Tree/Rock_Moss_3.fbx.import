@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://x07vut3g63op"
-path="res://.godot/imported/Rock_Moss_3.fbx-b9bbc15a90e49bc138cec8676f40b110.scn"
+uid="uid://jcwla52sn1p5"
+path="res://.godot/imported/Rock_Moss_3.fbx-4bc61419100c8cc8fb158a260f51c201.scn"
 
 [deps]
 
-source_file="res://scene/Model/Tree/FBX/Rock_Moss_3.fbx"
-dest_files=["res://.godot/imported/Rock_Moss_3.fbx-b9bbc15a90e49bc138cec8676f40b110.scn"]
+source_file="res://scene/Model/Tree/Rock_Moss_3.fbx"
+dest_files=["res://.godot/imported/Rock_Moss_3.fbx-4bc61419100c8cc8fb158a260f51c201.scn"]
 
 [params]
 
