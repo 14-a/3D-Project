@@ -303,6 +303,29 @@ material = ExtResource("3_pjrx6")
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_oofo1"]
 data = PackedVector3Array(-1.9999999, -0.5000001, 30, -1.9999999, -0.5000001, -30, -1.9999999, 0.5000001, -30, 1.9999999, -0.5000001, -30, -1.9999999, -0.5000001, -30, -1.9999999, -0.5000001, 30, -1.9999999, 0.5000001, -30, -1.9999999, -0.5000001, -30, 1.9999999, -0.5000001, -30, -1.9999999, 0.5000001, -30, -1.9999999, 0.5000001, 30, -1.9999999, -0.5000001, 30, -1.9999999, -0.5000001, 30, -1.9999999, 0.5000001, 30, 1.9999999, 0.5000001, 30, 1.9999999, 0.5000001, 30, -1.9999999, 0.5000001, 30, -1.9999999, 0.5000001, -30, -1.9999999, -0.5000001, 30, 1.9999999, -0.5000001, 30, 1.9999999, -0.5000001, -30, 1.9999999, 0.5000001, 30, 1.9999999, -0.5000001, 30, -1.9999999, -0.5000001, 30, 1.9999999, -0.5000001, -30, 1.9999999, -0.5000001, 30, 1.9999999, 0.5000001, 30, 1.9999999, -0.5000001, -30, 1.9999999, 0.5000001, -30, -1.9999999, 0.5000001, -30, -1.9999999, 0.5000001, -30, 1.9999999, 0.5000001, -30, 1.9999999, 0.5000001, 30, 1.9999999, 0.5000001, 30, 1.9999999, 0.5000001, -30, 1.9999999, -0.5000001, -30)
 
+[sub_resource type="ArrayMesh" id="ArrayMesh_0o224"]
+_surfaces = [{
+"aabb": AABB(-1, -4.5, -0.5, 2, 9, 1),
+"attribute_data": PackedByteArray("AACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/"),
+"format": 34359738391,
+"material": ExtResource("6_sqxtk"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 36,
+"vertex_data": PackedByteArray("AACAvwAAkMAAAAA/AACAvwAAkMAAAAC/AACAvwAAkEAAAAC/AACAPwAAkMAAAAC/AACAvwAAkMAAAAC/AACAvwAAkMAAAAA/AACAvwAAkEAAAAC/AACAvwAAkMAAAAC/AACAPwAAkMAAAAC/AACAvwAAkEAAAAC/AACAvwAAkEAAAAA/AACAvwAAkMAAAAA/AACAvwAAkMAAAAA/AACAvwAAkEAAAAA/AACAPwAAkEAAAAA/AACAPwAAkEAAAAA/AACAvwAAkEAAAAA/AACAvwAAkEAAAAC/AACAvwAAkMAAAAA/AACAPwAAkMAAAAA/AACAPwAAkMAAAAC/AACAPwAAkEAAAAA/AACAPwAAkMAAAAA/AACAvwAAkMAAAAA/AACAPwAAkMAAAAC/AACAPwAAkMAAAAA/AACAPwAAkEAAAAA/AACAPwAAkMAAAAC/AACAPwAAkEAAAAC/AACAvwAAkEAAAAC/AACAvwAAkEAAAAC/AACAPwAAkEAAAAC/AACAPwAAkEAAAAA/AACAPwAAkEAAAAA/AACAPwAAkEAAAAC/AACAPwAAkMAAAAC/AAAAgP9//n8AAACA/3/+fwAAAID/f/5/AIAAAP//AAAAgAAA//8AAACAAAD//wAA/////wAA/z//////AAD/P/////8AAP8/AAAAgP9//n8AAACA/3/+fwAAAID/f/5//3//fwAA/z//f/9/AAD/P/9//38AAP8/AID/////AAAAgP////8AAACA/////wAAAIAAAP//AAAAgAAA//8AAACAAAD//wAA/3//fwAA/z//f/9/AAD/P/9//38AAP8///8AgP9//n///wCA/3/+f///AID/f/5//////wAA/z//////AAD/P/////8AAP8/AID/////AAAAgP////8AAACA/////wAA//8AgP9//n///wCA/3/+f///AID/f/5/")
+}]
+blend_shape_mode = 0
+
+[sub_resource type="PackedScene" id="PackedScene_ndm8b"]
+[node name="Block_Prat_01" type="CSGBox3D" unique_id=1699818074]
+transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, -3.5)
+use_collision = true
+size = Vector3(2, 9, 1)
+material = ExtResource("6_sqxtk")
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_0vsbj"]
+data = PackedVector3Array(-1, -4.5, 0.5, -1, -4.5, -0.5, -1, 4.5, -0.5, 1, -4.5, -0.5, -1, -4.5, -0.5, -1, -4.5, 0.5, -1, 4.5, -0.5, -1, -4.5, -0.5, 1, -4.5, -0.5, -1, 4.5, -0.5, -1, 4.5, 0.5, -1, -4.5, 0.5, -1, -4.5, 0.5, -1, 4.5, 0.5, 1, 4.5, 0.5, 1, 4.5, 0.5, -1, 4.5, 0.5, -1, 4.5, -0.5, -1, -4.5, 0.5, 1, -4.5, 0.5, 1, -4.5, -0.5, 1, 4.5, 0.5, 1, -4.5, 0.5, -1, -4.5, 0.5, 1, -4.5, -0.5, 1, -4.5, 0.5, 1, 4.5, 0.5, 1, -4.5, -0.5, 1, 4.5, -0.5, -1, 4.5, -0.5, -1, 4.5, -0.5, 1, 4.5, -0.5, 1, 4.5, 0.5, 1, 4.5, 0.5, 1, 4.5, -0.5, 1, -4.5, -0.5)
+
 [resource]
 
 [node name="Level6" type="Node3D" unique_id=2114917572]
@@ -479,10 +502,10 @@ size = Vector3(4, 1, 4)
 material = ExtResource("2_npth6")
 
 [node name="小岛" parent="Map/静止平台/z+" unique_id=898657080 instance=ExtResource("8_nyfat")]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 24, 0, 14)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 28, 0, 16)
 
-[node name="小按钮" parent="Map/静止平台/z+" unique_id=1748769119 instance=ExtResource("5_qtesh")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 0, 15)
+[node name="小按钮" parent="Map/静止平台/z+/小岛" unique_id=1748769119 instance=ExtResource("5_qtesh")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 1, 0, 1)
 
 [node name="x+" type="Node3D" parent="Map/静止平台" unique_id=533528121]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 88, 0, -86)
@@ -553,7 +576,7 @@ shape = SubResource("ConcavePolygonShape3D_va41v")
 [node name="Prat3" type="Node3D" parent="Map" unique_id=93144484]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 18, 0, -28)
 script = ExtResource("8_08ssv")
-"偏转度" = 2
+"偏转度" = 1
 
 [node name="Block_Prat_01" type="MeshInstance3D" parent="Map/Prat3" unique_id=1972528313]
 transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, -3.5)
@@ -664,8 +687,158 @@ metadata/_csg_blockout_generated = true
 [node name="Shape" type="CollisionShape3D" parent="Map/第四路径/Block/Collision" unique_id=651563959]
 shape = SubResource("ConcavePolygonShape3D_oofo1")
 
+[node name="Prat4" type="Node3D" parent="Map" unique_id=630644846]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 0, -18)
+script = ExtResource("8_08ssv")
+
+[node name="Block_Prat_01" type="MeshInstance3D" parent="Map/Prat4" unique_id=162237754]
+transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, -3.5)
+mesh = SubResource("ArrayMesh_0o224")
+metadata/_csg_blockout_bake = {
+"collision": "auto",
+"lod": true,
+"occluder": false,
+"texel": 0.2,
+"uv2": false
+}
+metadata/_csg_blockout_source = SubResource("PackedScene_ndm8b")
+
+[node name="Collision" type="StaticBody3D" parent="Map/Prat4/Block_Prat_01" unique_id=1293153275]
+metadata/_csg_blockout_generated = true
+
+[node name="Shape" type="CollisionShape3D" parent="Map/Prat4/Block_Prat_01/Collision" unique_id=342768149]
+shape = SubResource("ConcavePolygonShape3D_0vsbj")
+
+[node name="小按钮" parent="Map/Prat4" unique_id=857416161 instance=ExtResource("5_qtesh")]
+
+[node name="Prat5" type="Node3D" parent="Map" unique_id=1511762331]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 28, 0, -2)
+script = ExtResource("8_08ssv")
+"偏转度" = 2
+"反向" = true
+
+[node name="Block_Prat_01" type="MeshInstance3D" parent="Map/Prat5" unique_id=716435105]
+transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, -3.5)
+mesh = SubResource("ArrayMesh_0o224")
+metadata/_csg_blockout_bake = {
+"collision": "auto",
+"lod": true,
+"occluder": false,
+"texel": 0.2,
+"uv2": false
+}
+metadata/_csg_blockout_source = SubResource("PackedScene_ndm8b")
+
+[node name="Collision" type="StaticBody3D" parent="Map/Prat5/Block_Prat_01" unique_id=1585168040]
+metadata/_csg_blockout_generated = true
+
+[node name="Shape" type="CollisionShape3D" parent="Map/Prat5/Block_Prat_01/Collision" unique_id=565945131]
+shape = SubResource("ConcavePolygonShape3D_0vsbj")
+
+[node name="小按钮" parent="Map/Prat5" unique_id=142574841 instance=ExtResource("5_qtesh")]
+
+[node name="Prat6" type="Node3D" parent="Map" unique_id=1604830444]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 0, 22)
+script = ExtResource("8_08ssv")
+
+[node name="Block_Prat_01" type="MeshInstance3D" parent="Map/Prat6" unique_id=1434553224]
+transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, -3.5)
+mesh = SubResource("ArrayMesh_0o224")
+metadata/_csg_blockout_bake = {
+"collision": "auto",
+"lod": true,
+"occluder": false,
+"texel": 0.2,
+"uv2": false
+}
+metadata/_csg_blockout_source = SubResource("PackedScene_ndm8b")
+
+[node name="Collision" type="StaticBody3D" parent="Map/Prat6/Block_Prat_01" unique_id=899329269]
+metadata/_csg_blockout_generated = true
+
+[node name="Shape" type="CollisionShape3D" parent="Map/Prat6/Block_Prat_01/Collision" unique_id=1999824397]
+shape = SubResource("ConcavePolygonShape3D_0vsbj")
+
+[node name="小按钮" parent="Map/Prat6" unique_id=797061894 instance=ExtResource("5_qtesh")]
+
+[node name="Prat7" type="Node3D" parent="Map" unique_id=758317428]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 28, 0, 40)
+script = ExtResource("8_08ssv")
+"偏转度" = 2
+
+[node name="Block_Prat_01" type="MeshInstance3D" parent="Map/Prat7" unique_id=398566526]
+transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, -3.5)
+mesh = SubResource("ArrayMesh_0o224")
+metadata/_csg_blockout_bake = {
+"collision": "auto",
+"lod": true,
+"occluder": false,
+"texel": 0.2,
+"uv2": false
+}
+metadata/_csg_blockout_source = SubResource("PackedScene_ndm8b")
+
+[node name="Collision" type="StaticBody3D" parent="Map/Prat7/Block_Prat_01" unique_id=985018563]
+metadata/_csg_blockout_generated = true
+
+[node name="Shape" type="CollisionShape3D" parent="Map/Prat7/Block_Prat_01/Collision" unique_id=286913810]
+shape = SubResource("ConcavePolygonShape3D_0vsbj")
+
+[node name="小按钮" parent="Map/Prat7" unique_id=685087129 instance=ExtResource("5_qtesh")]
+
+[node name="Prat8" type="Node3D" parent="Map" unique_id=858713278]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 12, 0, 40)
+script = ExtResource("8_08ssv")
+"偏转度" = 2
+
+[node name="Block_Prat_01" type="MeshInstance3D" parent="Map/Prat8" unique_id=60766830]
+transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, -3.5)
+mesh = SubResource("ArrayMesh_0o224")
+metadata/_csg_blockout_bake = {
+"collision": "auto",
+"lod": true,
+"occluder": false,
+"texel": 0.2,
+"uv2": false
+}
+metadata/_csg_blockout_source = SubResource("PackedScene_ndm8b")
+
+[node name="Collision" type="StaticBody3D" parent="Map/Prat8/Block_Prat_01" unique_id=2085829809]
+metadata/_csg_blockout_generated = true
+
+[node name="Shape" type="CollisionShape3D" parent="Map/Prat8/Block_Prat_01/Collision" unique_id=819697790]
+shape = SubResource("ConcavePolygonShape3D_0vsbj")
+
+[node name="小按钮" parent="Map/Prat8" unique_id=1984491470 instance=ExtResource("5_qtesh")]
+
+[node name="Prat9" type="Node3D" parent="Map" unique_id=530550935]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -4, 0, 40)
+script = ExtResource("8_08ssv")
+"偏转度" = 1
+
+[node name="Block_Prat_01" type="MeshInstance3D" parent="Map/Prat9" unique_id=1223273805]
+transform = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, -0.5, -3.5)
+mesh = SubResource("ArrayMesh_0o224")
+metadata/_csg_blockout_bake = {
+"collision": "auto",
+"lod": true,
+"occluder": false,
+"texel": 0.2,
+"uv2": false
+}
+metadata/_csg_blockout_source = SubResource("PackedScene_ndm8b")
+
+[node name="Collision" type="StaticBody3D" parent="Map/Prat9/Block_Prat_01" unique_id=629699726]
+metadata/_csg_blockout_generated = true
+
+[node name="Shape" type="CollisionShape3D" parent="Map/Prat9/Block_Prat_01/Collision" unique_id=473043597]
+shape = SubResource("ConcavePolygonShape3D_0vsbj")
+
+[node name="小按钮" parent="Map/Prat9" unique_id=81255531 instance=ExtResource("5_qtesh")]
+
 [connection signal="小按钮触发" from="Map/静止平台/z+/ready/小按钮" to="." method="旋转"]
 [connection signal="小按钮触发" from="Map/静止平台/z+/岛/小按钮" to="Map" method="第一平台"]
 [connection signal="小按钮触发" from="Map/Prat/小按钮" to="." method="旋转"]
 [connection signal="小按钮触发" from="Map/Prat2/小按钮" to="." method="旋转"]
 [connection signal="小按钮触发" from="Map/Prat3/小按钮" to="." method="旋转"]
+[connection signal="小按钮触发" from="Map/Prat4/小按钮" to="." method="旋转"]

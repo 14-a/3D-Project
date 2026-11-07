@@ -282,6 +282,7 @@ rendering_device/driver.windows="d3d12"
 lights_and_shadows/contact_shadow/enabled=true
 lights_and_shadows/contact_shadow/shadow_length=2
 lights_and_shadows/multi_bounce_occlusion/enabled=true
+environment/ssao/quality=4
 environment/ssao/half_size=false
 environment/ssil/half_size=false
 anti_aliasing/quality/msaa_3d=3

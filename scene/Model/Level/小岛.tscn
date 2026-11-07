@@ -4,6 +4,8 @@
 [ext_resource type="Material" path="res://addons/csg_blockout/res/materials/mat_grid_light.tres" id="2_fp2m6"]
 [ext_resource type="PackedScene" uid="uid://d8bc663x1qn6" path="res://scene/Model/Tree/FBX/CommonTree_5.fbx" id="3_06gqr"]
 [ext_resource type="PackedScene" uid="uid://dkxdx4o1qgcru" path="res://scene/Model/Tree/FBX/Rock_Moss_4.fbx" id="4_pvi56"]
+[ext_resource type="PackedScene" uid="uid://84lb28o2dr3l" path="res://scene/Model/Tree/FBX/Bush_1.fbx" id="5_06gqr"]
+[ext_resource type="PackedScene" uid="uid://bjy252funj67y" path="res://scene/Model/Tree/FBX/Bush_2.fbx" id="6_pvi56"]
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_6bman"]
 _surfaces = [{
@@ -76,3 +78,12 @@ transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, -1.2647979, 0.045117922
 
 [node name="Rock_Moss_4" parent="." unique_id=19918578 instance=ExtResource("4_pvi56")]
 transform = Transform3D(-1.4955962, 0, -1.3278524, 0, 2, 0, 1.3278524, 0, -1.4955962, 1.0983644, 0.2731279, -2.346012)
+
+[node name="Bush_1" parent="." unique_id=925466371 instance=ExtResource("5_06gqr")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45526433, 0.036267143, 3.043024)
+
+[node name="Bush_2" parent="." unique_id=1902453166 instance=ExtResource("6_pvi56")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.39983797, 0.08168341, 2.6250563)
+
+[node name="Bush_3" parent="." unique_id=1739513249 instance=ExtResource("5_06gqr")]
+transform = Transform3D(1.5124252, 0, 0, 0, 1, 0, 0, 0, 1.4061048, -1.2702959, 0.036267143, 2.6063423)
